@@ -8,6 +8,7 @@
   },
   "scripts": {
     "dev": "nodemon src/server.js",
+    "prestart": "prisma migrate deploy && prisma generate",
     "start": "node src/server.js",
     "lint": "eslint .",
     "format": "prettier --write .",
