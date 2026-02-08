@@ -1,0 +1,40 @@
+node_modules
+dist
+build
+coverage
+.cache
+.eslintcache
+.npm
+.pnpm-store
+.parcel-cache
+.turbo
+.vercel
+.next
+.nuxt
+.svelte-kit
+.output
+.vite
+.rollup.cache
+.history
+.tmp
+.temp
+.env
+.env
+.env.*
+!.env.example
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.DS_Store
+
+# Prisma
+prisma/dev.db
+prisma/dev.db-journal
+
+# Docker
+*.log
+
+# IDE
+.idea
+.vscode

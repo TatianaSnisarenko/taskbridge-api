@@ -1,0 +1,303 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum ExperienceLevel {
+  STUDENT
+  JUNIOR
+  MIDDLE
+  SENIOR
+}
+
+enum Availability {
+  FEW_HOURS_WEEK
+  PART_TIME
+  FULL_TIME
+}
+
+enum TaskCategory {
+  BACKEND
+  FRONTEND
+  DEVOPS
+  QA
+  DATA
+  MOBILE
+  OTHER
+}
+
+enum TaskType {
+  PAID
+  UNPAID
+  VOLUNTEER
+  EXPERIENCE
+}
+
+enum TaskDifficulty {
+  JUNIOR
+  MIDDLE
+  SENIOR
+  ANY
+}
+
+enum TaskDuration {
+  DAYS_1_7
+  DAYS_8_14
+  DAYS_15_30
+  DAYS_30_PLUS
+}
+
+enum TaskVisibility {
+  PUBLIC
+  UNLISTED
+}
+
+enum TaskStatus {
+  DRAFT
+  PUBLISHED
+  IN_PROGRESS
+  COMPLETION_REQUESTED
+  COMPLETED
+  CLOSED
+}
+
+enum ApplicationStatus {
+  APPLIED
+  ACCEPTED
+  REJECTED
+}
+
+enum Persona {
+  developer
+  company
+}
+
+enum CompanyType {
+  STARTUP
+  SMB
+  ENTERPRISE
+  INDIVIDUAL
+}
+
+enum NotificationType {
+  APPLICATION_CREATED
+  APPLICATION_ACCEPTED
+  APPLICATION_REJECTED
+  COMPLETION_REQUESTED
+  TASK_COMPLETED
+  REVIEW_CREATED
+}
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  refreshTokens    RefreshToken[]
+  developerProfile DeveloperProfile?
+  companyProfile   CompanyProfile?
+
+  ownedTasks   Task[]        @relation("TaskOwner")
+  applications Application[] @relation("ApplicationDeveloper")
+
+  sentMessages ChatMessage[]
+
+  authoredReviews Review[] @relation("ReviewAuthor")
+  receivedReviews Review[] @relation("ReviewTarget")
+
+  notifications Notification[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @map("user_id") @db.Uuid
+  tokenHash  String    @unique @map("token_hash")
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  expiresAt  DateTime  @map("expires_at") @db.Timestamptz(6)
+  revokedAt  DateTime? @map("revoked_at") @db.Timestamptz(6)
+  deviceInfo String?   @map("device_info")
+  ip         String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt(sort: Desc)])
+  @@map("refresh_tokens")
+}
+
+model DeveloperProfile {
+  userId                  String           @id @map("user_id") @db.Uuid
+  displayName             String           @map("display_name")
+  jobTitle                String           @default("") @map("primary_role")
+  bio                     String           @default("")
+  experienceLevel         ExperienceLevel? @map("experience_level")
+  location                String?
+  timezone                String?
+  skills                  String[]         @default([])
+  techStack               String[]         @default([]) @map("tech_stack")
+  availability            Availability?
+  preferredTaskCategories TaskCategory[]   @default([]) @map("preferred_task_categories")
+  portfolioUrl            String?          @map("portfolio_url")
+  githubUrl               String?          @map("github_url")
+  linkedinUrl             String?          @map("linkedin_url")
+  avgRating               Decimal          @default(0) @map("avg_rating") @db.Decimal(2, 1)
+  reviewsCount            Int              @default(0) @map("reviews_count")
+  createdAt               DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt               DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("developer_profiles")
+}
+
+model CompanyProfile {
+  userId       String       @id @map("user_id") @db.Uuid
+  companyName  String       @map("company_name")
+  companyType  CompanyType? @map("company_type")
+  description  String       @default("")
+  teamSize     Int?         @map("team_size")
+  country      String?
+  timezone     String?
+  contactEmail String?      @map("contact_email")
+  websiteUrl   String?      @map("website_url")
+  links        Json         @default("{}")
+  verified     Boolean      @default(false)
+  avgRating    Decimal      @default(0) @map("avg_rating") @db.Decimal(2, 1)
+  reviewsCount Int          @default(0) @map("reviews_count")
+  createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("company_profiles")
+}
+
+model Task {
+  id          String     @id @default(uuid()) @db.Uuid
+  ownerUserId String     @map("owner_user_id") @db.Uuid
+  status      TaskStatus
+
+  title          String
+  description    String
+  category       TaskCategory?
+  type           TaskType        @default(EXPERIENCE)
+  difficulty     TaskDifficulty?
+  requiredSkills String[]        @default([]) @map("required_skills")
+
+  estimatedEffortHours  Int?           @map("estimated_effort_hours")
+  expectedDuration      TaskDuration?  @map("expected_duration")
+  communicationLanguage String?        @map("communication_language")
+  timezonePreference    String?        @map("timezone_preference")
+  applicationDeadline   DateTime?      @map("application_deadline") @db.Date
+  visibility            TaskVisibility @default(PUBLIC)
+
+  deliverables String @default("")
+  requirements String @default("")
+  niceToHave   String @default("") @map("nice_to_have")
+
+  acceptedApplicationId String? @unique @map("accepted_application_id") @db.Uuid
+
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  publishedAt DateTime? @map("published_at") @db.Timestamptz(6)
+  closedAt    DateTime? @map("closed_at") @db.Timestamptz(6)
+  completedAt DateTime? @map("completed_at") @db.Timestamptz(6)
+
+  owner               User          @relation("TaskOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  applications        Application[]
+  acceptedApplication Application?  @relation("AcceptedApplication", fields: [acceptedApplicationId], references: [id])
+  chatThread          ChatThread?
+  reviews             Review[]
+
+  @@index([status, publishedAt(sort: Desc)])
+  @@index([ownerUserId, createdAt(sort: Desc)])
+  @@map("tasks")
+}
+
+model Application {
+  id               String            @id @default(uuid()) @db.Uuid
+  taskId           String            @map("task_id") @db.Uuid
+  developerUserId  String            @map("developer_user_id") @db.Uuid
+  status           ApplicationStatus
+  message          String?
+  proposedPlan     String?           @map("proposed_plan")
+  availabilityNote String?           @map("availability_note")
+  createdAt        DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  task            Task  @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  developer       User  @relation("ApplicationDeveloper", fields: [developerUserId], references: [id], onDelete: Cascade)
+  acceptedForTask Task? @relation("AcceptedApplication")
+
+  @@unique([taskId, developerUserId])
+  @@index([taskId, createdAt(sort: Desc)])
+  @@index([developerUserId, createdAt(sort: Desc)])
+  @@map("applications")
+}
+
+model ChatThread {
+  id              String   @id @default(uuid()) @db.Uuid
+  taskId          String   @unique @map("task_id") @db.Uuid
+  companyUserId   String   @map("company_user_id") @db.Uuid
+  developerUserId String   @map("developer_user_id") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  task     Task          @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  messages ChatMessage[]
+
+  @@map("chat_threads")
+}
+
+model ChatMessage {
+  id            String   @id @default(uuid()) @db.Uuid
+  threadId      String   @map("thread_id") @db.Uuid
+  senderUserId  String   @map("sender_user_id") @db.Uuid
+  senderPersona Persona? @map("sender_persona")
+  text          String
+  sentAt        DateTime @default(now()) @map("sent_at") @db.Timestamptz(6)
+
+  thread ChatThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  sender User       @relation(fields: [senderUserId], references: [id], onDelete: Cascade)
+
+  @@index([threadId, sentAt(sort: Desc)])
+  @@map("chat_messages")
+}
+
+model Review {
+  id           String   @id @default(uuid()) @db.Uuid
+  taskId       String   @map("task_id") @db.Uuid
+  authorUserId String   @map("author_user_id") @db.Uuid
+  targetUserId String   @map("target_user_id") @db.Uuid
+  rating       Int
+  text         String?
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  task   Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  author User @relation("ReviewAuthor", fields: [authorUserId], references: [id], onDelete: Cascade)
+  target User @relation("ReviewTarget", fields: [targetUserId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, authorUserId])
+  @@index([targetUserId, createdAt(sort: Desc)])
+  @@map("reviews")
+}
+
+model Notification {
+  id        String           @id @default(uuid()) @db.Uuid
+  userId    String           @map("user_id") @db.Uuid
+  type      NotificationType
+  payload   Json             @default("{}")
+  createdAt DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  readAt    DateTime?        @map("read_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([userId, readAt])
+  @@map("notifications")
+}

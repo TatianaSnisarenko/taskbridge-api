@@ -1,0 +1,26 @@
+import Joi from 'joi';
+
+export const emailRegexp = /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/;
+export const passRegexp = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9])[ -~]{6,64}$/;
+
+export const signupSchema = Joi.object({
+  email: Joi.string().pattern(emailRegexp).required().messages({
+    'string.pattern.base': 'Email format is invalid',
+    'string.empty': 'Email is required',
+    'any.required': 'Email is required',
+  }),
+  password: Joi.string().pattern(passRegexp).required().messages({
+    'string.pattern.base': 'Password must be 6-64 chars, with upper/lowercase, number, and symbol',
+    'string.empty': 'Password is required',
+    'any.required': 'Password is required',
+  }),
+});
+
+export const loginSchema = Joi.object({
+  email: Joi.string().pattern(emailRegexp).required().messages({
+    'string.pattern.base': 'Email format is invalid',
+    'string.empty': 'Email is required',
+    'any.required': 'Email is required',
+  }),
+  password: Joi.string().required(),
+});
