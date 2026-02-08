@@ -23,6 +23,35 @@ export const swaggerSpec = {
           password: { type: 'string', minLength: 6, maxLength: 64 },
         },
       },
+      SignupRequest: {
+        type: 'object',
+        required: ['email', 'password'],
+        properties: {
+          email: { type: 'string', format: 'email' },
+          password: { type: 'string', minLength: 6, maxLength: 64 },
+          developerProfile: {
+            type: 'object',
+            properties: {
+              displayName: { type: 'string' },
+            },
+          },
+          companyProfile: {
+            type: 'object',
+            properties: {
+              companyName: { type: 'string' },
+            },
+          },
+        },
+      },
+      SignupResponse: {
+        type: 'object',
+        properties: {
+          user_id: { type: 'string', format: 'uuid' },
+          email: { type: 'string', format: 'email' },
+          hasDeveloperProfile: { type: 'boolean' },
+          hasCompanyProfile: { type: 'boolean' },
+        },
+      },
       AccessTokenResponse: {
         type: 'object',
         properties: {
@@ -62,7 +91,7 @@ export const swaggerSpec = {
           required: true,
           content: {
             'application/json': {
-              schema: { $ref: '#/components/schemas/AuthCredentials' },
+              schema: { $ref: '#/components/schemas/SignupRequest' },
             },
           },
         },
@@ -71,7 +100,7 @@ export const swaggerSpec = {
             description: 'User created',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/AccessTokenResponse' },
+                schema: { $ref: '#/components/schemas/SignupResponse' },
               },
             },
           },

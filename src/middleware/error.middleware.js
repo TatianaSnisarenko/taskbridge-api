@@ -7,11 +7,21 @@ export function errorMiddleware(err, req, res, next) {
     return res.status(err.status).json(errorResponse(err));
   }
 
+  // Invalid JSON body (body-parser)
+  if (err?.type === 'entity.parse.failed' || err instanceof SyntaxError) {
+    const apiErr = new ApiError(400, 'INVALID_JSON', 'Invalid JSON format');
+    return res.status(apiErr.status).json(errorResponse(apiErr));
+  }
+
   // Joi validation errors
   if (err?.isJoi) {
     const details = err.details?.map((d) => ({
-      field: d.path?.join('.') ?? 'unknown',
-      issue: d.type ?? 'invalid',
+      field: d.path?.length
+        ? d.path.join('.')
+        : d.type === 'object.missing' && Array.isArray(d.context?.peers)
+          ? d.context.peers.join(' or ')
+          : 'body',
+      issue: d.message ?? d.type ?? 'invalid',
     }));
     const apiErr = new ApiError(400, 'VALIDATION_ERROR', 'Validation failed', details);
     return res.status(apiErr.status).json(errorResponse(apiErr));

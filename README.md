@@ -40,6 +40,12 @@ npm run prisma:generate
 npm run prisma:migrate:dev -- --name <migration_name>
 ```
 
+Check migration status (no changes created):
+
+```bash
+npm run prisma:migrate:status
+```
+
 6. Run migrations (applies the schema in Postgres):
 
 ```bash

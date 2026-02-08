@@ -14,7 +14,17 @@ export const signupSchema = Joi.object({
     'string.empty': 'Password is required',
     'any.required': 'Password is required',
   }),
-});
+  developerProfile: Joi.object({
+    displayName: Joi.string().trim().min(1).required(),
+  }).unknown(true),
+  companyProfile: Joi.object({
+    companyName: Joi.string().trim().min(1).required(),
+  }).unknown(true),
+})
+  .or('developerProfile', 'companyProfile')
+  .messages({
+    'object.missing': 'At least one profile is required',
+  });
 
 export const loginSchema = Joi.object({
   email: Joi.string().pattern(emailRegexp).required().messages({

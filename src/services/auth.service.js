@@ -10,14 +10,20 @@ function hashRefresh(token) {
   return crypto.createHash('sha256').update(token).digest('hex');
 }
 
-export async function signup({ email, password }) {
+export async function signup({ email, password, developerProfile, companyProfile }) {
   const existing = await findUserByEmail(email);
   if (existing) {
     throw new ApiError(409, 'EMAIL_ALREADY_EXISTS', 'Email already in use');
   }
 
-  const user = await createUser({ email, password });
-  return { userId: user.id };
+  const user = await createUser({ email, password, developerProfile, companyProfile });
+
+  return {
+    userId: user.id,
+    email: user.email,
+    hasDeveloperProfile: Boolean(user.developerProfile),
+    hasCompanyProfile: Boolean(user.companyProfile),
+  };
 }
 
 export async function login({ email, password }) {

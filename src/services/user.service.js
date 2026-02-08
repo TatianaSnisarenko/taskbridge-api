@@ -1,10 +1,19 @@
 import { prisma } from '../db/prisma.js';
 import { hashPassword, verifyPassword } from '../utils/password.js';
 
-export async function createUser({ email, password }) {
+export async function createUser({ email, password, developerProfile, companyProfile }) {
   const passwordHash = await hashPassword(password);
   return prisma.user.create({
-    data: { email, passwordHash },
+    data: {
+      email,
+      passwordHash,
+      developerProfile: developerProfile ? { create: developerProfile } : undefined,
+      companyProfile: companyProfile ? { create: companyProfile } : undefined,
+    },
+    include: {
+      developerProfile: true,
+      companyProfile: true,
+    },
   });
 }
 

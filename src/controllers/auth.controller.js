@@ -13,8 +13,15 @@ function refreshCookieOptions() {
 }
 
 export const signup = asyncHandler(async (req, res) => {
-  const { userId } = await authService.signup(req.body);
-  return res.status(201).json({ user_id: userId });
+  const { userId, email, hasDeveloperProfile, hasCompanyProfile } = await authService.signup(
+    req.body
+  );
+  return res.status(201).json({
+    user_id: userId,
+    email,
+    hasDeveloperProfile,
+    hasCompanyProfile,
+  });
 });
 
 export const login = asyncHandler(async (req, res) => {
