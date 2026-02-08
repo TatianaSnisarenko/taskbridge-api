@@ -24,6 +24,7 @@
     "express": "^4.19.2",
     "joi": "^17.13.3",
     "jsonwebtoken": "^9.0.2",
+    "swagger-ui-express": "^5.0.1",
     "@prisma/client": "^7.0.0",
     "@prisma/adapter-pg": "^7.0.0",
     "pg": "^8.12.0",
