@@ -18,4 +18,12 @@ export const env = {
   clientOrigin: process.env.CLIENT_ORIGIN ?? 'http://localhost:5173',
   cookieSecure: String(process.env.COOKIE_SECURE ?? 'false').toLowerCase() === 'true',
   cookieSameSite: process.env.COOKIE_SAMESITE ?? 'lax',
+  emailAddress: required('EMAIL_ADDRESS'),
+  emailPassword: required('EMAIL_PASSWORD'),
+  emailHost: required('EMAIL_HOST'),
+  emailPort: Number(process.env.EMAIL_PORT ?? 465),
+  emailSecure: String(process.env.EMAIL_SECURE ?? 'true').toLowerCase() === 'true',
+  appBaseUrl: process.env.APP_BASE_URL ?? 'http://localhost:3000',
+  emailVerificationTtlHours: Number(process.env.EMAIL_VERIFICATION_TTL_HOURS ?? 24),
+  verificationTokenRetentionDays: Number(process.env.VERIFICATION_TOKEN_RETENTION_DAYS ?? 7),
 };

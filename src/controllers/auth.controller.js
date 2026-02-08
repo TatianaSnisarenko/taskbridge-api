@@ -50,3 +50,8 @@ export const logout = asyncHandler(async (req, res) => {
   res.clearCookie('refresh_token', { path: '/api/v1/auth' });
   return res.status(200).json({ status: 'ok' });
 });
+
+export const verifyEmail = asyncHandler(async (req, res) => {
+  const { email } = await authService.verifyEmail({ token: req.query?.token });
+  return res.status(200).json({ status: 'ok', email });
+});

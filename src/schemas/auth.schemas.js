@@ -34,3 +34,10 @@ export const loginSchema = Joi.object({
   }),
   password: Joi.string().required(),
 });
+
+export const verifyEmailSchema = Joi.object({
+  token: Joi.string().trim().required().messages({
+    'string.empty': 'Verification token is required',
+    'any.required': 'Verification token is required',
+  }),
+});

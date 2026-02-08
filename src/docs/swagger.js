@@ -58,6 +58,13 @@ export const swaggerSpec = {
           access_token: { type: 'string' },
         },
       },
+      VerifyEmailResponse: {
+        type: 'object',
+        properties: {
+          status: { type: 'string', example: 'ok' },
+          email: { type: 'string', format: 'email' },
+        },
+      },
       HealthResponse: {
         type: 'object',
         properties: {
@@ -141,6 +148,30 @@ export const swaggerSpec = {
             content: {
               'application/json': {
                 schema: { $ref: '#/components/schemas/AccessTokenResponse' },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/api/v1/auth/verify-email': {
+      get: {
+        tags: ['Auth'],
+        summary: 'Verify email address',
+        parameters: [
+          {
+            name: 'token',
+            in: 'query',
+            required: true,
+            schema: { type: 'string' },
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Email verified',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/VerifyEmailResponse' },
               },
             },
           },

@@ -22,6 +22,8 @@
     "**/*.{js,json,md,yml,yaml}": "prettier --write"
   },
   "dependencies": {
+    "@prisma/adapter-pg": "^7.0.0",
+    "@prisma/client": "^7.0.0",
     "bcryptjs": "^2.4.3",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
@@ -29,11 +31,11 @@
     "express": "^4.19.2",
     "joi": "^17.13.3",
     "jsonwebtoken": "^9.0.2",
-    "swagger-ui-express": "^5.0.1",
-    "@prisma/client": "^7.0.0",
-    "@prisma/adapter-pg": "^7.0.0",
+    "node-cron": "^3.0.3",
+    "nodemailer": "^6.10.1",
     "pg": "^8.12.0",
-    "prisma": "^7.0.0"
+    "prisma": "^7.0.0",
+    "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
     "eslint": "^9.9.1",

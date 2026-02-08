@@ -5,9 +5,21 @@ import { ApiError } from '../utils/ApiError.js';
 import { createUser, findUserByEmail } from './user.service.js';
 import { verifyPassword } from '../utils/password.js';
 import { generateRefreshToken, signAccessToken } from './token.service.js';
+import { sendVerificationEmail } from './email.service.js';
 
 function hashRefresh(token) {
   return crypto.createHash('sha256').update(token).digest('hex');
+}
+
+function hashVerification(token) {
+  return crypto.createHash('sha256').update(token).digest('hex');
+}
+
+function generateEmailVerificationToken() {
+  const token = crypto.randomBytes(32).toString('base64url');
+  const tokenHash = hashVerification(token);
+  const expiresAt = new Date(Date.now() + env.emailVerificationTtlHours * 60 * 60 * 1000);
+  return { token, tokenHash, expiresAt };
 }
 
 export async function signup({ email, password, developerProfile, companyProfile }) {
@@ -16,7 +28,24 @@ export async function signup({ email, password, developerProfile, companyProfile
     throw new ApiError(409, 'EMAIL_ALREADY_EXISTS', 'Email already in use');
   }
 
-  const user = await createUser({ email, password, developerProfile, companyProfile });
+  const verification = generateEmailVerificationToken();
+  const user = await createUser({
+    email,
+    password,
+    developerProfile,
+    companyProfile,
+  });
+
+  await prisma.verificationToken.create({
+    data: {
+      userId: user.id,
+      type: 'EMAIL_VERIFY',
+      tokenHash: verification.tokenHash,
+      expiresAt: verification.expiresAt,
+    },
+  });
+
+  await sendVerificationEmail({ to: user.email, token: verification.token });
 
   return {
     userId: user.id,
@@ -35,6 +64,10 @@ export async function login({ email, password }) {
   const ok = await verifyPassword(password, user.passwordHash);
   if (!ok) {
     throw new ApiError(401, 'INVALID_CREDENTIALS', 'Invalid email or password');
+  }
+
+  if (!user.emailVerified) {
+    throw new ApiError(403, 'EMAIL_NOT_VERIFIED', 'Email is not verified');
   }
 
   const accessToken = signAccessToken({ userId: user.id, email: user.email });
@@ -107,4 +140,40 @@ export async function logout({ refreshToken }) {
     where: { tokenHash, revokedAt: null },
     data: { revokedAt: new Date() },
   });
+}
+
+export async function verifyEmail({ token }) {
+  if (!token) {
+    throw new ApiError(400, 'EMAIL_VERIFICATION_MISSING', 'Verification token is missing');
+  }
+
+  const tokenHash = hashVerification(token);
+  const tokenRecord = await prisma.verificationToken.findFirst({
+    where: {
+      tokenHash,
+      type: 'EMAIL_VERIFY',
+      usedAt: null,
+    },
+    include: { user: true },
+  });
+
+  if (!tokenRecord) {
+    throw new ApiError(400, 'EMAIL_VERIFICATION_INVALID', 'Verification link is invalid');
+  }
+
+  if (tokenRecord.expiresAt < new Date()) {
+    throw new ApiError(400, 'EMAIL_VERIFICATION_EXPIRED', 'Verification link has expired');
+  }
+
+  await prisma.user.update({
+    where: { id: tokenRecord.userId },
+    data: { emailVerified: true },
+  });
+
+  await prisma.verificationToken.update({
+    where: { id: tokenRecord.id },
+    data: { usedAt: new Date() },
+  });
+
+  return { email: tokenRecord.user.email };
 }

@@ -136,4 +136,16 @@ On container start we run:
 
 - `prisma migrate deploy`
 
+If your hosting platform supports a pre-build step, run:
+
+```bash
+npm run prisma:migrate:deploy && npm run prisma:generate
+```
+
+If `&&` is not supported, use:
+
+```bash
+npm run prisma:migrate:deploy; npm run prisma:generate
+```
+
 So make sure `DATABASE_URL` points to your production DB.
