@@ -56,6 +56,18 @@ Health check:
 
 - `GET http://localhost:3000/api/v1/health`
 
+## Pre-commit formatting
+
+We use Husky + lint-staged to auto-format staged files on `git commit`.
+
+Setup once after install:
+
+```bash
+npm run prepare
+```
+
+Formatting runs via Prettier only on staged files and re-stages them.
+
 ## Docker (local dev)
 
 Start only the database:

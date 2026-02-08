@@ -11,10 +11,14 @@
     "start": "node src/server.js",
     "lint": "eslint .",
     "format": "prettier --write .",
+    "prepare": "husky",
     "prisma:generate": "prisma generate",
     "prisma:migrate:dev": "prisma migrate dev",
     "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio"
+  },
+  "lint-staged": {
+    "**/*.{js,json,md,yml,yaml}": "prettier --write"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -34,6 +38,8 @@
     "eslint": "^9.9.1",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-import": "^2.30.0",
+    "husky": "^9.1.5",
+    "lint-staged": "^15.2.10",
     "nodemon": "^3.1.7",
     "prettier": "^3.3.3"
   }
