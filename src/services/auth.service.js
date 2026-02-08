@@ -177,3 +177,47 @@ export async function verifyEmail({ token }) {
 
   return { email: tokenRecord.user.email };
 }
+
+export async function resendVerificationEmail({ email }) {
+  const user = await findUserByEmail(email);
+  if (!user) {
+    throw new ApiError(404, 'USER_NOT_FOUND', 'User not found');
+  }
+
+  if (user.emailVerified) {
+    throw new ApiError(400, 'EMAIL_ALREADY_VERIFIED', 'Email is already verified');
+  }
+
+  const lastToken = await prisma.verificationToken.findFirst({
+    where: {
+      userId: user.id,
+      type: 'EMAIL_VERIFY',
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  if (lastToken) {
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    if (lastToken.createdAt > fiveMinutesAgo) {
+      throw new ApiError(
+        429,
+        'EMAIL_VERIFICATION_THROTTLED',
+        'Please wait before requesting another verification email'
+      );
+    }
+  }
+
+  const verification = generateEmailVerificationToken();
+  await prisma.verificationToken.create({
+    data: {
+      userId: user.id,
+      type: 'EMAIL_VERIFY',
+      tokenHash: verification.tokenHash,
+      expiresAt: verification.expiresAt,
+    },
+  });
+
+  await sendVerificationEmail({ to: user.email, token: verification.token });
+
+  return { email: user.email };
+}

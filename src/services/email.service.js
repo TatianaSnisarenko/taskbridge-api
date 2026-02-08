@@ -1,6 +1,7 @@
 import nodemailer from 'nodemailer';
 import { URL } from 'node:url';
 import { env } from '../config/env.js';
+import { buildVerifyEmailTemplate } from '../templates/email/verify-email.js';
 
 const transporter = nodemailer.createTransport({
   host: env.emailHost,
@@ -14,7 +15,7 @@ const transporter = nodemailer.createTransport({
 
 export async function sendEmail({ to, subject, text, html }) {
   return transporter.sendMail({
-    from: env.emailAddress,
+    from: `TeamUp IT <${env.emailAddress}>`,
     to,
     subject,
     text,
@@ -27,9 +28,11 @@ export async function sendVerificationEmail({ to, token }) {
   url.searchParams.set('token', token);
   const link = url.toString();
 
-  const subject = 'Verify your email';
-  const text = `Verify your email: ${link}`;
-  const html = `<p>Verify your email:</p><p><a href="${link}">Confirm email</a></p>`;
+  const { subject, text, html } = buildVerifyEmailTemplate({
+    link,
+    ttlHours: env.emailVerificationTtlHours,
+    contactEmail: env.emailAddress,
+  });
 
   return sendEmail({ to, subject, text, html });
 }

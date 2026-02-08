@@ -55,3 +55,8 @@ export const verifyEmail = asyncHandler(async (req, res) => {
   const { email } = await authService.verifyEmail({ token: req.query?.token });
   return res.status(200).json({ status: 'ok', email });
 });
+
+export const resendVerification = asyncHandler(async (req, res) => {
+  const { email } = await authService.resendVerificationEmail({ email: req.body.email });
+  return res.status(200).json({ status: 'ok', email });
+});

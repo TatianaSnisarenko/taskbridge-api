@@ -23,6 +23,13 @@ export const swaggerSpec = {
           password: { type: 'string', minLength: 6, maxLength: 64 },
         },
       },
+      ResendVerificationRequest: {
+        type: 'object',
+        required: ['email'],
+        properties: {
+          email: { type: 'string', format: 'email' },
+        },
+      },
       SignupRequest: {
         type: 'object',
         required: ['email', 'password'],
@@ -59,6 +66,13 @@ export const swaggerSpec = {
         },
       },
       VerifyEmailResponse: {
+        type: 'object',
+        properties: {
+          status: { type: 'string', example: 'ok' },
+          email: { type: 'string', format: 'email' },
+        },
+      },
+      ResendVerificationResponse: {
         type: 'object',
         properties: {
           status: { type: 'string', example: 'ok' },
@@ -172,6 +186,30 @@ export const swaggerSpec = {
             content: {
               'application/json': {
                 schema: { $ref: '#/components/schemas/VerifyEmailResponse' },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/api/v1/auth/resend-verification': {
+      post: {
+        tags: ['Auth'],
+        summary: 'Resend verification email',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/ResendVerificationRequest' },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'Verification email sent',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ResendVerificationResponse' },
               },
             },
           },

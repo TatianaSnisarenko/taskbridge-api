@@ -41,3 +41,11 @@ export const verifyEmailSchema = Joi.object({
     'any.required': 'Verification token is required',
   }),
 });
+
+export const resendVerificationSchema = Joi.object({
+  email: Joi.string().pattern(emailRegexp).required().messages({
+    'string.pattern.base': 'Email format is invalid',
+    'string.empty': 'Email is required',
+    'any.required': 'Email is required',
+  }),
+});
