@@ -65,3 +65,31 @@ export async function updateProject({ userId, projectId, project }) {
 
   return { projectId: updated.id, updated: true, updatedAt: updated.updatedAt };
 }
+
+export async function deleteProject({ userId, projectId }) {
+  const existing = await prisma.project.findUnique({
+    where: { id: projectId },
+    select: { id: true, ownerUserId: true },
+  });
+  if (!existing) {
+    throw new ApiError(404, 'NOT_FOUND', 'Project not found');
+  }
+  if (existing.ownerUserId !== userId) {
+    throw new ApiError(403, 'NOT_OWNER', 'Project does not belong to user');
+  }
+
+  const deletedAt = new Date();
+  const [updated] = await prisma.$transaction([
+    prisma.project.update({
+      where: { id: projectId },
+      data: { deletedAt, status: 'ARCHIVED' },
+      select: { id: true, deletedAt: true },
+    }),
+    prisma.task.updateMany({
+      where: { projectId, deletedAt: null },
+      data: { deletedAt, status: 'CLOSED' },
+    }),
+  ]);
+
+  return { projectId: updated.id, deletedAt: updated.deletedAt };
+}

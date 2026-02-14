@@ -114,3 +114,11 @@ export const updateProjectParamsSchema = Joi.object({
     'any.required': 'Project id is required',
   }),
 });
+
+export const deleteProjectParamsSchema = Joi.object({
+  projectId: Joi.string().guid({ version: 'uuidv4' }).required().messages({
+    'string.empty': 'Project id is required',
+    'string.guid': 'Project id must be a valid UUID',
+    'any.required': 'Project id is required',
+  }),
+});

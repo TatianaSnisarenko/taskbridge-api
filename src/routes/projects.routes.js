@@ -5,6 +5,7 @@ import { validate } from '../middleware/validate.middleware.js';
 import * as projectsController from '../controllers/projects.controller.js';
 import {
   createProjectSchema,
+  deleteProjectParamsSchema,
   updateProjectParamsSchema,
   updateProjectSchema,
 } from '../schemas/projects.schemas.js';
@@ -26,4 +27,12 @@ projectsRouter.put(
   validate(updateProjectParamsSchema, 'params'),
   validate(updateProjectSchema),
   projectsController.updateProject
+);
+
+projectsRouter.delete(
+  '/:projectId',
+  requireAuth,
+  requirePersona('company'),
+  validate(deleteProjectParamsSchema, 'params'),
+  projectsController.deleteProject
 );

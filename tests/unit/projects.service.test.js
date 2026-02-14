@@ -7,6 +7,10 @@ const prismaMock = {
     findUnique: jest.fn(),
     update: jest.fn(),
   },
+  task: {
+    updateMany: jest.fn(),
+  },
+  $transaction: jest.fn((ops) => Promise.all(ops)),
 };
 
 jest.unstable_mockModule('../../src/db/prisma.js', () => ({ prisma: prismaMock }));
@@ -153,5 +157,47 @@ describe('projects.service', () => {
     });
 
     expect(result).toEqual({ projectId: 'p1', updated: true, updatedAt });
+  });
+
+  test('deleteProject rejects missing project', async () => {
+    prismaMock.project.findUnique.mockResolvedValue(null);
+
+    await expect(
+      projectsService.deleteProject({ userId: 'u1', projectId: 'p1' })
+    ).rejects.toMatchObject({
+      status: 404,
+      code: 'NOT_FOUND',
+    });
+  });
+
+  test('deleteProject rejects non-owner', async () => {
+    prismaMock.project.findUnique.mockResolvedValue({ id: 'p1', ownerUserId: 'u2' });
+
+    await expect(
+      projectsService.deleteProject({ userId: 'u1', projectId: 'p1' })
+    ).rejects.toMatchObject({
+      status: 403,
+      code: 'NOT_OWNER',
+    });
+  });
+
+  test('deleteProject soft deletes project and tasks', async () => {
+    const deletedAt = new Date('2026-02-14T12:30:00Z');
+    prismaMock.project.findUnique.mockResolvedValue({ id: 'p1', ownerUserId: 'u1' });
+    prismaMock.project.update.mockResolvedValue({ id: 'p1', deletedAt });
+    prismaMock.task.updateMany.mockResolvedValue({ count: 2 });
+
+    const result = await projectsService.deleteProject({ userId: 'u1', projectId: 'p1' });
+
+    expect(prismaMock.project.update).toHaveBeenCalledWith({
+      where: { id: 'p1' },
+      data: { deletedAt: expect.any(Date), status: 'ARCHIVED' },
+      select: { id: true, deletedAt: true },
+    });
+    expect(prismaMock.task.updateMany).toHaveBeenCalledWith({
+      where: { projectId: 'p1', deletedAt: null },
+      data: { deletedAt: expect.any(Date), status: 'CLOSED' },
+    });
+    expect(result).toEqual({ projectId: 'p1', deletedAt });
   });
 });

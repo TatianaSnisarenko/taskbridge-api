@@ -26,3 +26,15 @@ export const updateProject = asyncHandler(async (req, res) => {
     updated_at: result.updatedAt.toISOString(),
   });
 });
+
+export const deleteProject = asyncHandler(async (req, res) => {
+  const result = await projectsService.deleteProject({
+    userId: req.user.id,
+    projectId: req.params.projectId,
+  });
+
+  return res.status(200).json({
+    project_id: result.projectId,
+    deleted_at: result.deletedAt.toISOString(),
+  });
+});

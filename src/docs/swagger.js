@@ -322,6 +322,13 @@ export const swaggerSpec = {
           updated_at: { type: 'string', format: 'date-time' },
         },
       },
+      DeleteProjectResponse: {
+        type: 'object',
+        properties: {
+          project_id: { type: 'string', format: 'uuid' },
+          deleted_at: { type: 'string', format: 'date-time' },
+        },
+      },
       DeveloperPublicProfileResponse: {
         type: 'object',
         properties: {
@@ -813,6 +820,39 @@ export const swaggerSpec = {
           403: { description: 'Not owner' },
           404: { description: 'Not found' },
           409: { description: 'Project title already exists' },
+        },
+      },
+      delete: {
+        tags: ['Projects'],
+        summary: 'Delete project',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'projectId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+          {
+            name: 'X-Persona',
+            in: 'header',
+            required: true,
+            schema: { type: 'string', enum: ['company'] },
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Project deleted',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/DeleteProjectResponse' },
+              },
+            },
+          },
+          400: { description: 'Validation error' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Not owner' },
+          404: { description: 'Not found' },
         },
       },
     },

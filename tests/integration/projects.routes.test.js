@@ -263,4 +263,130 @@ describe('projects routes', () => {
       maxTalents: updatePayload.max_talents,
     });
   });
+
+  test('DELETE /projects/:projectId rejects unauthorized', async () => {
+    const res = await request(app).delete('/api/v1/projects/p1');
+
+    expect(res.status).toBe(401);
+    expect(res.body.error.code).toBe('AUTH_REQUIRED');
+  });
+
+  test('DELETE /projects/:projectId rejects invalid projectId', async () => {
+    const user = await createUser({ companyProfile: { companyName: 'TeamUp' } });
+    const token = buildAccessToken({ userId: user.id, email: user.email });
+
+    const res = await request(app)
+      .delete('/api/v1/projects/not-a-uuid')
+      .set('Authorization', `Bearer ${token}`)
+      .set('X-Persona', 'company');
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    expect(res.body.error.details).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          field: 'projectId',
+          issue: 'Project id must be a valid UUID',
+        }),
+      ])
+    );
+  });
+
+  test('DELETE /projects/:projectId rejects missing project', async () => {
+    const user = await createUser({ companyProfile: { companyName: 'TeamUp' } });
+    const token = buildAccessToken({ userId: user.id, email: user.email });
+
+    const res = await request(app)
+      .delete('/api/v1/projects/3fa85f64-5717-4562-b3fc-2c963f66afa6')
+      .set('Authorization', `Bearer ${token}`)
+      .set('X-Persona', 'company');
+
+    expect(res.status).toBe(404);
+    expect(res.body.error.code).toBe('NOT_FOUND');
+  });
+
+  test('DELETE /projects/:projectId rejects non-owner', async () => {
+    const owner = await createUser({ companyProfile: { companyName: 'TeamUp' } });
+    const otherUser = await createUser({ companyProfile: { companyName: 'Other' } });
+    const token = buildAccessToken({ userId: otherUser.id, email: otherUser.email });
+
+    const project = await prisma.project.create({
+      data: {
+        ownerUserId: owner.id,
+        title: projectPayload.title,
+        shortDescription: projectPayload.short_description,
+        description: projectPayload.description,
+        technologies: projectPayload.technologies,
+        visibility: projectPayload.visibility,
+        status: projectPayload.status,
+        maxTalents: projectPayload.max_talents,
+      },
+    });
+
+    const res = await request(app)
+      .delete(`/api/v1/projects/${project.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .set('X-Persona', 'company');
+
+    expect(res.status).toBe(403);
+    expect(res.body.error.code).toBe('NOT_OWNER');
+  });
+
+  test('DELETE /projects/:projectId soft deletes project and tasks', async () => {
+    const owner = await createUser({ companyProfile: { companyName: 'TeamUp' } });
+    const token = buildAccessToken({ userId: owner.id, email: owner.email });
+
+    const project = await prisma.project.create({
+      data: {
+        ownerUserId: owner.id,
+        title: projectPayload.title,
+        shortDescription: projectPayload.short_description,
+        description: projectPayload.description,
+        technologies: projectPayload.technologies,
+        visibility: projectPayload.visibility,
+        status: projectPayload.status,
+        maxTalents: projectPayload.max_talents,
+      },
+    });
+
+    await prisma.task.create({
+      data: {
+        ownerUserId: owner.id,
+        projectId: project.id,
+        title: 'Task A',
+        description: 'First task',
+      },
+    });
+    await prisma.task.create({
+      data: {
+        ownerUserId: owner.id,
+        projectId: project.id,
+        title: 'Task B',
+        description: 'Second task',
+      },
+    });
+
+    const res = await request(app)
+      .delete(`/api/v1/projects/${project.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .set('X-Persona', 'company');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      project_id: project.id,
+      deleted_at: expect.any(String),
+    });
+    expect(Number.isNaN(Date.parse(res.body.deleted_at))).toBe(false);
+
+    const deletedProject = await prisma.project.findUnique({ where: { id: project.id } });
+    expect(deletedProject.deletedAt).not.toBeNull();
+    expect(deletedProject.status).toBe('ARCHIVED');
+
+    const tasks = await prisma.task.findMany({ where: { projectId: project.id } });
+    expect(tasks).toHaveLength(2);
+    for (const task of tasks) {
+      expect(task.deletedAt).not.toBeNull();
+      expect(task.status).toBe('CLOSED');
+    }
+  });
 });
