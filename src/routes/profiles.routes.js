@@ -4,6 +4,7 @@ import { validate } from '../middleware/validate.middleware.js';
 import * as profilesController from '../controllers/profiles.controller.js';
 import {
   createDeveloperProfileSchema,
+  getDeveloperProfileParamsSchema,
   updateDeveloperProfileSchema,
 } from '../schemas/profiles.schemas.js';
 
@@ -21,4 +22,10 @@ profilesRouter.put(
   requireAuth,
   validate(updateDeveloperProfileSchema),
   profilesController.updateDeveloperProfile
+);
+
+profilesRouter.get(
+  '/developer/:userId',
+  validate(getDeveloperProfileParamsSchema, 'params'),
+  profilesController.getDeveloperProfile
 );

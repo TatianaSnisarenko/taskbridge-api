@@ -92,3 +92,11 @@ const developerProfileFields = {
 export const createDeveloperProfileSchema = Joi.object(developerProfileFields);
 
 export const updateDeveloperProfileSchema = Joi.object(developerProfileFields);
+
+export const getDeveloperProfileParamsSchema = Joi.object({
+  userId: Joi.string().guid({ version: 'uuidv4' }).required().messages({
+    'string.empty': 'User id is required',
+    'string.guid': 'User id must be a valid UUID',
+    'any.required': 'User id is required',
+  }),
+});

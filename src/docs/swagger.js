@@ -183,6 +183,38 @@ export const swaggerSpec = {
           updated_at: { type: 'string', format: 'date-time' },
         },
       },
+      DeveloperPublicProfileResponse: {
+        type: 'object',
+        properties: {
+          user_id: { type: 'string', format: 'uuid' },
+          display_name: { type: 'string', minLength: 2, maxLength: 100 },
+          primary_role: { type: 'string', minLength: 2, maxLength: 100 },
+          bio: { type: 'string', minLength: 10, maxLength: 500 },
+          experience_level: {
+            type: 'string',
+            enum: ['STUDENT', 'JUNIOR', 'MIDDLE', 'SENIOR'],
+          },
+          location: { type: 'string', minLength: 2, maxLength: 100 },
+          timezone: { type: 'string', minLength: 3, maxLength: 50 },
+          skills: {
+            type: 'array',
+            items: { type: 'string', minLength: 1, maxLength: 50 },
+            uniqueItems: true,
+            maxItems: 50,
+          },
+          tech_stack: {
+            type: 'array',
+            items: { type: 'string', minLength: 1, maxLength: 50 },
+            uniqueItems: true,
+            maxItems: 50,
+          },
+          portfolio_url: { type: 'string', format: 'uri' },
+          github_url: { type: 'string', format: 'uri' },
+          linkedin_url: { type: 'string', format: 'uri' },
+          avg_rating: { type: 'number', format: 'float', example: 4.7 },
+          reviews_count: { type: 'integer', example: 12 },
+        },
+      },
     },
   },
   paths: {
@@ -414,6 +446,32 @@ export const swaggerSpec = {
           },
           400: { description: 'Validation error' },
           401: { description: 'Unauthorized' },
+          404: { description: 'Profile not found' },
+        },
+      },
+    },
+    '/api/v1/profiles/developer/{userId}': {
+      get: {
+        tags: ['Profiles'],
+        summary: 'Get public developer profile',
+        parameters: [
+          {
+            name: 'userId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Developer profile',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/DeveloperPublicProfileResponse' },
+              },
+            },
+          },
+          400: { description: 'Validation error' },
           404: { description: 'Profile not found' },
         },
       },

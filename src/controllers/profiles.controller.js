@@ -25,3 +25,11 @@ export const updateDeveloperProfile = asyncHandler(async (req, res) => {
     updated_at: result.updatedAt.toISOString(),
   });
 });
+
+export const getDeveloperProfile = asyncHandler(async (req, res) => {
+  const result = await profilesService.getDeveloperProfileByUserId({
+    userId: req.params.userId,
+  });
+
+  return res.status(200).json(result);
+});

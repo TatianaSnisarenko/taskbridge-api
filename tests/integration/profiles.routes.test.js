@@ -275,4 +275,68 @@ describe('profiles routes', () => {
       linkedinUrl: basePayload.linkedin_url,
     });
   });
+
+  test('GET /profiles/developer/:userId rejects invalid userId', async () => {
+    const res = await request(app).get('/api/v1/profiles/developer/not-a-uuid');
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    expect(res.body.error.details).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          field: 'userId',
+          issue: 'User id must be a valid UUID',
+        }),
+      ])
+    );
+  });
+
+  test('GET /profiles/developer/:userId returns 404 for missing profile', async () => {
+    const user = await createUser();
+
+    const res = await request(app).get(`/api/v1/profiles/developer/${user.id}`);
+
+    expect(res.status).toBe(404);
+    expect(res.body.error.code).toBe('PROFILE_NOT_FOUND');
+  });
+
+  test('GET /profiles/developer/:userId returns public profile', async () => {
+    const user = await createUser({
+      developerProfile: {
+        displayName: 'Tetiana',
+        jobTitle: 'Java Backend Engineer',
+        bio: 'Short bio',
+        experienceLevel: 'SENIOR',
+        location: 'Ukraine',
+        timezone: 'Europe/Zaporozhye',
+        skills: ['Java', 'Spring'],
+        techStack: ['Spring Boot', 'JPA'],
+        portfolioUrl: 'https://example.com/portfolio',
+        githubUrl: 'https://github.com/example',
+        linkedinUrl: 'https://linkedin.com/in/example',
+        avgRating: 4.7,
+        reviewsCount: 12,
+      },
+    });
+
+    const res = await request(app).get(`/api/v1/profiles/developer/${user.id}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      user_id: user.id,
+      display_name: 'Tetiana',
+      primary_role: 'Java Backend Engineer',
+      bio: 'Short bio',
+      experience_level: 'SENIOR',
+      location: 'Ukraine',
+      timezone: 'Europe/Zaporozhye',
+      skills: ['Java', 'Spring'],
+      tech_stack: ['Spring Boot', 'JPA'],
+      portfolio_url: 'https://example.com/portfolio',
+      github_url: 'https://github.com/example',
+      linkedin_url: 'https://linkedin.com/in/example',
+      avg_rating: 4.7,
+      reviews_count: 12,
+    });
+  });
 });

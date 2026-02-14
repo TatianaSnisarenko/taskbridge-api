@@ -19,6 +19,32 @@ function mapDeveloperProfileInput(input) {
   };
 }
 
+function toNumber(value) {
+  if (value === null || value === undefined) return null;
+  if (typeof value === 'number') return value;
+  if (typeof value?.toNumber === 'function') return value.toNumber();
+  return Number(value);
+}
+
+function mapDeveloperProfileOutput(profile) {
+  return {
+    user_id: profile.userId,
+    display_name: profile.displayName,
+    primary_role: profile.jobTitle,
+    bio: profile.bio,
+    experience_level: profile.experienceLevel,
+    location: profile.location,
+    timezone: profile.timezone,
+    skills: profile.skills,
+    tech_stack: profile.techStack,
+    portfolio_url: profile.portfolioUrl,
+    github_url: profile.githubUrl,
+    linkedin_url: profile.linkedinUrl,
+    avg_rating: toNumber(profile.avgRating),
+    reviews_count: profile.reviewsCount,
+  };
+}
+
 export async function createDeveloperProfile({ userId, profile }) {
   const existing = await prisma.developerProfile.findUnique({ where: { userId } });
   if (existing) {
@@ -48,4 +74,13 @@ export async function updateDeveloperProfile({ userId, profile }) {
   });
 
   return { userId: updated.userId, updated: true, updatedAt: updated.updatedAt };
+}
+
+export async function getDeveloperProfileByUserId({ userId }) {
+  const profile = await prisma.developerProfile.findUnique({ where: { userId } });
+  if (!profile) {
+    throw new ApiError(404, 'PROFILE_NOT_FOUND', 'Developer profile not found');
+  }
+
+  return mapDeveloperProfileOutput(profile);
 }

@@ -134,4 +134,53 @@ describe('profiles.service', () => {
 
     expect(result).toEqual({ userId: 'u1', updated: true, updatedAt });
   });
+
+  test('getDeveloperProfileByUserId rejects missing profile', async () => {
+    prismaMock.developerProfile.findUnique.mockResolvedValue(null);
+
+    await expect(
+      profilesService.getDeveloperProfileByUserId({ userId: 'u1' })
+    ).rejects.toMatchObject({
+      status: 404,
+      code: 'PROFILE_NOT_FOUND',
+    });
+  });
+
+  test('getDeveloperProfileByUserId returns mapped profile', async () => {
+    prismaMock.developerProfile.findUnique.mockResolvedValue({
+      userId: 'u1',
+      displayName: 'Tetiana',
+      jobTitle: 'Java Backend Engineer',
+      bio: 'Short bio',
+      experienceLevel: 'SENIOR',
+      location: 'Ukraine',
+      timezone: 'Europe/Zaporozhye',
+      skills: ['Java', 'Spring'],
+      techStack: ['Spring Boot', 'JPA'],
+      portfolioUrl: 'https://example.com/portfolio',
+      githubUrl: 'https://github.com/example',
+      linkedinUrl: 'https://linkedin.com/in/example',
+      avgRating: { toNumber: () => 4.7 },
+      reviewsCount: 12,
+    });
+
+    const result = await profilesService.getDeveloperProfileByUserId({ userId: 'u1' });
+
+    expect(result).toEqual({
+      user_id: 'u1',
+      display_name: 'Tetiana',
+      primary_role: 'Java Backend Engineer',
+      bio: 'Short bio',
+      experience_level: 'SENIOR',
+      location: 'Ukraine',
+      timezone: 'Europe/Zaporozhye',
+      skills: ['Java', 'Spring'],
+      tech_stack: ['Spring Boot', 'JPA'],
+      portfolio_url: 'https://example.com/portfolio',
+      github_url: 'https://github.com/example',
+      linkedin_url: 'https://linkedin.com/in/example',
+      avg_rating: 4.7,
+      reviews_count: 12,
+    });
+  });
 });
