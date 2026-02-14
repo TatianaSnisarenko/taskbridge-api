@@ -133,4 +133,22 @@ describe('persona.middleware', () => {
     expect(req.persona).toBe('company');
     expect(next).toHaveBeenCalledWith();
   });
+
+  test('rejects when required persona does not match', async () => {
+    const prismaMock = {
+      developerProfile: { findUnique: jest.fn().mockResolvedValue({ id: 'd1' }) },
+      companyProfile: { findUnique: jest.fn() },
+    };
+    const requirePersona = await loadPersonaMiddleware({ prismaMock });
+    const middleware = requirePersona('company');
+
+    const req = { headers: { 'x-persona': 'developer' }, user: { id: 'u1' } };
+    const next = jest.fn();
+
+    await middleware(req, {}, next);
+
+    const err = next.mock.calls[0][0];
+    expect(err.status).toBe(403);
+    expect(err.code).toBe('PERSONA_NOT_AVAILABLE');
+  });
 });

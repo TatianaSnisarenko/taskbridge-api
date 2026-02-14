@@ -1,7 +1,13 @@
 import { prisma } from '../db/prisma.js';
 import { ApiError } from '../utils/ApiError.js';
 
-export function requirePersona() {
+function getPersonaErrorMessage(persona) {
+  return persona === 'company'
+    ? 'Company profile does not exist'
+    : 'Developer profile does not exist';
+}
+
+export function requirePersona(requiredPersona) {
   return async (req, res, next) => {
     const persona = req.headers['x-persona'];
     if (!persona)
@@ -9,6 +15,12 @@ export function requirePersona() {
 
     if (persona !== 'developer' && persona !== 'company') {
       return next(new ApiError(400, 'PERSONA_INVALID', 'X-Persona must be developer or company'));
+    }
+
+    if (requiredPersona && persona !== requiredPersona) {
+      return next(
+        new ApiError(403, 'PERSONA_NOT_AVAILABLE', getPersonaErrorMessage(requiredPersona))
+      );
     }
 
     // Ensure profile exists for the persona

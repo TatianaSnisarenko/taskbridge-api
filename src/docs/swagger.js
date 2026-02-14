@@ -5,7 +5,13 @@ export const swaggerSpec = {
     version: '0.1.0',
   },
   servers: [{ url: 'http://localhost:3000' }],
-  tags: [{ name: 'Health' }, { name: 'Auth' }, { name: 'Me' }, { name: 'Profiles' }],
+  tags: [
+    { name: 'Health' },
+    { name: 'Auth' },
+    { name: 'Me' },
+    { name: 'Profiles' },
+    { name: 'Projects' },
+  ],
   components: {
     securitySchemes: {
       bearerAuth: {
@@ -261,6 +267,32 @@ export const swaggerSpec = {
           verified: { type: 'boolean' },
           avg_rating: { type: 'number', format: 'float', example: 4.6 },
           reviews_count: { type: 'integer', example: 8 },
+        },
+      },
+      CreateProjectRequest: {
+        type: 'object',
+        required: ['title', 'short_description', 'description'],
+        properties: {
+          title: { type: 'string', minLength: 3, maxLength: 120 },
+          short_description: { type: 'string', minLength: 10, maxLength: 200 },
+          description: { type: 'string', minLength: 10, maxLength: 2000 },
+          technologies: {
+            type: 'array',
+            items: { type: 'string', minLength: 1, maxLength: 50 },
+            uniqueItems: true,
+            minItems: 1,
+            maxItems: 50,
+          },
+          visibility: { type: 'string', enum: ['PUBLIC', 'UNLISTED'] },
+          status: { type: 'string', enum: ['ACTIVE', 'ARCHIVED'] },
+          max_talents: { type: 'integer', minimum: 1, maximum: 100 },
+        },
+      },
+      CreateProjectResponse: {
+        type: 'object',
+        properties: {
+          project_id: { type: 'string', format: 'uuid' },
+          created_at: { type: 'string', format: 'date-time' },
         },
       },
       DeveloperPublicProfileResponse: {
@@ -655,6 +687,51 @@ export const swaggerSpec = {
           },
           400: { description: 'Validation error' },
           404: { description: 'Profile not found' },
+        },
+      },
+    },
+    '/api/v1/projects': {
+      post: {
+        tags: ['Projects'],
+        summary: 'Create project',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'X-Persona',
+            in: 'header',
+            required: true,
+            schema: { type: 'string', enum: ['company'] },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/CreateProjectRequest' },
+              example: {
+                title: 'TeamUp MVP',
+                short_description: 'Build MVP for marketplace',
+                description: 'Longer description...',
+                technologies: ['Node.js', 'PostgreSQL', 'Prisma'],
+                visibility: 'PUBLIC',
+                status: 'ACTIVE',
+                max_talents: 3,
+              },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: 'Project created',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/CreateProjectResponse' },
+              },
+            },
+          },
+          400: { description: 'Validation error' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Persona not available' },
         },
       },
     },
