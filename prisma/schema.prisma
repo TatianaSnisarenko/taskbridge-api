@@ -245,6 +245,7 @@ model Project {
 
   notifications Notification[]
 
+  @@unique([ownerUserId, title])
   @@index([ownerUserId, createdAt(sort: Desc)])
   @@index([visibility, deletedAt, createdAt(sort: Desc)])
   @@index([deletedAt, createdAt(sort: Desc)])

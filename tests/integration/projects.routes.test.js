@@ -117,4 +117,24 @@ describe('projects routes', () => {
       maxTalents: projectPayload.max_talents,
     });
   });
+
+  test('POST /projects rejects duplicate title for same owner', async () => {
+    const user = await createUser({ companyProfile: { companyName: 'TeamUp' } });
+    const token = buildAccessToken({ userId: user.id, email: user.email });
+
+    await request(app)
+      .post('/api/v1/projects')
+      .set('Authorization', `Bearer ${token}`)
+      .set('X-Persona', 'company')
+      .send(projectPayload);
+
+    const res = await request(app)
+      .post('/api/v1/projects')
+      .set('Authorization', `Bearer ${token}`)
+      .set('X-Persona', 'company')
+      .send(projectPayload);
+
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe('PROJECT_TITLE_EXISTS');
+  });
 });

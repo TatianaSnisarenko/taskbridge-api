@@ -1,4 +1,5 @@
 import { prisma } from '../db/prisma.js';
+import { ApiError } from '../utils/ApiError.js';
 
 function mapProjectInput(input) {
   return {
@@ -13,6 +14,14 @@ function mapProjectInput(input) {
 }
 
 export async function createProject({ userId, project }) {
+  const existing = await prisma.project.findFirst({
+    where: { ownerUserId: userId, title: project.title },
+    select: { id: true },
+  });
+  if (existing) {
+    throw new ApiError(409, 'PROJECT_TITLE_EXISTS', 'Project title already exists');
+  }
+
   const created = await prisma.project.create({
     data: {
       ownerUserId: userId,

@@ -732,6 +732,7 @@ export const swaggerSpec = {
           400: { description: 'Validation error' },
           401: { description: 'Unauthorized' },
           403: { description: 'Persona not available' },
+          409: { description: 'Project title already exists' },
         },
       },
     },
