@@ -22,4 +22,19 @@ export default [
       'import/extensions': ['error', 'ignorePackages', { js: 'always' }],
     },
   },
+  {
+    files: ['tests/**/*.js'],
+    languageOptions: {
+      globals: {
+        describe: 'readonly',
+        test: 'readonly',
+        it: 'readonly',
+        expect: 'readonly',
+        beforeAll: 'readonly',
+        beforeEach: 'readonly',
+        afterAll: 'readonly',
+        afterEach: 'readonly',
+      },
+    },
+  },
 ];

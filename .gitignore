@@ -18,10 +18,12 @@ coverage
 .history
 .tmp
 .temp
+tests/.tmp
 .env
 .env
 .env.*
 !.env.example
+!.env.test
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -38,3 +40,5 @@ prisma/dev.db-journal
 # IDE
 .idea
 .vscode
+docs
+docs
