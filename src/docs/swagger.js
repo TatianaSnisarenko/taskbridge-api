@@ -132,6 +132,57 @@ export const swaggerSpec = {
           created: { type: 'boolean', example: true },
         },
       },
+      UpdateDeveloperProfileRequest: {
+        type: 'object',
+        required: ['display_name'],
+        properties: {
+          display_name: { type: 'string', minLength: 2, maxLength: 100 },
+          primary_role: { type: 'string', minLength: 2, maxLength: 100 },
+          bio: { type: 'string', minLength: 10, maxLength: 500 },
+          experience_level: {
+            type: 'string',
+            enum: ['STUDENT', 'JUNIOR', 'MIDDLE', 'SENIOR'],
+          },
+          location: { type: 'string', minLength: 2, maxLength: 100 },
+          timezone: { type: 'string', minLength: 3, maxLength: 50 },
+          skills: {
+            type: 'array',
+            items: { type: 'string', minLength: 1, maxLength: 50 },
+            uniqueItems: true,
+            maxItems: 50,
+          },
+          tech_stack: {
+            type: 'array',
+            items: { type: 'string', minLength: 1, maxLength: 50 },
+            uniqueItems: true,
+            maxItems: 50,
+          },
+          availability: {
+            type: 'string',
+            enum: ['FEW_HOURS_WEEK', 'PART_TIME', 'FULL_TIME'],
+          },
+          preferred_task_categories: {
+            type: 'array',
+            items: {
+              type: 'string',
+              enum: ['BACKEND', 'FRONTEND', 'DEVOPS', 'QA', 'DATA', 'MOBILE', 'OTHER'],
+            },
+            uniqueItems: true,
+            maxItems: 10,
+          },
+          portfolio_url: { type: 'string', format: 'uri' },
+          github_url: { type: 'string', format: 'uri' },
+          linkedin_url: { type: 'string', format: 'uri' },
+        },
+      },
+      UpdateDeveloperProfileResponse: {
+        type: 'object',
+        properties: {
+          user_id: { type: 'string', format: 'uuid' },
+          updated: { type: 'boolean', example: true },
+          updated_at: { type: 'string', format: 'date-time' },
+        },
+      },
     },
   },
   paths: {
@@ -323,6 +374,47 @@ export const swaggerSpec = {
           400: { description: 'Validation error' },
           401: { description: 'Unauthorized' },
           409: { description: 'Profile already exists' },
+        },
+      },
+      put: {
+        tags: ['Profiles'],
+        summary: 'Update developer profile',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/UpdateDeveloperProfileRequest' },
+              example: {
+                display_name: 'Tetiana',
+                primary_role: 'Java Backend Engineer',
+                bio: 'Updated bio',
+                experience_level: 'SENIOR',
+                location: 'Ukraine',
+                timezone: 'Europe/Zaporozhye',
+                skills: ['Java', 'Spring'],
+                tech_stack: ['Spring Boot', 'JPA'],
+                availability: 'PART_TIME',
+                preferred_task_categories: ['BACKEND', 'DEVOPS'],
+                portfolio_url: 'https://example.com/portfolio',
+                github_url: 'https://github.com/example',
+                linkedin_url: 'https://linkedin.com/in/example',
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'Developer profile updated',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/UpdateDeveloperProfileResponse' },
+              },
+            },
+          },
+          400: { description: 'Validation error' },
+          401: { description: 'Unauthorized' },
+          404: { description: 'Profile not found' },
         },
       },
     },

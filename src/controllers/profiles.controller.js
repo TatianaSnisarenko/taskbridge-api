@@ -12,3 +12,16 @@ export const createDeveloperProfile = asyncHandler(async (req, res) => {
     created: result.created,
   });
 });
+
+export const updateDeveloperProfile = asyncHandler(async (req, res) => {
+  const result = await profilesService.updateDeveloperProfile({
+    userId: req.user.id,
+    profile: req.body,
+  });
+
+  return res.status(200).json({
+    user_id: result.userId,
+    updated: result.updated,
+    updated_at: result.updatedAt.toISOString(),
+  });
+});

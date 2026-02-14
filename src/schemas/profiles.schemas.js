@@ -4,7 +4,7 @@ const EXPERIENCE_LEVELS = ['STUDENT', 'JUNIOR', 'MIDDLE', 'SENIOR'];
 const AVAILABILITY_LEVELS = ['FEW_HOURS_WEEK', 'PART_TIME', 'FULL_TIME'];
 const TASK_CATEGORIES = ['BACKEND', 'FRONTEND', 'DEVOPS', 'QA', 'DATA', 'MOBILE', 'OTHER'];
 
-export const createDeveloperProfileSchema = Joi.object({
+const developerProfileFields = {
   display_name: Joi.string().trim().min(2).max(100).required().messages({
     'string.empty': 'Display name is required',
     'string.min': 'Display name must be at least 2 characters',
@@ -87,4 +87,8 @@ export const createDeveloperProfileSchema = Joi.object({
   linkedin_url: Joi.string().uri().messages({
     'string.uri': 'LinkedIn URL must be a valid URI',
   }),
-});
+};
+
+export const createDeveloperProfileSchema = Joi.object(developerProfileFields);
+
+export const updateDeveloperProfileSchema = Joi.object(developerProfileFields);

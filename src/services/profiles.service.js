@@ -34,3 +34,18 @@ export async function createDeveloperProfile({ userId, profile }) {
 
   return { userId, created: true };
 }
+
+export async function updateDeveloperProfile({ userId, profile }) {
+  const existing = await prisma.developerProfile.findUnique({ where: { userId } });
+  if (!existing) {
+    throw new ApiError(404, 'PROFILE_NOT_FOUND', 'Developer profile not found');
+  }
+
+  const updated = await prisma.developerProfile.update({
+    where: { userId },
+    data: mapDeveloperProfileInput(profile),
+    select: { userId: true, updatedAt: true },
+  });
+
+  return { userId: updated.userId, updated: true, updatedAt: updated.updatedAt };
+}

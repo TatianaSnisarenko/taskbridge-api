@@ -197,4 +197,82 @@ describe('profiles routes', () => {
       linkedinUrl: basePayload.linkedin_url,
     });
   });
+
+  test('PUT /profiles/developer rejects unauthorized', async () => {
+    const res = await request(app).put('/api/v1/profiles/developer').send(basePayload);
+
+    expect(res.status).toBe(401);
+    expect(res.body.error.code).toBe('AUTH_REQUIRED');
+  });
+
+  test('PUT /profiles/developer rejects invalid payload', async () => {
+    const user = await createUser({ developerProfile: { displayName: 'Old' } });
+    const token = buildAccessToken({ userId: user.id, email: user.email });
+
+    const res = await request(app)
+      .put('/api/v1/profiles/developer')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ display_name: 'A' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    expect(res.body.error.details).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          field: 'display_name',
+          issue: 'Display name must be at least 2 characters',
+        }),
+      ])
+    );
+  });
+
+  test('PUT /profiles/developer rejects missing profile', async () => {
+    const user = await createUser();
+    const token = buildAccessToken({ userId: user.id, email: user.email });
+
+    const res = await request(app)
+      .put('/api/v1/profiles/developer')
+      .set('Authorization', `Bearer ${token}`)
+      .send(basePayload);
+
+    expect(res.status).toBe(404);
+    expect(res.body.error.code).toBe('PROFILE_NOT_FOUND');
+  });
+
+  test('PUT /profiles/developer updates profile', async () => {
+    const user = await createUser({ developerProfile: { displayName: 'Old' } });
+    const token = buildAccessToken({ userId: user.id, email: user.email });
+
+    const res = await request(app)
+      .put('/api/v1/profiles/developer')
+      .set('Authorization', `Bearer ${token}`)
+      .send(basePayload);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      user_id: user.id,
+      updated: true,
+      updated_at: expect.any(String),
+    });
+    expect(Number.isNaN(Date.parse(res.body.updated_at))).toBe(false);
+
+    const profile = await prisma.developerProfile.findUnique({ where: { userId: user.id } });
+
+    expect(profile).toMatchObject({
+      userId: user.id,
+      displayName: basePayload.display_name,
+      jobTitle: basePayload.primary_role,
+      bio: basePayload.bio,
+      experienceLevel: basePayload.experience_level,
+      location: basePayload.location,
+      timezone: basePayload.timezone,
+      skills: basePayload.skills,
+      techStack: basePayload.tech_stack,
+      availability: basePayload.availability,
+      preferredTaskCategories: basePayload.preferred_task_categories,
+      portfolioUrl: basePayload.portfolio_url,
+      githubUrl: basePayload.github_url,
+      linkedinUrl: basePayload.linkedin_url,
+    });
+  });
 });
