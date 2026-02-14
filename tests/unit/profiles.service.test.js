@@ -6,6 +6,10 @@ const prismaMock = {
     create: jest.fn(),
     update: jest.fn(),
   },
+  companyProfile: {
+    findUnique: jest.fn(),
+    create: jest.fn(),
+  },
 };
 
 jest.unstable_mockModule('../../src/db/prisma.js', () => ({ prisma: prismaMock }));
@@ -182,5 +186,55 @@ describe('profiles.service', () => {
       avg_rating: 4.7,
       reviews_count: 12,
     });
+  });
+
+  test('createCompanyProfile rejects existing profile', async () => {
+    prismaMock.companyProfile.findUnique.mockResolvedValue({ userId: 'u2' });
+
+    await expect(
+      profilesService.createCompanyProfile({
+        userId: 'u2',
+        profile: { company_name: 'TeamUp' },
+      })
+    ).rejects.toMatchObject({
+      status: 409,
+      code: 'PROFILE_ALREADY_EXISTS',
+    });
+  });
+
+  test('createCompanyProfile creates profile', async () => {
+    prismaMock.companyProfile.findUnique.mockResolvedValue(null);
+    prismaMock.companyProfile.create.mockResolvedValue({ userId: 'u2' });
+
+    const profile = {
+      company_name: 'TeamUp Studio',
+      company_type: 'STARTUP',
+      description: 'We build platforms for remote teams',
+      team_size: 4,
+      country: 'UA',
+      timezone: 'Europe/Zaporozhye',
+      contact_email: 'contact@teamup.dev',
+      website_url: 'https://teamup.dev',
+      links: { linkedin: 'https://linkedin.com/company/teamup' },
+    };
+
+    const result = await profilesService.createCompanyProfile({ userId: 'u2', profile });
+
+    expect(prismaMock.companyProfile.create).toHaveBeenCalledWith({
+      data: {
+        userId: 'u2',
+        companyName: 'TeamUp Studio',
+        companyType: 'STARTUP',
+        description: 'We build platforms for remote teams',
+        teamSize: 4,
+        country: 'UA',
+        timezone: 'Europe/Zaporozhye',
+        contactEmail: 'contact@teamup.dev',
+        websiteUrl: 'https://teamup.dev',
+        links: { linkedin: 'https://linkedin.com/company/teamup' },
+      },
+    });
+
+    expect(result).toEqual({ userId: 'u2', created: true });
   });
 });

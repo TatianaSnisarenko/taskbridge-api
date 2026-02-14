@@ -33,3 +33,15 @@ export const getDeveloperProfile = asyncHandler(async (req, res) => {
 
   return res.status(200).json(result);
 });
+
+export const createCompanyProfile = asyncHandler(async (req, res) => {
+  const result = await profilesService.createCompanyProfile({
+    userId: req.user.id,
+    profile: req.body,
+  });
+
+  return res.status(201).json({
+    user_id: result.userId,
+    created: result.created,
+  });
+});

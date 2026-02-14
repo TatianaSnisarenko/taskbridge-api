@@ -183,6 +183,34 @@ export const swaggerSpec = {
           updated_at: { type: 'string', format: 'date-time' },
         },
       },
+      CreateCompanyProfileRequest: {
+        type: 'object',
+        required: ['company_name'],
+        properties: {
+          company_name: { type: 'string', minLength: 2, maxLength: 100 },
+          company_type: {
+            type: 'string',
+            enum: ['STARTUP', 'SMB', 'ENTERPRISE', 'INDIVIDUAL'],
+          },
+          description: { type: 'string', minLength: 10, maxLength: 1000 },
+          team_size: { type: 'integer', minimum: 1, maximum: 100000 },
+          country: { type: 'string', pattern: '^[A-Z]{2}$' },
+          timezone: { type: 'string', minLength: 3, maxLength: 50 },
+          contact_email: { type: 'string', format: 'email' },
+          website_url: { type: 'string', format: 'uri' },
+          links: {
+            type: 'object',
+            additionalProperties: { type: 'string', format: 'uri' },
+          },
+        },
+      },
+      CreateCompanyProfileResponse: {
+        type: 'object',
+        properties: {
+          user_id: { type: 'string', format: 'uuid' },
+          created: { type: 'boolean', example: true },
+        },
+      },
       DeveloperPublicProfileResponse: {
         type: 'object',
         properties: {
@@ -473,6 +501,45 @@ export const swaggerSpec = {
           },
           400: { description: 'Validation error' },
           404: { description: 'Profile not found' },
+        },
+      },
+    },
+    '/api/v1/profiles/company': {
+      post: {
+        tags: ['Profiles'],
+        summary: 'Create company profile',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/CreateCompanyProfileRequest' },
+              example: {
+                company_name: 'TeamUp Studio',
+                company_type: 'STARTUP',
+                description: 'We build...',
+                team_size: 4,
+                country: 'UA',
+                timezone: 'Europe/Zaporozhye',
+                contact_email: 'contact@teamup.dev',
+                website_url: 'https://teamup.dev',
+                links: { linkedin: 'https://linkedin.com/company/teamup' },
+              },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: 'Company profile created',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/CreateCompanyProfileResponse' },
+              },
+            },
+          },
+          400: { description: 'Validation error' },
+          401: { description: 'Unauthorized' },
+          409: { description: 'Profile already exists' },
         },
       },
     },

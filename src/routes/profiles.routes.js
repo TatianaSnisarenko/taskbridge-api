@@ -3,6 +3,7 @@ import { requireAuth } from '../middleware/auth.middleware.js';
 import { validate } from '../middleware/validate.middleware.js';
 import * as profilesController from '../controllers/profiles.controller.js';
 import {
+  createCompanyProfileSchema,
   createDeveloperProfileSchema,
   getDeveloperProfileParamsSchema,
   updateDeveloperProfileSchema,
@@ -28,4 +29,11 @@ profilesRouter.get(
   '/developer/:userId',
   validate(getDeveloperProfileParamsSchema, 'params'),
   profilesController.getDeveloperProfile
+);
+
+profilesRouter.post(
+  '/company',
+  requireAuth,
+  validate(createCompanyProfileSchema),
+  profilesController.createCompanyProfile
 );

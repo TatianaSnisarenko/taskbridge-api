@@ -25,6 +25,18 @@ const basePayload = {
   linkedin_url: 'https://linkedin.com/in/example',
 };
 
+const companyPayload = {
+  company_name: 'TeamUp Studio',
+  company_type: 'STARTUP',
+  description: 'We build platforms for remote teams',
+  team_size: 4,
+  country: 'UA',
+  timezone: 'Europe/Zaporozhye',
+  contact_email: 'contact@teamup.dev',
+  website_url: 'https://teamup.dev',
+  links: { linkedin: 'https://linkedin.com/company/teamup' },
+};
+
 describe('profiles routes', () => {
   beforeAll(async () => {
     await prisma.$connect();
@@ -337,6 +349,96 @@ describe('profiles routes', () => {
       linkedin_url: 'https://linkedin.com/in/example',
       avg_rating: 4.7,
       reviews_count: 12,
+    });
+  });
+
+  test('POST /profiles/company rejects unauthorized', async () => {
+    const res = await request(app).post('/api/v1/profiles/company').send(companyPayload);
+
+    expect(res.status).toBe(401);
+    expect(res.body.error.code).toBe('AUTH_REQUIRED');
+  });
+
+  test('POST /profiles/company rejects invalid payload', async () => {
+    const user = await createUser();
+    const token = buildAccessToken({ userId: user.id, email: user.email });
+
+    const res = await request(app)
+      .post('/api/v1/profiles/company')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ company_name: 'A' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    expect(res.body.error.details).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          field: 'company_name',
+          issue: 'Company name must be at least 2 characters',
+        }),
+      ])
+    );
+  });
+
+  test('POST /profiles/company validates contact_email format', async () => {
+    const user = await createUser();
+    const token = buildAccessToken({ userId: user.id, email: user.email });
+
+    const res = await request(app)
+      .post('/api/v1/profiles/company')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ company_name: 'TeamUp', contact_email: 'not-an-email' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    expect(res.body.error.details).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          field: 'contact_email',
+          issue: 'Contact email must be a valid email',
+        }),
+      ])
+    );
+  });
+
+  test('POST /profiles/company rejects duplicate profile', async () => {
+    const user = await createUser({ companyProfile: { companyName: 'TeamUp' } });
+    const token = buildAccessToken({ userId: user.id, email: user.email });
+
+    const res = await request(app)
+      .post('/api/v1/profiles/company')
+      .set('Authorization', `Bearer ${token}`)
+      .send(companyPayload);
+
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe('PROFILE_ALREADY_EXISTS');
+  });
+
+  test('POST /profiles/company creates profile', async () => {
+    const user = await createUser();
+    const token = buildAccessToken({ userId: user.id, email: user.email });
+
+    const res = await request(app)
+      .post('/api/v1/profiles/company')
+      .set('Authorization', `Bearer ${token}`)
+      .send(companyPayload);
+
+    expect(res.status).toBe(201);
+    expect(res.body).toEqual({ user_id: user.id, created: true });
+
+    const profile = await prisma.companyProfile.findUnique({ where: { userId: user.id } });
+
+    expect(profile).toMatchObject({
+      userId: user.id,
+      companyName: companyPayload.company_name,
+      companyType: companyPayload.company_type,
+      description: companyPayload.description,
+      teamSize: companyPayload.team_size,
+      country: companyPayload.country,
+      timezone: companyPayload.timezone,
+      contactEmail: companyPayload.contact_email,
+      websiteUrl: companyPayload.website_url,
+      links: companyPayload.links,
     });
   });
 });

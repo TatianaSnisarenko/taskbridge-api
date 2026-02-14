@@ -19,6 +19,20 @@ function mapDeveloperProfileInput(input) {
   };
 }
 
+function mapCompanyProfileInput(input) {
+  return {
+    companyName: input.company_name,
+    companyType: input.company_type,
+    description: input.description,
+    teamSize: input.team_size,
+    country: input.country,
+    timezone: input.timezone,
+    contactEmail: input.contact_email,
+    websiteUrl: input.website_url,
+    links: input.links,
+  };
+}
+
 function toNumber(value) {
   if (value === null || value === undefined) return null;
   if (typeof value === 'number') return value;
@@ -83,4 +97,20 @@ export async function getDeveloperProfileByUserId({ userId }) {
   }
 
   return mapDeveloperProfileOutput(profile);
+}
+
+export async function createCompanyProfile({ userId, profile }) {
+  const existing = await prisma.companyProfile.findUnique({ where: { userId } });
+  if (existing) {
+    throw new ApiError(409, 'PROFILE_ALREADY_EXISTS', 'Company profile already exists');
+  }
+
+  await prisma.companyProfile.create({
+    data: {
+      userId,
+      ...mapCompanyProfileInput(profile),
+    },
+  });
+
+  return { userId, created: true };
 }
