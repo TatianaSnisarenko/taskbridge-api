@@ -1,0 +1,90 @@
+import Joi from 'joi';
+
+const EXPERIENCE_LEVELS = ['STUDENT', 'JUNIOR', 'MIDDLE', 'SENIOR'];
+const AVAILABILITY_LEVELS = ['FEW_HOURS_WEEK', 'PART_TIME', 'FULL_TIME'];
+const TASK_CATEGORIES = ['BACKEND', 'FRONTEND', 'DEVOPS', 'QA', 'DATA', 'MOBILE', 'OTHER'];
+
+export const createDeveloperProfileSchema = Joi.object({
+  display_name: Joi.string().trim().min(2).max(100).required().messages({
+    'string.empty': 'Display name is required',
+    'string.min': 'Display name must be at least 2 characters',
+    'string.max': 'Display name must not exceed 100 characters',
+    'any.required': 'Display name is required',
+  }),
+  primary_role: Joi.string().trim().min(2).max(100).messages({
+    'string.min': 'Primary role must be at least 2 characters',
+    'string.max': 'Primary role must not exceed 100 characters',
+  }),
+  bio: Joi.string().trim().min(10).max(500).messages({
+    'string.min': 'Bio must be at least 10 characters',
+    'string.max': 'Bio must not exceed 500 characters',
+  }),
+  experience_level: Joi.string()
+    .valid(...EXPERIENCE_LEVELS)
+    .messages({
+      'any.only': 'Experience level must be one of: STUDENT, JUNIOR, MIDDLE, SENIOR',
+    }),
+  location: Joi.string().trim().min(2).max(100).messages({
+    'string.min': 'Location must be at least 2 characters',
+    'string.max': 'Location must not exceed 100 characters',
+  }),
+  timezone: Joi.string().trim().min(3).max(50).messages({
+    'string.min': 'Timezone must be at least 3 characters',
+    'string.max': 'Timezone must not exceed 50 characters',
+  }),
+  skills: Joi.array()
+    .items(
+      Joi.string().trim().min(1).max(50).messages({
+        'string.min': 'Each skill must be at least 1 character',
+        'string.max': 'Each skill must not exceed 50 characters',
+      })
+    )
+    .unique()
+    .max(50)
+    .messages({
+      'array.unique': 'Skills must be unique',
+      'array.max': 'Skills list must not exceed 50 items',
+    }),
+  tech_stack: Joi.array()
+    .items(
+      Joi.string().trim().min(1).max(50).messages({
+        'string.min': 'Each technology must be at least 1 character',
+        'string.max': 'Each technology must not exceed 50 characters',
+      })
+    )
+    .unique()
+    .max(50)
+    .messages({
+      'array.unique': 'Tech stack items must be unique',
+      'array.max': 'Tech stack list must not exceed 50 items',
+    }),
+  availability: Joi.string()
+    .valid(...AVAILABILITY_LEVELS)
+    .messages({
+      'any.only': 'Availability must be one of: FEW_HOURS_WEEK, PART_TIME, FULL_TIME',
+    }),
+  preferred_task_categories: Joi.array()
+    .items(
+      Joi.string()
+        .valid(...TASK_CATEGORIES)
+        .messages({
+          'any.only':
+            'Each task category must be one of: BACKEND, FRONTEND, DEVOPS, QA, DATA, MOBILE, OTHER',
+        })
+    )
+    .unique()
+    .max(10)
+    .messages({
+      'array.unique': 'Task categories must be unique',
+      'array.max': 'Task categories list must not exceed 10 items',
+    }),
+  portfolio_url: Joi.string().uri().messages({
+    'string.uri': 'Portfolio URL must be a valid URI',
+  }),
+  github_url: Joi.string().uri().messages({
+    'string.uri': 'GitHub URL must be a valid URI',
+  }),
+  linkedin_url: Joi.string().uri().messages({
+    'string.uri': 'LinkedIn URL must be a valid URI',
+  }),
+});

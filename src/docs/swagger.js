@@ -5,7 +5,7 @@ export const swaggerSpec = {
     version: '0.1.0',
   },
   servers: [{ url: 'http://localhost:3000' }],
-  tags: [{ name: 'Health' }, { name: 'Auth' }, { name: 'Me' }],
+  tags: [{ name: 'Health' }, { name: 'Auth' }, { name: 'Me' }, { name: 'Profiles' }],
   components: {
     securitySchemes: {
       bearerAuth: {
@@ -83,6 +83,53 @@ export const swaggerSpec = {
         type: 'object',
         properties: {
           status: { type: 'string', example: 'ok' },
+        },
+      },
+      CreateDeveloperProfileRequest: {
+        type: 'object',
+        required: ['display_name'],
+        properties: {
+          display_name: { type: 'string', minLength: 1 },
+          primary_role: { type: 'string', minLength: 1 },
+          bio: { type: 'string', minLength: 1 },
+          experience_level: {
+            type: 'string',
+            enum: ['STUDENT', 'JUNIOR', 'MIDDLE', 'SENIOR'],
+          },
+          location: { type: 'string', minLength: 1 },
+          timezone: { type: 'string', minLength: 1 },
+          skills: {
+            type: 'array',
+            items: { type: 'string' },
+            uniqueItems: true,
+          },
+          tech_stack: {
+            type: 'array',
+            items: { type: 'string' },
+            uniqueItems: true,
+          },
+          availability: {
+            type: 'string',
+            enum: ['FEW_HOURS_WEEK', 'PART_TIME', 'FULL_TIME'],
+          },
+          preferred_task_categories: {
+            type: 'array',
+            items: {
+              type: 'string',
+              enum: ['BACKEND', 'FRONTEND', 'DEVOPS', 'QA', 'DATA', 'MOBILE', 'OTHER'],
+            },
+            uniqueItems: true,
+          },
+          portfolio_url: { type: 'string', format: 'uri' },
+          github_url: { type: 'string', format: 'uri' },
+          linkedin_url: { type: 'string', format: 'uri' },
+        },
+      },
+      CreateDeveloperProfileResponse: {
+        type: 'object',
+        properties: {
+          user_id: { type: 'string', format: 'uuid' },
+          created: { type: 'boolean', example: true },
         },
       },
     },
@@ -233,6 +280,49 @@ export const swaggerSpec = {
         responses: {
           200: { description: 'Current user profile' },
           401: { description: 'Unauthorized' },
+        },
+      },
+    },
+    '/api/v1/profiles/developer': {
+      post: {
+        tags: ['Profiles'],
+        summary: 'Create developer profile',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/CreateDeveloperProfileRequest' },
+              example: {
+                display_name: 'Tetiana',
+                primary_role: 'Java Backend Engineer',
+                bio: 'Short bio',
+                experience_level: 'SENIOR',
+                location: 'Ukraine',
+                timezone: 'Europe/Zaporozhye',
+                skills: ['Java', 'Spring'],
+                tech_stack: ['Spring Boot', 'JPA'],
+                availability: 'FEW_HOURS_WEEK',
+                preferred_task_categories: ['BACKEND'],
+                portfolio_url: 'https://example.com/portfolio',
+                github_url: 'https://github.com/example',
+                linkedin_url: 'https://linkedin.com/in/example',
+              },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: 'Developer profile created',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/CreateDeveloperProfileResponse' },
+              },
+            },
+          },
+          400: { description: 'Validation error' },
+          401: { description: 'Unauthorized' },
+          409: { description: 'Profile already exists' },
         },
       },
     },

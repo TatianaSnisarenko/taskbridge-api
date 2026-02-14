@@ -1,0 +1,200 @@
+import { jest } from '@jest/globals';
+import request from 'supertest';
+import { prisma } from '../../src/db/prisma.js';
+import { resetDatabase } from '../helpers/db.js';
+import { buildAccessToken } from '../helpers/auth.js';
+import { createUser } from '../helpers/factories.js';
+
+const { createApp } = await import('../../src/app.js');
+
+const app = createApp();
+
+const basePayload = {
+  display_name: 'Tetiana',
+  primary_role: 'Java Backend Engineer',
+  bio: 'Experienced developer with passion for clean code',
+  experience_level: 'SENIOR',
+  location: 'Ukraine',
+  timezone: 'Europe/Zaporozhye',
+  skills: ['Java', 'Spring'],
+  tech_stack: ['Spring Boot', 'JPA'],
+  availability: 'FEW_HOURS_WEEK',
+  preferred_task_categories: ['BACKEND'],
+  portfolio_url: 'https://example.com/portfolio',
+  github_url: 'https://github.com/example',
+  linkedin_url: 'https://linkedin.com/in/example',
+};
+
+describe('profiles routes', () => {
+  beforeAll(async () => {
+    await prisma.$connect();
+  });
+
+  afterAll(async () => {
+    await prisma.$disconnect();
+  });
+
+  beforeEach(async () => {
+    jest.clearAllMocks();
+    await resetDatabase();
+  });
+
+  test('POST /profiles/developer rejects unauthorized', async () => {
+    const res = await request(app).post('/api/v1/profiles/developer').send(basePayload);
+
+    expect(res.status).toBe(401);
+    expect(res.body.error.code).toBe('AUTH_REQUIRED');
+  });
+
+  test('POST /profiles/developer rejects invalid token', async () => {
+    const res = await request(app)
+      .post('/api/v1/profiles/developer')
+      .set('Authorization', 'Bearer invalid')
+      .send(basePayload);
+
+    expect(res.status).toBe(401);
+    expect(res.body.error.code).toBe('INVALID_TOKEN');
+  });
+
+  test('POST /profiles/developer rejects invalid payload', async () => {
+    const user = await createUser();
+    const token = buildAccessToken({ userId: user.id, email: user.email });
+
+    const res = await request(app)
+      .post('/api/v1/profiles/developer')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ display_name: '' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+  });
+
+  test('POST /profiles/developer validates display_name min length', async () => {
+    const user = await createUser();
+    const token = buildAccessToken({ userId: user.id, email: user.email });
+
+    const res = await request(app)
+      .post('/api/v1/profiles/developer')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ display_name: 'A' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    expect(res.body.error.details).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          field: 'display_name',
+          issue: 'Display name must be at least 2 characters',
+        }),
+      ])
+    );
+  });
+
+  test('POST /profiles/developer validates bio min length', async () => {
+    const user = await createUser();
+    const token = buildAccessToken({ userId: user.id, email: user.email });
+
+    const res = await request(app)
+      .post('/api/v1/profiles/developer')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ display_name: 'Test', bio: 'Short' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    expect(res.body.error.details).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          field: 'bio',
+          issue: 'Bio must be at least 10 characters',
+        }),
+      ])
+    );
+  });
+
+  test('POST /profiles/developer validates experience_level enum', async () => {
+    const user = await createUser();
+    const token = buildAccessToken({ userId: user.id, email: user.email });
+
+    const res = await request(app)
+      .post('/api/v1/profiles/developer')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ display_name: 'Test', experience_level: 'EXPERT' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    expect(res.body.error.details).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          field: 'experience_level',
+          issue: 'Experience level must be one of: STUDENT, JUNIOR, MIDDLE, SENIOR',
+        }),
+      ])
+    );
+  });
+
+  test('POST /profiles/developer validates URL format', async () => {
+    const user = await createUser();
+    const token = buildAccessToken({ userId: user.id, email: user.email });
+
+    const res = await request(app)
+      .post('/api/v1/profiles/developer')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ display_name: 'Test', portfolio_url: 'not-a-url' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    expect(res.body.error.details).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          field: 'portfolio_url',
+          issue: 'Portfolio URL must be a valid URI',
+        }),
+      ])
+    );
+  });
+
+  test('POST /profiles/developer rejects duplicate profile', async () => {
+    const user = await createUser({ developerProfile: { displayName: 'Dev' } });
+    const token = buildAccessToken({ userId: user.id, email: user.email });
+
+    const res = await request(app)
+      .post('/api/v1/profiles/developer')
+      .set('Authorization', `Bearer ${token}`)
+      .send(basePayload);
+
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe('PROFILE_ALREADY_EXISTS');
+  });
+
+  test('POST /profiles/developer creates profile', async () => {
+    const user = await createUser();
+    const token = buildAccessToken({ userId: user.id, email: user.email });
+
+    const res = await request(app)
+      .post('/api/v1/profiles/developer')
+      .set('Authorization', `Bearer ${token}`)
+      .send(basePayload);
+
+    expect(res.status).toBe(201);
+    expect(res.body).toEqual({ user_id: user.id, created: true });
+
+    const profile = await prisma.developerProfile.findUnique({ where: { userId: user.id } });
+
+    expect(profile).toMatchObject({
+      userId: user.id,
+      displayName: basePayload.display_name,
+      jobTitle: basePayload.primary_role,
+      bio: basePayload.bio,
+      experienceLevel: basePayload.experience_level,
+      location: basePayload.location,
+      timezone: basePayload.timezone,
+      skills: basePayload.skills,
+      techStack: basePayload.tech_stack,
+      availability: basePayload.availability,
+      preferredTaskCategories: basePayload.preferred_task_categories,
+      portfolioUrl: basePayload.portfolio_url,
+      githubUrl: basePayload.github_url,
+      linkedinUrl: basePayload.linkedin_url,
+    });
+  });
+});
