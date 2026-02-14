@@ -295,6 +295,33 @@ export const swaggerSpec = {
           created_at: { type: 'string', format: 'date-time' },
         },
       },
+      UpdateProjectRequest: {
+        type: 'object',
+        required: ['title', 'short_description', 'description'],
+        properties: {
+          title: { type: 'string', minLength: 3, maxLength: 120 },
+          short_description: { type: 'string', minLength: 10, maxLength: 200 },
+          description: { type: 'string', minLength: 10, maxLength: 2000 },
+          technologies: {
+            type: 'array',
+            items: { type: 'string', minLength: 1, maxLength: 50 },
+            uniqueItems: true,
+            minItems: 1,
+            maxItems: 50,
+          },
+          visibility: { type: 'string', enum: ['PUBLIC', 'UNLISTED'] },
+          status: { type: 'string', enum: ['ACTIVE', 'ARCHIVED'] },
+          max_talents: { type: 'integer', minimum: 1, maximum: 100 },
+        },
+      },
+      UpdateProjectResponse: {
+        type: 'object',
+        properties: {
+          project_id: { type: 'string', format: 'uuid' },
+          updated: { type: 'boolean', example: true },
+          updated_at: { type: 'string', format: 'date-time' },
+        },
+      },
       DeveloperPublicProfileResponse: {
         type: 'object',
         properties: {
@@ -732,6 +759,59 @@ export const swaggerSpec = {
           400: { description: 'Validation error' },
           401: { description: 'Unauthorized' },
           403: { description: 'Persona not available' },
+          409: { description: 'Project title already exists' },
+        },
+      },
+    },
+    '/api/v1/projects/{projectId}': {
+      put: {
+        tags: ['Projects'],
+        summary: 'Update project',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'projectId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+          {
+            name: 'X-Persona',
+            in: 'header',
+            required: true,
+            schema: { type: 'string', enum: ['company'] },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/UpdateProjectRequest' },
+              example: {
+                title: 'TeamUp MVP',
+                short_description: 'Updated short',
+                description: 'Updated long',
+                technologies: ['Node.js', 'PostgreSQL', 'Prisma'],
+                visibility: 'PUBLIC',
+                status: 'ACTIVE',
+                max_talents: 5,
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'Project updated',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/UpdateProjectResponse' },
+              },
+            },
+          },
+          400: { description: 'Validation error' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Not owner' },
+          404: { description: 'Not found' },
           409: { description: 'Project title already exists' },
         },
       },

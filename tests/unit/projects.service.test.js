@@ -4,6 +4,8 @@ const prismaMock = {
   project: {
     create: jest.fn(),
     findFirst: jest.fn(),
+    findUnique: jest.fn(),
+    update: jest.fn(),
   },
 };
 
@@ -66,5 +68,90 @@ describe('projects.service', () => {
       status: 409,
       code: 'PROJECT_TITLE_EXISTS',
     });
+  });
+
+  test('updateProject rejects missing project', async () => {
+    prismaMock.project.findUnique.mockResolvedValue(null);
+
+    await expect(
+      projectsService.updateProject({
+        userId: 'u1',
+        projectId: 'p1',
+        project: { title: 'TeamUp MVP' },
+      })
+    ).rejects.toMatchObject({
+      status: 404,
+      code: 'NOT_FOUND',
+    });
+  });
+
+  test('updateProject rejects non-owner', async () => {
+    prismaMock.project.findUnique.mockResolvedValue({ id: 'p1', ownerUserId: 'u2' });
+
+    await expect(
+      projectsService.updateProject({
+        userId: 'u1',
+        projectId: 'p1',
+        project: { title: 'TeamUp MVP' },
+      })
+    ).rejects.toMatchObject({
+      status: 403,
+      code: 'NOT_OWNER',
+    });
+  });
+
+  test('updateProject rejects duplicate title for owner', async () => {
+    prismaMock.project.findUnique.mockResolvedValue({ id: 'p1', ownerUserId: 'u1' });
+    prismaMock.project.findFirst.mockResolvedValue({ id: 'p2' });
+
+    await expect(
+      projectsService.updateProject({
+        userId: 'u1',
+        projectId: 'p1',
+        project: { title: 'TeamUp MVP' },
+      })
+    ).rejects.toMatchObject({
+      status: 409,
+      code: 'PROJECT_TITLE_EXISTS',
+    });
+  });
+
+  test('updateProject updates project', async () => {
+    const updatedAt = new Date('2026-02-14T12:00:00Z');
+    prismaMock.project.findUnique.mockResolvedValue({ id: 'p1', ownerUserId: 'u1' });
+    prismaMock.project.findFirst.mockResolvedValue(null);
+    prismaMock.project.update.mockResolvedValue({ id: 'p1', updatedAt });
+
+    const project = {
+      title: 'TeamUp MVP',
+      short_description: 'Updated short',
+      description: 'Updated long description',
+      technologies: ['Node.js', 'PostgreSQL', 'Prisma'],
+      visibility: 'PUBLIC',
+      status: 'ACTIVE',
+      max_talents: 5,
+    };
+
+    const result = await projectsService.updateProject({
+      userId: 'u1',
+      projectId: 'p1',
+      project,
+    });
+
+    expect(prismaMock.project.update).toHaveBeenCalledWith({
+      where: { id: 'p1' },
+      data: {
+        title: 'TeamUp MVP',
+        shortDescription: 'Updated short',
+        description: 'Updated long description',
+        technologies: ['Node.js', 'PostgreSQL', 'Prisma'],
+        visibility: 'PUBLIC',
+        status: 'ACTIVE',
+        maxTalents: 5,
+      },
+      select: { id: true, updatedAt: true },
+    });
+
+    expect(result).toEqual({ projectId: 'p1', updated: true, updatedAt });
   });
 });
