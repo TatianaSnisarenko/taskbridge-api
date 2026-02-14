@@ -45,3 +45,16 @@ export const createCompanyProfile = asyncHandler(async (req, res) => {
     created: result.created,
   });
 });
+
+export const updateCompanyProfile = asyncHandler(async (req, res) => {
+  const result = await profilesService.updateCompanyProfile({
+    userId: req.user.id,
+    profile: req.body,
+  });
+
+  return res.status(200).json({
+    user_id: result.userId,
+    updated: result.updated,
+    updated_at: result.updatedAt.toISOString(),
+  });
+});

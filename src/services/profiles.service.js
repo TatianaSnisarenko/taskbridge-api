@@ -114,3 +114,18 @@ export async function createCompanyProfile({ userId, profile }) {
 
   return { userId, created: true };
 }
+
+export async function updateCompanyProfile({ userId, profile }) {
+  const existing = await prisma.companyProfile.findUnique({ where: { userId } });
+  if (!existing) {
+    throw new ApiError(404, 'PROFILE_NOT_FOUND', 'Company profile not found');
+  }
+
+  const updated = await prisma.companyProfile.update({
+    where: { userId },
+    data: mapCompanyProfileInput(profile),
+    select: { userId: true, updatedAt: true },
+  });
+
+  return { userId: updated.userId, updated: true, updatedAt: updated.updatedAt };
+}

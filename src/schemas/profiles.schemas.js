@@ -156,3 +156,5 @@ const companyProfileFields = {
 };
 
 export const createCompanyProfileSchema = Joi.object(companyProfileFields);
+
+export const updateCompanyProfileSchema = Joi.object(companyProfileFields);

@@ -6,6 +6,7 @@ import {
   createCompanyProfileSchema,
   createDeveloperProfileSchema,
   getDeveloperProfileParamsSchema,
+  updateCompanyProfileSchema,
   updateDeveloperProfileSchema,
 } from '../schemas/profiles.schemas.js';
 
@@ -36,4 +37,11 @@ profilesRouter.post(
   requireAuth,
   validate(createCompanyProfileSchema),
   profilesController.createCompanyProfile
+);
+
+profilesRouter.put(
+  '/company',
+  requireAuth,
+  validate(updateCompanyProfileSchema),
+  profilesController.updateCompanyProfile
 );

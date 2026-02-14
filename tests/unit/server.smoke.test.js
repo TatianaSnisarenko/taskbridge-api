@@ -1,4 +1,5 @@
 import { jest } from '@jest/globals';
+import { setImmediate } from 'node:timers';
 
 async function loadServer({ connectImpl, listenImpl }) {
   jest.resetModules();

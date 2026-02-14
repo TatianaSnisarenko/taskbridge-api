@@ -441,4 +441,78 @@ describe('profiles routes', () => {
       links: companyPayload.links,
     });
   });
+
+  test('PUT /profiles/company rejects unauthorized', async () => {
+    const res = await request(app).put('/api/v1/profiles/company').send(companyPayload);
+
+    expect(res.status).toBe(401);
+    expect(res.body.error.code).toBe('AUTH_REQUIRED');
+  });
+
+  test('PUT /profiles/company rejects invalid payload', async () => {
+    const user = await createUser({ companyProfile: { companyName: 'Old' } });
+    const token = buildAccessToken({ userId: user.id, email: user.email });
+
+    const res = await request(app)
+      .put('/api/v1/profiles/company')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ company_name: 'A' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    expect(res.body.error.details).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          field: 'company_name',
+          issue: 'Company name must be at least 2 characters',
+        }),
+      ])
+    );
+  });
+
+  test('PUT /profiles/company rejects missing profile', async () => {
+    const user = await createUser();
+    const token = buildAccessToken({ userId: user.id, email: user.email });
+
+    const res = await request(app)
+      .put('/api/v1/profiles/company')
+      .set('Authorization', `Bearer ${token}`)
+      .send(companyPayload);
+
+    expect(res.status).toBe(404);
+    expect(res.body.error.code).toBe('PROFILE_NOT_FOUND');
+  });
+
+  test('PUT /profiles/company updates profile', async () => {
+    const user = await createUser({ companyProfile: { companyName: 'Old' } });
+    const token = buildAccessToken({ userId: user.id, email: user.email });
+
+    const res = await request(app)
+      .put('/api/v1/profiles/company')
+      .set('Authorization', `Bearer ${token}`)
+      .send(companyPayload);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      user_id: user.id,
+      updated: true,
+      updated_at: expect.any(String),
+    });
+    expect(Number.isNaN(Date.parse(res.body.updated_at))).toBe(false);
+
+    const profile = await prisma.companyProfile.findUnique({ where: { userId: user.id } });
+
+    expect(profile).toMatchObject({
+      userId: user.id,
+      companyName: companyPayload.company_name,
+      companyType: companyPayload.company_type,
+      description: companyPayload.description,
+      teamSize: companyPayload.team_size,
+      country: companyPayload.country,
+      timezone: companyPayload.timezone,
+      contactEmail: companyPayload.contact_email,
+      websiteUrl: companyPayload.website_url,
+      links: companyPayload.links,
+    });
+  });
 });

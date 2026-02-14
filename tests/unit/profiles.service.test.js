@@ -9,6 +9,7 @@ const prismaMock = {
   companyProfile: {
     findUnique: jest.fn(),
     create: jest.fn(),
+    update: jest.fn(),
   },
 };
 
@@ -236,5 +237,57 @@ describe('profiles.service', () => {
     });
 
     expect(result).toEqual({ userId: 'u2', created: true });
+  });
+
+  test('updateCompanyProfile rejects missing profile', async () => {
+    prismaMock.companyProfile.findUnique.mockResolvedValue(null);
+
+    await expect(
+      profilesService.updateCompanyProfile({
+        userId: 'u2',
+        profile: { company_name: 'TeamUp Studio' },
+      })
+    ).rejects.toMatchObject({
+      status: 404,
+      code: 'PROFILE_NOT_FOUND',
+    });
+  });
+
+  test('updateCompanyProfile updates profile', async () => {
+    prismaMock.companyProfile.findUnique.mockResolvedValue({ userId: 'u2' });
+    const updatedAt = new Date('2026-02-14T12:00:00Z');
+    prismaMock.companyProfile.update.mockResolvedValue({ userId: 'u2', updatedAt });
+
+    const profile = {
+      company_name: 'TeamUp Studio',
+      company_type: 'STARTUP',
+      description: 'Updated description',
+      team_size: 5,
+      country: 'UA',
+      timezone: 'Europe/Zaporozhye',
+      contact_email: 'contact@teamup.dev',
+      website_url: 'https://teamup.dev',
+      links: { linkedin: 'https://linkedin.com/company/teamup' },
+    };
+
+    const result = await profilesService.updateCompanyProfile({ userId: 'u2', profile });
+
+    expect(prismaMock.companyProfile.update).toHaveBeenCalledWith({
+      where: { userId: 'u2' },
+      data: {
+        companyName: 'TeamUp Studio',
+        companyType: 'STARTUP',
+        description: 'Updated description',
+        teamSize: 5,
+        country: 'UA',
+        timezone: 'Europe/Zaporozhye',
+        contactEmail: 'contact@teamup.dev',
+        websiteUrl: 'https://teamup.dev',
+        links: { linkedin: 'https://linkedin.com/company/teamup' },
+      },
+      select: { userId: true, updatedAt: true },
+    });
+
+    expect(result).toEqual({ userId: 'u2', updated: true, updatedAt });
   });
 });
