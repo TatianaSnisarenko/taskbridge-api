@@ -97,6 +97,24 @@ enum VerificationType {
   EMAIL_CHANGE
 }
 
+enum ProjectStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum ProjectVisibility {
+  PUBLIC
+  UNLISTED
+}
+
+enum ProjectReportReason {
+  SPAM
+  SCAM
+  INAPPROPRIATE_CONTENT
+  MISLEADING
+  OTHER
+}
+
 model User {
   id            String   @id @default(uuid()) @db.Uuid
   email         String   @unique
@@ -110,7 +128,9 @@ model User {
   developerProfile   DeveloperProfile?
   companyProfile     CompanyProfile?
 
-  ownedTasks   Task[]        @relation("TaskOwner")
+  ownedProjects Project[] @relation("ProjectOwner")
+  ownedTasks    Task[]    @relation("TaskOwner")
+
   applications Application[] @relation("ApplicationDeveloper")
 
   sentMessages ChatMessage[]
@@ -118,7 +138,10 @@ model User {
   authoredReviews Review[] @relation("ReviewAuthor")
   receivedReviews Review[] @relation("ReviewTarget")
 
-  notifications Notification[]
+  notifications      Notification[] @relation("NotificationRecipient")
+  actedNotifications Notification[] @relation("NotificationActor")
+
+  projectReports ProjectReport[] @relation("ProjectReportReporter")
 
   @@map("users")
 }
@@ -202,10 +225,55 @@ model CompanyProfile {
   @@map("company_profiles")
 }
 
+model Project {
+  id               String            @id @default(uuid()) @db.Uuid
+  ownerUserId      String            @map("owner_user_id") @db.Uuid
+  status           ProjectStatus     @default(ACTIVE)
+  visibility       ProjectVisibility @default(PUBLIC)
+  title            String
+  shortDescription String            @default("") @map("short_description")
+  description      String            @default("")
+  technologies     String[]          @default([])
+  maxTalents       Int               @default(1) @map("max_talents")
+  createdAt        DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt        DateTime?         @map("deleted_at") @db.Timestamptz(6)
+
+  owner   User            @relation("ProjectOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  tasks   Task[]
+  reports ProjectReport[]
+
+  notifications Notification[]
+
+  @@index([ownerUserId, createdAt(sort: Desc)])
+  @@index([visibility, deletedAt, createdAt(sort: Desc)])
+  @@index([deletedAt, createdAt(sort: Desc)])
+  @@map("projects")
+}
+
+model ProjectReport {
+  id             String              @id @default(uuid()) @db.Uuid
+  projectId      String              @map("project_id") @db.Uuid
+  reporterUserId String              @map("reporter_user_id") @db.Uuid
+  reason         ProjectReportReason
+  comment        String?             @default("")
+  createdAt      DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  project  Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  reporter User    @relation("ProjectReportReporter", fields: [reporterUserId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, reporterUserId])
+  @@index([projectId, createdAt(sort: Desc)])
+  @@index([reporterUserId, createdAt(sort: Desc)])
+  @@map("project_reports")
+}
+
 model Task {
   id          String     @id @default(uuid()) @db.Uuid
   ownerUserId String     @map("owner_user_id") @db.Uuid
-  status      TaskStatus
+  status      TaskStatus @default(DRAFT)
+
+  projectId String? @map("project_id") @db.Uuid
 
   title          String
   description    String
@@ -232,15 +300,22 @@ model Task {
   publishedAt DateTime? @map("published_at") @db.Timestamptz(6)
   closedAt    DateTime? @map("closed_at") @db.Timestamptz(6)
   completedAt DateTime? @map("completed_at") @db.Timestamptz(6)
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(6)
 
   owner               User          @relation("TaskOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  project             Project?      @relation(fields: [projectId], references: [id], onDelete: SetNull)
   applications        Application[]
   acceptedApplication Application?  @relation("AcceptedApplication", fields: [acceptedApplicationId], references: [id])
   chatThread          ChatThread?
   reviews             Review[]
 
+  notifications Notification[]
+
   @@index([status, publishedAt(sort: Desc)])
   @@index([ownerUserId, createdAt(sort: Desc)])
+  @@index([projectId, createdAt(sort: Desc)])
+  @@index([deletedAt, createdAt(sort: Desc)])
+  @@index([projectId, deletedAt, createdAt(sort: Desc)])
   @@map("tasks")
 }
 
@@ -274,6 +349,8 @@ model ChatThread {
 
   task     Task          @relation(fields: [taskId], references: [id], onDelete: Cascade)
   messages ChatMessage[]
+
+  notifications Notification[]
 
   @@map("chat_threads")
 }
@@ -312,16 +389,28 @@ model Review {
 }
 
 model Notification {
-  id        String           @id @default(uuid()) @db.Uuid
-  userId    String           @map("user_id") @db.Uuid
-  type      NotificationType
-  payload   Json             @default("{}")
-  createdAt DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
-  readAt    DateTime?        @map("read_at") @db.Timestamptz(6)
+  id          String           @id @default(uuid()) @db.Uuid
+  userId      String           @map("user_id") @db.Uuid
+  actorUserId String?          @map("actor_user_id") @db.Uuid
+  projectId   String?          @map("project_id") @db.Uuid
+  taskId      String?          @map("task_id") @db.Uuid
+  threadId    String?          @map("thread_id") @db.Uuid
+  type        NotificationType
+  payload     Json             @default("{}")
+  createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  readAt      DateTime?        @map("read_at") @db.Timestamptz(6)
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user  User  @relation("NotificationRecipient", fields: [userId], references: [id], onDelete: Cascade)
+  actor User? @relation("NotificationActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  project Project?    @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  task    Task?       @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  thread  ChatThread? @relation(fields: [threadId], references: [id], onDelete: SetNull)
 
   @@index([userId, createdAt(sort: Desc)])
   @@index([userId, readAt])
+  @@index([projectId, createdAt(sort: Desc)])
+  @@index([taskId, createdAt(sort: Desc)])
+  @@index([threadId, createdAt(sort: Desc)])
   @@map("notifications")
 }
