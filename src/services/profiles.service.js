@@ -59,6 +59,23 @@ function mapDeveloperProfileOutput(profile) {
   };
 }
 
+function mapCompanyProfileOutput(profile) {
+  return {
+    user_id: profile.userId,
+    company_name: profile.companyName,
+    company_type: profile.companyType,
+    description: profile.description,
+    team_size: profile.teamSize,
+    country: profile.country,
+    timezone: profile.timezone,
+    website_url: profile.websiteUrl,
+    links: profile.links,
+    verified: profile.verified,
+    avg_rating: toNumber(profile.avgRating),
+    reviews_count: profile.reviewsCount,
+  };
+}
+
 export async function createDeveloperProfile({ userId, profile }) {
   const existing = await prisma.developerProfile.findUnique({ where: { userId } });
   if (existing) {
@@ -128,4 +145,13 @@ export async function updateCompanyProfile({ userId, profile }) {
   });
 
   return { userId: updated.userId, updated: true, updatedAt: updated.updatedAt };
+}
+
+export async function getCompanyProfileByUserId({ userId }) {
+  const profile = await prisma.companyProfile.findUnique({ where: { userId } });
+  if (!profile) {
+    throw new ApiError(404, 'PROFILE_NOT_FOUND', 'Company profile not found');
+  }
+
+  return mapCompanyProfileOutput(profile);
 }

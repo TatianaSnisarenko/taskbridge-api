@@ -515,4 +515,64 @@ describe('profiles routes', () => {
       links: companyPayload.links,
     });
   });
+
+  test('GET /profiles/company/:userId rejects invalid userId', async () => {
+    const res = await request(app).get('/api/v1/profiles/company/not-a-uuid');
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    expect(res.body.error.details).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          field: 'userId',
+          issue: 'User id must be a valid UUID',
+        }),
+      ])
+    );
+  });
+
+  test('GET /profiles/company/:userId returns 404 for missing profile', async () => {
+    const user = await createUser();
+
+    const res = await request(app).get(`/api/v1/profiles/company/${user.id}`);
+
+    expect(res.status).toBe(404);
+    expect(res.body.error.code).toBe('PROFILE_NOT_FOUND');
+  });
+
+  test('GET /profiles/company/:userId returns public profile', async () => {
+    const user = await createUser({
+      companyProfile: {
+        companyName: 'TeamUp Studio',
+        companyType: 'STARTUP',
+        description: 'We build...',
+        teamSize: 4,
+        country: 'UA',
+        timezone: 'Europe/Zaporozhye',
+        websiteUrl: 'https://teamup.dev',
+        links: { linkedin: 'https://linkedin.com/company/teamup' },
+        verified: false,
+        avgRating: 4.6,
+        reviewsCount: 8,
+      },
+    });
+
+    const res = await request(app).get(`/api/v1/profiles/company/${user.id}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      user_id: user.id,
+      company_name: 'TeamUp Studio',
+      company_type: 'STARTUP',
+      description: 'We build...',
+      team_size: 4,
+      country: 'UA',
+      timezone: 'Europe/Zaporozhye',
+      website_url: 'https://teamup.dev',
+      links: { linkedin: 'https://linkedin.com/company/teamup' },
+      verified: false,
+      avg_rating: 4.6,
+      reviews_count: 8,
+    });
+  });
 });

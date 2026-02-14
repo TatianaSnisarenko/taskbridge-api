@@ -58,3 +58,11 @@ export const updateCompanyProfile = asyncHandler(async (req, res) => {
     updated_at: result.updatedAt.toISOString(),
   });
 });
+
+export const getCompanyProfile = asyncHandler(async (req, res) => {
+  const result = await profilesService.getCompanyProfileByUserId({
+    userId: req.params.userId,
+  });
+
+  return res.status(200).json(result);
+});

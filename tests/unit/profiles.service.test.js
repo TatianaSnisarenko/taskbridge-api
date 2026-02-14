@@ -290,4 +290,49 @@ describe('profiles.service', () => {
 
     expect(result).toEqual({ userId: 'u2', updated: true, updatedAt });
   });
+
+  test('getCompanyProfileByUserId rejects missing profile', async () => {
+    prismaMock.companyProfile.findUnique.mockResolvedValue(null);
+
+    await expect(profilesService.getCompanyProfileByUserId({ userId: 'u2' })).rejects.toMatchObject(
+      {
+        status: 404,
+        code: 'PROFILE_NOT_FOUND',
+      }
+    );
+  });
+
+  test('getCompanyProfileByUserId returns mapped profile', async () => {
+    prismaMock.companyProfile.findUnique.mockResolvedValue({
+      userId: 'u2',
+      companyName: 'TeamUp Studio',
+      companyType: 'STARTUP',
+      description: 'We build...',
+      teamSize: 4,
+      country: 'UA',
+      timezone: 'Europe/Zaporozhye',
+      websiteUrl: 'https://teamup.dev',
+      links: { linkedin: 'https://linkedin.com/company/teamup' },
+      verified: false,
+      avgRating: { toNumber: () => 4.6 },
+      reviewsCount: 8,
+    });
+
+    const result = await profilesService.getCompanyProfileByUserId({ userId: 'u2' });
+
+    expect(result).toEqual({
+      user_id: 'u2',
+      company_name: 'TeamUp Studio',
+      company_type: 'STARTUP',
+      description: 'We build...',
+      team_size: 4,
+      country: 'UA',
+      timezone: 'Europe/Zaporozhye',
+      website_url: 'https://teamup.dev',
+      links: { linkedin: 'https://linkedin.com/company/teamup' },
+      verified: false,
+      avg_rating: 4.6,
+      reviews_count: 8,
+    });
+  });
 });

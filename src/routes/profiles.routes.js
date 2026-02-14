@@ -5,6 +5,7 @@ import * as profilesController from '../controllers/profiles.controller.js';
 import {
   createCompanyProfileSchema,
   createDeveloperProfileSchema,
+  getCompanyProfileParamsSchema,
   getDeveloperProfileParamsSchema,
   updateCompanyProfileSchema,
   updateDeveloperProfileSchema,
@@ -44,4 +45,10 @@ profilesRouter.put(
   requireAuth,
   validate(updateCompanyProfileSchema),
   profilesController.updateCompanyProfile
+);
+
+profilesRouter.get(
+  '/company/:userId',
+  validate(getCompanyProfileParamsSchema, 'params'),
+  profilesController.getCompanyProfile
 );

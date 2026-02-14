@@ -103,6 +103,14 @@ export const getDeveloperProfileParamsSchema = Joi.object({
   }),
 });
 
+export const getCompanyProfileParamsSchema = Joi.object({
+  userId: Joi.string().guid({ version: 'uuidv4' }).required().messages({
+    'string.empty': 'User id is required',
+    'string.guid': 'User id must be a valid UUID',
+    'any.required': 'User id is required',
+  }),
+});
+
 const companyProfileFields = {
   company_name: Joi.string().trim().min(2).max(100).required().messages({
     'string.empty': 'Company name is required',
