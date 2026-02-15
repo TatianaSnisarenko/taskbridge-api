@@ -51,3 +51,50 @@ export async function createTaskDraft({ userId, task }) {
 
   return { taskId: created.id, status: created.status, createdAt: created.createdAt };
 }
+
+export async function updateTaskDraft({ userId, taskId, task }) {
+  const existingTask = await prisma.task.findUnique({
+    where: { id: taskId },
+    select: { id: true, ownerUserId: true, status: true, deletedAt: true },
+  });
+
+  if (!existingTask || existingTask.deletedAt) {
+    throw new ApiError(404, 'NOT_FOUND', 'Task not found');
+  }
+
+  if (existingTask.ownerUserId !== userId) {
+    throw new ApiError(403, 'NOT_OWNER', 'Task does not belong to user');
+  }
+
+  if (existingTask.status !== 'DRAFT' && existingTask.status !== 'PUBLISHED') {
+    throw new ApiError(409, 'INVALID_STATE', 'Task cannot be updated in current state');
+  }
+
+  const projectId = task.project_id ?? null;
+
+  if (projectId) {
+    const project = await prisma.project.findUnique({
+      where: { id: projectId },
+      select: { id: true, ownerUserId: true, deletedAt: true },
+    });
+
+    if (!project || project.deletedAt) {
+      throw new ApiError(404, 'PROJECT_NOT_FOUND', 'Project not found');
+    }
+
+    if (project.ownerUserId !== userId) {
+      throw new ApiError(403, 'NOT_OWNER', 'Project does not belong to user');
+    }
+  }
+
+  const updated = await prisma.task.update({
+    where: { id: taskId },
+    data: {
+      projectId,
+      ...mapTaskInput(task),
+    },
+    select: { id: true, updatedAt: true },
+  });
+
+  return { taskId: updated.id, updated: true, updatedAt: updated.updatedAt };
+}

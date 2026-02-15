@@ -13,3 +13,17 @@ export const createTaskDraft = asyncHandler(async (req, res) => {
     created_at: result.createdAt.toISOString(),
   });
 });
+
+export const updateTaskDraft = asyncHandler(async (req, res) => {
+  const result = await tasksService.updateTaskDraft({
+    userId: req.user.id,
+    taskId: req.params.taskId,
+    task: req.body,
+  });
+
+  return res.status(200).json({
+    task_id: result.taskId,
+    updated: result.updated,
+    updated_at: result.updatedAt.toISOString(),
+  });
+});

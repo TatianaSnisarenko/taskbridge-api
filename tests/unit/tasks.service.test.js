@@ -6,6 +6,8 @@ const prismaMock = {
   },
   task: {
     create: jest.fn(),
+    findUnique: jest.fn(),
+    update: jest.fn(),
   },
 };
 
@@ -180,5 +182,275 @@ describe('tasks.service', () => {
     });
 
     expect(result).toEqual({ taskId: 't2', status: 'DRAFT', createdAt });
+  });
+
+  test('updateTaskDraft rejects task not found', async () => {
+    prismaMock.task.findUnique.mockResolvedValue(null);
+
+    await expect(
+      tasksService.updateTaskDraft({
+        userId: 'u1',
+        taskId: 't1',
+        task: { title: 'Updated', description: 'Updated description' },
+      })
+    ).rejects.toMatchObject({
+      status: 404,
+      code: 'NOT_FOUND',
+    });
+  });
+
+  test('updateTaskDraft rejects deleted task', async () => {
+    prismaMock.task.findUnique.mockResolvedValue({
+      id: 't1',
+      ownerUserId: 'u1',
+      status: 'DRAFT',
+      deletedAt: new Date(),
+    });
+
+    await expect(
+      tasksService.updateTaskDraft({
+        userId: 'u1',
+        taskId: 't1',
+        task: { title: 'Updated', description: 'Updated description' },
+      })
+    ).rejects.toMatchObject({
+      status: 404,
+      code: 'NOT_FOUND',
+    });
+  });
+
+  test('updateTaskDraft rejects non-owner task', async () => {
+    prismaMock.task.findUnique.mockResolvedValue({
+      id: 't1',
+      ownerUserId: 'u2',
+      status: 'DRAFT',
+      deletedAt: null,
+    });
+
+    await expect(
+      tasksService.updateTaskDraft({
+        userId: 'u1',
+        taskId: 't1',
+        task: { title: 'Updated', description: 'Updated description' },
+      })
+    ).rejects.toMatchObject({
+      status: 403,
+      code: 'NOT_OWNER',
+    });
+  });
+
+  test('updateTaskDraft rejects invalid state', async () => {
+    prismaMock.task.findUnique.mockResolvedValue({
+      id: 't1',
+      ownerUserId: 'u1',
+      status: 'IN_PROGRESS',
+      deletedAt: null,
+    });
+
+    await expect(
+      tasksService.updateTaskDraft({
+        userId: 'u1',
+        taskId: 't1',
+        task: { title: 'Updated', description: 'Updated description' },
+      })
+    ).rejects.toMatchObject({
+      status: 409,
+      code: 'INVALID_STATE',
+    });
+  });
+
+  test('updateTaskDraft rejects missing project', async () => {
+    prismaMock.task.findUnique.mockResolvedValue({
+      id: 't1',
+      ownerUserId: 'u1',
+      status: 'DRAFT',
+      deletedAt: null,
+    });
+    prismaMock.project.findUnique.mockResolvedValue(null);
+
+    await expect(
+      tasksService.updateTaskDraft({
+        userId: 'u1',
+        taskId: 't1',
+        task: { project_id: 'p1', title: 'Updated', description: 'Updated description' },
+      })
+    ).rejects.toMatchObject({
+      status: 404,
+      code: 'PROJECT_NOT_FOUND',
+    });
+  });
+
+  test('updateTaskDraft rejects deleted project', async () => {
+    prismaMock.task.findUnique.mockResolvedValue({
+      id: 't1',
+      ownerUserId: 'u1',
+      status: 'DRAFT',
+      deletedAt: null,
+    });
+    prismaMock.project.findUnique.mockResolvedValue({
+      id: 'p1',
+      ownerUserId: 'u1',
+      deletedAt: new Date(),
+    });
+
+    await expect(
+      tasksService.updateTaskDraft({
+        userId: 'u1',
+        taskId: 't1',
+        task: { project_id: 'p1', title: 'Updated', description: 'Updated description' },
+      })
+    ).rejects.toMatchObject({
+      status: 404,
+      code: 'PROJECT_NOT_FOUND',
+    });
+  });
+
+  test('updateTaskDraft rejects non-owner project', async () => {
+    prismaMock.task.findUnique.mockResolvedValue({
+      id: 't1',
+      ownerUserId: 'u1',
+      status: 'DRAFT',
+      deletedAt: null,
+    });
+    prismaMock.project.findUnique.mockResolvedValue({
+      id: 'p1',
+      ownerUserId: 'u2',
+      deletedAt: null,
+    });
+
+    await expect(
+      tasksService.updateTaskDraft({
+        userId: 'u1',
+        taskId: 't1',
+        task: { project_id: 'p1', title: 'Updated', description: 'Updated description' },
+      })
+    ).rejects.toMatchObject({
+      status: 403,
+      code: 'NOT_OWNER',
+    });
+  });
+
+  test('updateTaskDraft updates task without project', async () => {
+    const updatedAt = new Date('2026-02-14T12:00:00Z');
+    prismaMock.task.findUnique.mockResolvedValue({
+      id: 't1',
+      ownerUserId: 'u1',
+      status: 'DRAFT',
+      deletedAt: null,
+    });
+    prismaMock.task.update.mockResolvedValue({ id: 't1', updatedAt });
+
+    const task = {
+      project_id: null,
+      title: 'Updated title',
+      description: 'Updated description',
+      category: 'FRONTEND',
+      type: 'PAID',
+      difficulty: 'MIDDLE',
+      required_skills: ['React'],
+      estimated_effort_hours: 10,
+      expected_duration: 'DAYS_15_30',
+      communication_language: 'UA',
+      timezone_preference: 'Europe/Kyiv',
+      application_deadline: new Date('2026-03-01'),
+      visibility: 'UNLISTED',
+      deliverables: 'Updated deliverables',
+      requirements: 'Updated requirements',
+      nice_to_have: 'Updated nice to have',
+    };
+
+    const result = await tasksService.updateTaskDraft({ userId: 'u1', taskId: 't1', task });
+
+    expect(prismaMock.task.update).toHaveBeenCalledWith({
+      where: { id: 't1' },
+      data: {
+        projectId: null,
+        title: 'Updated title',
+        description: 'Updated description',
+        category: 'FRONTEND',
+        type: 'PAID',
+        difficulty: 'MIDDLE',
+        requiredSkills: ['React'],
+        estimatedEffortHours: 10,
+        expectedDuration: 'DAYS_15_30',
+        communicationLanguage: 'UA',
+        timezonePreference: 'Europe/Kyiv',
+        applicationDeadline: task.application_deadline,
+        visibility: 'UNLISTED',
+        deliverables: 'Updated deliverables',
+        requirements: 'Updated requirements',
+        niceToHave: 'Updated nice to have',
+      },
+      select: { id: true, updatedAt: true },
+    });
+
+    expect(result).toEqual({ taskId: 't1', updated: true, updatedAt });
+  });
+
+  test('updateTaskDraft updates task with owned project', async () => {
+    const updatedAt = new Date('2026-02-14T13:00:00Z');
+    prismaMock.task.findUnique.mockResolvedValue({
+      id: 't1',
+      ownerUserId: 'u1',
+      status: 'PUBLISHED',
+      deletedAt: null,
+    });
+    prismaMock.project.findUnique.mockResolvedValue({
+      id: 'p1',
+      ownerUserId: 'u1',
+      deletedAt: null,
+    });
+    prismaMock.task.update.mockResolvedValue({ id: 't1', updatedAt });
+
+    const task = {
+      project_id: 'p1',
+      title: 'Updated title',
+      description: 'Updated description',
+      category: 'FRONTEND',
+      type: 'PAID',
+      difficulty: 'MIDDLE',
+      required_skills: ['React'],
+      estimated_effort_hours: 10,
+      expected_duration: 'DAYS_15_30',
+      communication_language: 'UA',
+      timezone_preference: 'Europe/Kyiv',
+      application_deadline: new Date('2026-03-01'),
+      visibility: 'UNLISTED',
+      deliverables: 'Updated deliverables',
+      requirements: 'Updated requirements',
+      nice_to_have: 'Updated nice to have',
+    };
+
+    const result = await tasksService.updateTaskDraft({ userId: 'u1', taskId: 't1', task });
+
+    expect(prismaMock.project.findUnique).toHaveBeenCalledWith({
+      where: { id: 'p1' },
+      select: { id: true, ownerUserId: true, deletedAt: true },
+    });
+
+    expect(prismaMock.task.update).toHaveBeenCalledWith({
+      where: { id: 't1' },
+      data: {
+        projectId: 'p1',
+        title: 'Updated title',
+        description: 'Updated description',
+        category: 'FRONTEND',
+        type: 'PAID',
+        difficulty: 'MIDDLE',
+        requiredSkills: ['React'],
+        estimatedEffortHours: 10,
+        expectedDuration: 'DAYS_15_30',
+        communicationLanguage: 'UA',
+        timezonePreference: 'Europe/Kyiv',
+        applicationDeadline: task.application_deadline,
+        visibility: 'UNLISTED',
+        deliverables: 'Updated deliverables',
+        requirements: 'Updated requirements',
+        niceToHave: 'Updated nice to have',
+      },
+      select: { id: true, updatedAt: true },
+    });
+
+    expect(result).toEqual({ taskId: 't1', updated: true, updatedAt });
   });
 });
