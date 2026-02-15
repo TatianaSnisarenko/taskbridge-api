@@ -11,6 +11,7 @@ const prismaMock = {
   },
   task: {
     updateMany: jest.fn(),
+    groupBy: jest.fn(),
   },
   $transaction: jest.fn((ops) => Promise.all(ops)),
 };
@@ -361,6 +362,174 @@ describe('projects.service', () => {
           }),
         })
       );
+    });
+  });
+
+  describe('getProjectById', () => {
+    const mockProject = {
+      id: 'p1',
+      ownerUserId: 'u1',
+      title: 'TeamUp MVP',
+      shortDescription: 'Build MVP',
+      description: 'Longer description',
+      technologies: ['Node.js', 'Prisma'],
+      visibility: 'PUBLIC',
+      status: 'ACTIVE',
+      maxTalents: 3,
+      createdAt: new Date('2026-02-14T10:00:00Z'),
+      updatedAt: new Date('2026-02-14T12:00:00Z'),
+      deletedAt: null,
+      owner: {
+        id: 'u1',
+        companyProfile: {
+          companyName: 'TeamUp Studio',
+          verified: false,
+          avgRating: 4.6,
+          reviewsCount: 8,
+        },
+      },
+    };
+
+    test('returns project details with task summary', async () => {
+      prismaMock.project.findUnique.mockResolvedValue(mockProject);
+      prismaMock.task.groupBy.mockResolvedValue([
+        { status: 'DRAFT', _count: { _all: 1 } },
+        { status: 'PUBLISHED', _count: { _all: 2 } },
+        { status: 'IN_PROGRESS', _count: { _all: 1 } },
+        { status: 'COMPLETION_REQUESTED', _count: { _all: 1 } },
+        { status: 'COMPLETED', _count: { _all: 3 } },
+        { status: 'CLOSED', _count: { _all: 2 } },
+      ]);
+
+      const result = await projectsService.getProjectById({
+        userId: null,
+        projectId: 'p1',
+        includeDeleted: false,
+      });
+
+      expect(prismaMock.project.findUnique).toHaveBeenCalledWith({
+        where: { id: 'p1' },
+        include: {
+          owner: {
+            select: {
+              id: true,
+              companyProfile: {
+                select: {
+                  companyName: true,
+                  verified: true,
+                  avgRating: true,
+                  reviewsCount: true,
+                },
+              },
+            },
+          },
+        },
+      });
+      expect(prismaMock.task.groupBy).toHaveBeenCalledWith({
+        by: ['status'],
+        where: { projectId: 'p1', deletedAt: null },
+        _count: { _all: true },
+      });
+      expect(result).toMatchObject({
+        project_id: 'p1',
+        owner_user_id: 'u1',
+        title: 'TeamUp MVP',
+        short_description: 'Build MVP',
+        description: 'Longer description',
+        technologies: ['Node.js', 'Prisma'],
+        visibility: 'PUBLIC',
+        status: 'ACTIVE',
+        max_talents: 3,
+        deleted_at: null,
+        company: {
+          user_id: 'u1',
+          company_name: 'TeamUp Studio',
+          verified: false,
+          avg_rating: 4.6,
+          reviews_count: 8,
+        },
+        tasks_summary: {
+          total: 10,
+          draft: 1,
+          published: 2,
+          in_progress: 2,
+          completed: 3,
+          closed: 2,
+        },
+      });
+    });
+
+    test('rejects missing project', async () => {
+      prismaMock.project.findUnique.mockResolvedValue(null);
+
+      await expect(
+        projectsService.getProjectById({
+          userId: null,
+          projectId: 'p1',
+          includeDeleted: false,
+        })
+      ).rejects.toMatchObject({
+        status: 404,
+        code: 'NOT_FOUND',
+      });
+    });
+
+    test('rejects deleted project without includeDeleted', async () => {
+      prismaMock.project.findUnique.mockResolvedValue({
+        ...mockProject,
+        deletedAt: new Date('2026-02-14T13:00:00Z'),
+      });
+
+      await expect(
+        projectsService.getProjectById({
+          userId: null,
+          projectId: 'p1',
+          includeDeleted: false,
+        })
+      ).rejects.toMatchObject({
+        status: 404,
+        code: 'NOT_FOUND',
+      });
+    });
+
+    test('rejects unlisted project for non-owner', async () => {
+      prismaMock.project.findUnique.mockResolvedValue({
+        ...mockProject,
+        visibility: 'UNLISTED',
+      });
+
+      await expect(
+        projectsService.getProjectById({
+          userId: 'u2',
+          projectId: 'p1',
+          includeDeleted: false,
+        })
+      ).rejects.toMatchObject({
+        status: 404,
+        code: 'NOT_FOUND',
+      });
+    });
+
+    test('returns deleted project for owner when includeDeleted=true', async () => {
+      prismaMock.project.findUnique.mockResolvedValue({
+        ...mockProject,
+        deletedAt: new Date('2026-02-14T13:00:00Z'),
+      });
+      prismaMock.task.groupBy.mockResolvedValue([]);
+
+      const result = await projectsService.getProjectById({
+        userId: 'u1',
+        projectId: 'p1',
+        includeDeleted: true,
+      });
+
+      expect(prismaMock.task.groupBy).toHaveBeenCalledWith({
+        by: ['status'],
+        where: { projectId: 'p1' },
+        _count: { _all: true },
+      });
+      expect(result.project_id).toBe('p1');
+      expect(result.deleted_at).toEqual(expect.any(String));
     });
   });
 });

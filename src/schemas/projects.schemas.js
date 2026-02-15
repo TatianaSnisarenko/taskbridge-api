@@ -123,6 +123,20 @@ export const deleteProjectParamsSchema = Joi.object({
   }),
 });
 
+export const getProjectParamsSchema = Joi.object({
+  projectId: Joi.string().guid({ version: 'uuidv4' }).required().messages({
+    'string.empty': 'Project id is required',
+    'string.guid': 'Project id must be a valid UUID',
+    'any.required': 'Project id is required',
+  }),
+});
+
+export const getProjectQuerySchema = Joi.object({
+  include_deleted: Joi.boolean().default(false).messages({
+    'boolean.base': 'Include deleted must be true or false',
+  }),
+});
+
 export const getProjectsQuerySchema = Joi.object({
   page: Joi.number().integer().min(1).default(1).messages({
     'number.base': 'Page must be a number',

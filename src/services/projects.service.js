@@ -114,6 +114,69 @@ function mapProjectOutput(project) {
   };
 }
 
+function buildTaskSummary(groups) {
+  const summary = {
+    total: 0,
+    draft: 0,
+    published: 0,
+    in_progress: 0,
+    completed: 0,
+    closed: 0,
+  };
+
+  for (const group of groups) {
+    const count = group._count?._all ?? 0;
+    summary.total += count;
+    switch (group.status) {
+      case 'DRAFT':
+        summary.draft += count;
+        break;
+      case 'PUBLISHED':
+        summary.published += count;
+        break;
+      case 'IN_PROGRESS':
+      case 'COMPLETION_REQUESTED':
+        summary.in_progress += count;
+        break;
+      case 'COMPLETED':
+        summary.completed += count;
+        break;
+      case 'CLOSED':
+        summary.closed += count;
+        break;
+      default:
+        break;
+    }
+  }
+
+  return summary;
+}
+
+function mapProjectDetailsOutput(project, taskSummary) {
+  return {
+    project_id: project.id,
+    owner_user_id: project.ownerUserId,
+    title: project.title,
+    short_description: project.shortDescription,
+    description: project.description,
+    technologies: project.technologies,
+    visibility: project.visibility,
+    status: project.status,
+    max_talents: project.maxTalents,
+    created_at: project.createdAt.toISOString(),
+    updated_at: project.updatedAt.toISOString(),
+    deleted_at: project.deletedAt ? project.deletedAt.toISOString() : null,
+    company: {
+      user_id: project.owner.id,
+      company_name: project.owner.companyProfile.companyName,
+      verified: project.owner.companyProfile.verified,
+      avg_rating: Number(project.owner.companyProfile.avgRating),
+      reviews_count: project.owner.companyProfile.reviewsCount,
+    },
+    tasks_summary: taskSummary,
+  };
+}
+
 export async function getProjects({ userId, query }) {
   const { page = 1, size = 20, search, technology, visibility, owner, include_deleted } = query;
 
@@ -192,4 +255,55 @@ export async function getProjects({ userId, query }) {
     size: Number(size),
     total,
   };
+}
+
+export async function getProjectById({ userId, projectId, includeDeleted }) {
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    include: {
+      owner: {
+        select: {
+          id: true,
+          companyProfile: {
+            select: {
+              companyName: true,
+              verified: true,
+              avgRating: true,
+              reviewsCount: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!project) {
+    throw new ApiError(404, 'NOT_FOUND', 'Project not found');
+  }
+
+  const isOwner = userId && project.ownerUserId === userId;
+
+  if (project.deletedAt) {
+    if (!includeDeleted || !isOwner) {
+      throw new ApiError(404, 'NOT_FOUND', 'Project not found');
+    }
+  }
+
+  if (!project.deletedAt && project.visibility !== 'PUBLIC' && !isOwner) {
+    throw new ApiError(404, 'NOT_FOUND', 'Project not found');
+  }
+
+  const taskWhere = { projectId };
+  if (!(includeDeleted && isOwner)) {
+    taskWhere.deletedAt = null;
+  }
+
+  const taskGroups = await prisma.task.groupBy({
+    by: ['status'],
+    where: taskWhere,
+    _count: { _all: true },
+  });
+
+  const taskSummary = buildTaskSummary(taskGroups);
+  return mapProjectDetailsOutput(project, taskSummary);
 }

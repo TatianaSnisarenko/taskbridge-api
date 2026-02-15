@@ -335,6 +335,270 @@ describe('projects routes', () => {
     });
   });
 
+  describe('GET /projects/:projectId', () => {
+    test('returns project details with task summary', async () => {
+      const owner = await createUser({ companyProfile: { companyName: 'TeamUp Studio' } });
+
+      const project = await prisma.project.create({
+        data: {
+          ownerUserId: owner.id,
+          title: 'TeamUp MVP',
+          shortDescription: 'Build MVP for marketplace',
+          description: 'Longer description',
+          technologies: ['Node.js', 'PostgreSQL', 'Prisma'],
+          visibility: 'PUBLIC',
+          status: 'ACTIVE',
+          maxTalents: 3,
+        },
+      });
+
+      await prisma.task.create({
+        data: {
+          ownerUserId: owner.id,
+          projectId: project.id,
+          title: 'Draft task',
+          description: 'Draft',
+          status: 'DRAFT',
+        },
+      });
+      await prisma.task.create({
+        data: {
+          ownerUserId: owner.id,
+          projectId: project.id,
+          title: 'Published task',
+          description: 'Published',
+          status: 'PUBLISHED',
+        },
+      });
+      await prisma.task.create({
+        data: {
+          ownerUserId: owner.id,
+          projectId: project.id,
+          title: 'In progress task',
+          description: 'In progress',
+          status: 'IN_PROGRESS',
+        },
+      });
+      await prisma.task.create({
+        data: {
+          ownerUserId: owner.id,
+          projectId: project.id,
+          title: 'Completion requested',
+          description: 'Awaiting review',
+          status: 'COMPLETION_REQUESTED',
+        },
+      });
+      await prisma.task.create({
+        data: {
+          ownerUserId: owner.id,
+          projectId: project.id,
+          title: 'Completed task',
+          description: 'Completed',
+          status: 'COMPLETED',
+        },
+      });
+      await prisma.task.create({
+        data: {
+          ownerUserId: owner.id,
+          projectId: project.id,
+          title: 'Closed task',
+          description: 'Closed',
+          status: 'CLOSED',
+        },
+      });
+
+      const res = await request(app).get(`/api/v1/projects/${project.id}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body).toMatchObject({
+        project_id: project.id,
+        owner_user_id: owner.id,
+        title: 'TeamUp MVP',
+        short_description: 'Build MVP for marketplace',
+        description: 'Longer description',
+        technologies: ['Node.js', 'PostgreSQL', 'Prisma'],
+        visibility: 'PUBLIC',
+        status: 'ACTIVE',
+        max_talents: 3,
+        deleted_at: null,
+        company: {
+          user_id: owner.id,
+          company_name: 'TeamUp Studio',
+          verified: false,
+          avg_rating: expect.any(Number),
+          reviews_count: expect.any(Number),
+        },
+        tasks_summary: {
+          total: 6,
+          draft: 1,
+          published: 1,
+          in_progress: 2,
+          completed: 1,
+          closed: 1,
+        },
+      });
+      expect(Number.isNaN(Date.parse(res.body.created_at))).toBe(false);
+      expect(Number.isNaN(Date.parse(res.body.updated_at))).toBe(false);
+    });
+
+    test('rejects invalid projectId', async () => {
+      const res = await request(app).get('/api/v1/projects/not-a-uuid');
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('VALIDATION_ERROR');
+      expect(res.body.error.details).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            field: 'projectId',
+            issue: 'Project id must be a valid UUID',
+          }),
+        ])
+      );
+    });
+
+    test('returns 404 for deleted project without include_deleted', async () => {
+      const owner = await createUser({ companyProfile: { companyName: 'TeamUp Studio' } });
+
+      const project = await prisma.project.create({
+        data: {
+          ownerUserId: owner.id,
+          title: 'Deleted project',
+          shortDescription: 'Deleted',
+          description: 'Deleted',
+          technologies: ['Node.js'],
+          visibility: 'PUBLIC',
+          deletedAt: new Date(),
+        },
+      });
+
+      const res = await request(app).get(`/api/v1/projects/${project.id}`);
+
+      expect(res.status).toBe(404);
+      expect(res.body.error.code).toBe('NOT_FOUND');
+    });
+
+    test('requires auth when include_deleted=true', async () => {
+      const owner = await createUser({ companyProfile: { companyName: 'TeamUp Studio' } });
+      const project = await prisma.project.create({
+        data: {
+          ownerUserId: owner.id,
+          title: 'Deleted project',
+          shortDescription: 'Deleted',
+          description: 'Deleted',
+          technologies: ['Node.js'],
+          visibility: 'PUBLIC',
+          deletedAt: new Date(),
+        },
+      });
+
+      const res = await request(app).get(`/api/v1/projects/${project.id}?include_deleted=true`);
+
+      expect(res.status).toBe(401);
+      expect(res.body.error.code).toBe('AUTH_REQUIRED');
+    });
+
+    test('returns deleted project for owner when include_deleted=true', async () => {
+      const owner = await createUser({ companyProfile: { companyName: 'TeamUp Studio' } });
+      const token = buildAccessToken({ userId: owner.id, email: owner.email });
+
+      const project = await prisma.project.create({
+        data: {
+          ownerUserId: owner.id,
+          title: 'Deleted project',
+          shortDescription: 'Deleted',
+          description: 'Deleted',
+          technologies: ['Node.js'],
+          visibility: 'PUBLIC',
+          deletedAt: new Date(),
+        },
+      });
+
+      const res = await request(app)
+        .get(`/api/v1/projects/${project.id}?include_deleted=true`)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.project_id).toBe(project.id);
+      expect(res.body.deleted_at).toEqual(expect.any(String));
+    });
+
+    test('returns 404 for deleted project when non-owner tries include_deleted=true', async () => {
+      const owner = await createUser({ companyProfile: { companyName: 'TeamUp Studio' } });
+      const otherUser = await createUser({ companyProfile: { companyName: 'Other' } });
+      const token = buildAccessToken({ userId: otherUser.id, email: otherUser.email });
+
+      const project = await prisma.project.create({
+        data: {
+          ownerUserId: owner.id,
+          title: 'Deleted project',
+          shortDescription: 'Deleted',
+          description: 'Deleted',
+          technologies: ['Node.js'],
+          visibility: 'PUBLIC',
+          deletedAt: new Date(),
+        },
+      });
+
+      const res = await request(app)
+        .get(`/api/v1/projects/${project.id}?include_deleted=true`)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(404);
+      expect(res.body.error.code).toBe('NOT_FOUND');
+    });
+
+    test('returns 404 for unlisted project when not owner', async () => {
+      const owner = await createUser({ companyProfile: { companyName: 'TeamUp Studio' } });
+
+      const project = await prisma.project.create({
+        data: {
+          ownerUserId: owner.id,
+          title: 'Private project',
+          shortDescription: 'Private',
+          description: 'Private',
+          technologies: ['Node.js'],
+          visibility: 'UNLISTED',
+        },
+      });
+
+      const res = await request(app).get(`/api/v1/projects/${project.id}`);
+
+      expect(res.status).toBe(404);
+      expect(res.body.error.code).toBe('NOT_FOUND');
+    });
+
+    test('returns unlisted project for owner when authenticated', async () => {
+      const owner = await createUser({ companyProfile: { companyName: 'TeamUp Studio' } });
+      const token = buildAccessToken({ userId: owner.id, email: owner.email });
+
+      const project = await prisma.project.create({
+        data: {
+          ownerUserId: owner.id,
+          title: 'Private project',
+          shortDescription: 'Private',
+          description: 'Private',
+          technologies: ['Node.js'],
+          visibility: 'UNLISTED',
+        },
+      });
+
+      const res = await request(app)
+        .get(`/api/v1/projects/${project.id}`)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.project_id).toBe(project.id);
+      expect(res.body.visibility).toBe('UNLISTED');
+    });
+
+    test('returns 404 for non-existent project', async () => {
+      const res = await request(app).get('/api/v1/projects/3fa85f64-5717-4562-b3fc-2c963f66afa6');
+
+      expect(res.status).toBe(404);
+      expect(res.body.error.code).toBe('NOT_FOUND');
+    });
+  });
+
   test('POST /projects rejects unauthorized', async () => {
     const res = await request(app).post('/api/v1/projects').send(projectPayload);
 

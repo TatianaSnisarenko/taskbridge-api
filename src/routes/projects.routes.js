@@ -6,6 +6,8 @@ import * as projectsController from '../controllers/projects.controller.js';
 import {
   createProjectSchema,
   deleteProjectParamsSchema,
+  getProjectParamsSchema,
+  getProjectQuerySchema,
   getProjectsQuerySchema,
   updateProjectParamsSchema,
   updateProjectSchema,
@@ -25,6 +27,22 @@ projectsRouter.get(
     return next();
   },
   projectsController.getProjects
+);
+
+projectsRouter.get(
+  '/:projectId',
+  validate(getProjectParamsSchema, 'params'),
+  validate(getProjectQuerySchema, 'query'),
+  (req, res, next) => {
+    if (req.query.include_deleted === true) {
+      return requireAuth(req, res, next);
+    }
+    if (req.headers.authorization) {
+      return requireAuth(req, res, next);
+    }
+    return next();
+  },
+  projectsController.getProjectById
 );
 
 projectsRouter.post(

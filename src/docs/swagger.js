@@ -352,6 +352,45 @@ export const swaggerSpec = {
           },
         },
       },
+      ProjectTasksSummary: {
+        type: 'object',
+        properties: {
+          total: { type: 'integer', example: 12 },
+          draft: { type: 'integer', example: 2 },
+          published: { type: 'integer', example: 5 },
+          in_progress: { type: 'integer', example: 2 },
+          completed: { type: 'integer', example: 3 },
+          closed: { type: 'integer', example: 0 },
+        },
+      },
+      ProjectDetailsResponse: {
+        type: 'object',
+        properties: {
+          project_id: { type: 'string', format: 'uuid' },
+          owner_user_id: { type: 'string', format: 'uuid' },
+          title: { type: 'string' },
+          short_description: { type: 'string' },
+          description: { type: 'string' },
+          technologies: { type: 'array', items: { type: 'string' } },
+          visibility: { type: 'string', enum: ['PUBLIC', 'UNLISTED'] },
+          status: { type: 'string', enum: ['ACTIVE', 'ARCHIVED'] },
+          max_talents: { type: 'integer' },
+          created_at: { type: 'string', format: 'date-time' },
+          updated_at: { type: 'string', format: 'date-time' },
+          deleted_at: { type: 'string', format: 'date-time', nullable: true },
+          company: {
+            type: 'object',
+            properties: {
+              user_id: { type: 'string', format: 'uuid' },
+              company_name: { type: 'string' },
+              verified: { type: 'boolean' },
+              avg_rating: { type: 'number', format: 'float' },
+              reviews_count: { type: 'integer' },
+            },
+          },
+          tasks_summary: { $ref: '#/components/schemas/ProjectTasksSummary' },
+        },
+      },
       GetProjectsResponse: {
         type: 'object',
         properties: {
@@ -874,6 +913,38 @@ export const swaggerSpec = {
       },
     },
     '/api/v1/projects/{projectId}': {
+      get: {
+        tags: ['Projects'],
+        summary: 'Get project details',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'projectId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+          {
+            name: 'include_deleted',
+            in: 'query',
+            schema: { type: 'boolean', default: false },
+            description: 'Include deleted project (owner only, requires Authorization header)',
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Project details',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ProjectDetailsResponse' },
+              },
+            },
+          },
+          400: { description: 'Validation error' },
+          401: { description: 'Unauthorized (include_deleted=true)' },
+          404: { description: 'Not found' },
+        },
+      },
       put: {
         tags: ['Projects'],
         summary: 'Update project',

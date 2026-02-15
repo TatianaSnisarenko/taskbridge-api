@@ -47,3 +47,13 @@ export const getProjects = asyncHandler(async (req, res) => {
 
   return res.status(200).json(result);
 });
+
+export const getProjectById = asyncHandler(async (req, res) => {
+  const result = await projectsService.getProjectById({
+    userId: req.user?.id,
+    projectId: req.params.projectId,
+    includeDeleted: req.query.include_deleted,
+  });
+
+  return res.status(200).json(result);
+});
