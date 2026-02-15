@@ -93,3 +93,103 @@ export async function deleteProject({ userId, projectId }) {
 
   return { projectId: updated.id, deletedAt: updated.deletedAt };
 }
+
+function mapProjectOutput(project) {
+  return {
+    project_id: project.id,
+    title: project.title,
+    short_description: project.shortDescription,
+    technologies: project.technologies,
+    visibility: project.visibility,
+    status: project.status,
+    max_talents: project.maxTalents,
+    created_at: project.createdAt.toISOString(),
+    company: {
+      user_id: project.owner.id,
+      company_name: project.owner.companyProfile.companyName,
+      verified: project.owner.companyProfile.verified,
+      avg_rating: Number(project.owner.companyProfile.avgRating),
+      reviews_count: project.owner.companyProfile.reviewsCount,
+    },
+  };
+}
+
+export async function getProjects({ userId, query }) {
+  const { page = 1, size = 20, search, technology, visibility, owner, include_deleted } = query;
+
+  const isOwnerQuery = owner === true || owner === 'true';
+  const includeDeleted = include_deleted === true || include_deleted === 'true';
+
+  // Only owner can see deleted and filter by owner
+  if (includeDeleted && !isOwnerQuery) {
+    throw new ApiError(403, 'FORBIDDEN', 'Only owner can include deleted projects');
+  }
+
+  const where = {};
+
+  // Owner filter
+  if (isOwnerQuery) {
+    where.ownerUserId = userId;
+  }
+
+  // Deleted filter
+  if (!includeDeleted) {
+    where.deletedAt = null;
+  }
+
+  // Visibility filter
+  if (visibility) {
+    where.visibility = visibility;
+  } else if (!isOwnerQuery) {
+    // Default to PUBLIC for public catalog
+    where.visibility = 'PUBLIC';
+  }
+
+  // Search filter
+  if (search) {
+    where.OR = [
+      { title: { contains: search, mode: 'insensitive' } },
+      { shortDescription: { contains: search, mode: 'insensitive' } },
+    ];
+  }
+
+  // Technology filter
+  if (technology) {
+    const techs = Array.isArray(technology) ? technology : [technology];
+    where.technologies = { hasSome: techs };
+  }
+
+  const skip = (page - 1) * size;
+
+  const [items, total] = await prisma.$transaction([
+    prisma.project.findMany({
+      where,
+      skip,
+      take: size,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        owner: {
+          select: {
+            id: true,
+            companyProfile: {
+              select: {
+                companyName: true,
+                verified: true,
+                avgRating: true,
+                reviewsCount: true,
+              },
+            },
+          },
+        },
+      },
+    }),
+    prisma.project.count({ where }),
+  ]);
+
+  return {
+    items: items.map(mapProjectOutput),
+    page,
+    size: Number(size),
+    total,
+  };
+}

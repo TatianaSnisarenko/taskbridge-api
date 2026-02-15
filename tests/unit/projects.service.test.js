@@ -6,6 +6,8 @@ const prismaMock = {
     findFirst: jest.fn(),
     findUnique: jest.fn(),
     update: jest.fn(),
+    findMany: jest.fn(),
+    count: jest.fn(),
   },
   task: {
     updateMany: jest.fn(),
@@ -199,5 +201,166 @@ describe('projects.service', () => {
       data: { deletedAt: expect.any(Date), status: 'CLOSED' },
     });
     expect(result).toEqual({ projectId: 'p1', deletedAt });
+  });
+
+  describe('getProjects', () => {
+    const mockProject = {
+      id: 'p1',
+      title: 'TeamUp MVP',
+      shortDescription: 'Build MVP',
+      technologies: ['Node.js', 'Prisma'],
+      visibility: 'PUBLIC',
+      status: 'ACTIVE',
+      maxTalents: 3,
+      createdAt: new Date('2026-02-14T10:00:00Z'),
+      owner: {
+        id: 'u1',
+        companyProfile: {
+          companyName: 'TeamUp Studio',
+          verified: false,
+          avgRating: 4.6,
+          reviewsCount: 8,
+        },
+      },
+    };
+
+    test('returns public projects by default', async () => {
+      prismaMock.$transaction.mockResolvedValue([[mockProject], 1]);
+
+      const result = await projectsService.getProjects({ userId: null, query: {} });
+
+      expect(prismaMock.project.findMany).toHaveBeenCalledWith({
+        where: { deletedAt: null, visibility: 'PUBLIC' },
+        skip: 0,
+        take: 20,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          owner: {
+            select: {
+              id: true,
+              companyProfile: {
+                select: {
+                  companyName: true,
+                  verified: true,
+                  avgRating: true,
+                  reviewsCount: true,
+                },
+              },
+            },
+          },
+        },
+      });
+      expect(prismaMock.project.count).toHaveBeenCalledWith({
+        where: { deletedAt: null, visibility: 'PUBLIC' },
+      });
+      expect(result).toEqual({
+        items: [
+          {
+            project_id: 'p1',
+            title: 'TeamUp MVP',
+            short_description: 'Build MVP',
+            technologies: ['Node.js', 'Prisma'],
+            visibility: 'PUBLIC',
+            status: 'ACTIVE',
+            max_talents: 3,
+            created_at: '2026-02-14T10:00:00.000Z',
+            company: {
+              user_id: 'u1',
+              company_name: 'TeamUp Studio',
+              verified: false,
+              avg_rating: 4.6,
+              reviews_count: 8,
+            },
+          },
+        ],
+        page: 1,
+        size: 20,
+        total: 1,
+      });
+    });
+
+    test('filters by search', async () => {
+      prismaMock.$transaction.mockResolvedValue([[], 0]);
+
+      await projectsService.getProjects({ userId: null, query: { search: 'teamup' } });
+
+      expect(prismaMock.project.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            OR: [
+              { title: { contains: 'teamup', mode: 'insensitive' } },
+              { shortDescription: { contains: 'teamup', mode: 'insensitive' } },
+            ],
+          }),
+        })
+      );
+    });
+
+    test('filters by technology', async () => {
+      prismaMock.$transaction.mockResolvedValue([[], 0]);
+
+      await projectsService.getProjects({ userId: null, query: { technology: 'Prisma' } });
+
+      expect(prismaMock.project.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            technologies: { hasSome: ['Prisma'] },
+          }),
+        })
+      );
+    });
+
+    test('supports pagination', async () => {
+      prismaMock.$transaction.mockResolvedValue([[], 0]);
+
+      await projectsService.getProjects({ userId: null, query: { page: 2, size: 10 } });
+
+      expect(prismaMock.project.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          skip: 10,
+          take: 10,
+        })
+      );
+    });
+
+    test('filters by owner', async () => {
+      prismaMock.$transaction.mockResolvedValue([[], 0]);
+
+      await projectsService.getProjects({ userId: 'u1', query: { owner: true } });
+
+      expect(prismaMock.project.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            ownerUserId: 'u1',
+          }),
+        })
+      );
+    });
+
+    test('include_deleted requires owner filter', async () => {
+      await expect(
+        projectsService.getProjects({ userId: null, query: { include_deleted: true } })
+      ).rejects.toMatchObject({
+        status: 403,
+        code: 'FORBIDDEN',
+      });
+    });
+
+    test('includes deleted when owner=true and include_deleted=true', async () => {
+      prismaMock.$transaction.mockResolvedValue([[], 0]);
+
+      await projectsService.getProjects({
+        userId: 'u1',
+        query: { owner: true, include_deleted: true },
+      });
+
+      expect(prismaMock.project.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.not.objectContaining({
+            deletedAt: null,
+          }),
+        })
+      );
+    });
   });
 });

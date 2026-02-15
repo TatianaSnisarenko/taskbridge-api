@@ -122,3 +122,36 @@ export const deleteProjectParamsSchema = Joi.object({
     'any.required': 'Project id is required',
   }),
 });
+
+export const getProjectsQuerySchema = Joi.object({
+  page: Joi.number().integer().min(1).default(1).messages({
+    'number.base': 'Page must be a number',
+    'number.integer': 'Page must be an integer',
+    'number.min': 'Page must be at least 1',
+  }),
+  size: Joi.number().integer().min(1).max(100).default(20).messages({
+    'number.base': 'Size must be a number',
+    'number.integer': 'Size must be an integer',
+    'number.min': 'Size must be at least 1',
+    'number.max': 'Size must not exceed 100',
+  }),
+  search: Joi.string().trim().max(200).messages({
+    'string.max': 'Search must not exceed 200 characters',
+  }),
+  technology: Joi.alternatives()
+    .try(Joi.string().trim().max(50), Joi.array().items(Joi.string().trim().max(50)))
+    .messages({
+      'string.max': 'Technology must not exceed 50 characters',
+    }),
+  visibility: Joi.string()
+    .valid(...PROJECT_VISIBILITY)
+    .messages({
+      'any.only': 'Visibility must be one of: PUBLIC, UNLISTED',
+    }),
+  owner: Joi.boolean().messages({
+    'boolean.base': 'Owner must be true or false',
+  }),
+  include_deleted: Joi.boolean().messages({
+    'boolean.base': 'Include deleted must be true or false',
+  }),
+});

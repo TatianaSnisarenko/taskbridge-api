@@ -329,6 +329,41 @@ export const swaggerSpec = {
           deleted_at: { type: 'string', format: 'date-time' },
         },
       },
+      ProjectListItem: {
+        type: 'object',
+        properties: {
+          project_id: { type: 'string', format: 'uuid' },
+          title: { type: 'string' },
+          short_description: { type: 'string' },
+          technologies: { type: 'array', items: { type: 'string' } },
+          visibility: { type: 'string', enum: ['PUBLIC', 'UNLISTED'] },
+          status: { type: 'string', enum: ['ACTIVE', 'ARCHIVED'] },
+          max_talents: { type: 'integer' },
+          created_at: { type: 'string', format: 'date-time' },
+          company: {
+            type: 'object',
+            properties: {
+              user_id: { type: 'string', format: 'uuid' },
+              company_name: { type: 'string' },
+              verified: { type: 'boolean' },
+              avg_rating: { type: 'number', format: 'float' },
+              reviews_count: { type: 'integer' },
+            },
+          },
+        },
+      },
+      GetProjectsResponse: {
+        type: 'object',
+        properties: {
+          items: {
+            type: 'array',
+            items: { $ref: '#/components/schemas/ProjectListItem' },
+          },
+          page: { type: 'integer', example: 1 },
+          size: { type: 'integer', example: 20 },
+          total: { type: 'integer', example: 1 },
+        },
+      },
       DeveloperPublicProfileResponse: {
         type: 'object',
         properties: {
@@ -745,7 +780,7 @@ export const swaggerSpec = {
               example: {
                 title: 'TeamUp MVP',
                 short_description: 'Build MVP for marketplace',
-                description: 'Longer description...',
+                description: 'Longer description for the marketplace project',
                 technologies: ['Node.js', 'PostgreSQL', 'Prisma'],
                 visibility: 'PUBLIC',
                 status: 'ACTIVE',
@@ -767,6 +802,74 @@ export const swaggerSpec = {
           401: { description: 'Unauthorized' },
           403: { description: 'Persona not available' },
           409: { description: 'Project title already exists' },
+        },
+      },
+      get: {
+        tags: ['Projects'],
+        summary: 'Get projects catalog or my projects',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'page',
+            in: 'query',
+            schema: { type: 'integer', minimum: 1, default: 1 },
+          },
+          {
+            name: 'size',
+            in: 'query',
+            schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
+          },
+          {
+            name: 'search',
+            in: 'query',
+            schema: { type: 'string', maxLength: 200 },
+            description: 'Search in title and short description',
+          },
+          {
+            name: 'technology',
+            in: 'query',
+            schema: { type: 'string', maxLength: 50 },
+            description: 'Filter by technology (repeatable)',
+          },
+          {
+            name: 'visibility',
+            in: 'query',
+            schema: { type: 'string', enum: ['PUBLIC', 'UNLISTED'] },
+            description: 'Filter by visibility (default PUBLIC for public catalog)',
+          },
+          {
+            name: 'owner',
+            in: 'query',
+            schema: { type: 'boolean' },
+            description:
+              'If true, show only my projects (requires Authorization header + X-Persona: company)',
+          },
+          {
+            name: 'include_deleted',
+            in: 'query',
+            schema: { type: 'boolean', default: false },
+            description: 'Include deleted projects (only with owner=true)',
+          },
+          {
+            name: 'X-Persona',
+            in: 'header',
+            required: false,
+            schema: { type: 'string', enum: ['company'] },
+            description: 'Required when owner=true',
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Projects list',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/GetProjectsResponse' },
+              },
+            },
+          },
+          400: { description: 'Validation error' },
+          401: { description: 'Authentication required (when owner=true)' },
+          403: { description: 'Forbidden (include_deleted without owner)' },
         },
       },
     },

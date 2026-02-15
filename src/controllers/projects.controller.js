@@ -38,3 +38,12 @@ export const deleteProject = asyncHandler(async (req, res) => {
     deleted_at: result.deletedAt.toISOString(),
   });
 });
+
+export const getProjects = asyncHandler(async (req, res) => {
+  const result = await projectsService.getProjects({
+    userId: req.user?.id,
+    query: req.query,
+  });
+
+  return res.status(200).json(result);
+});
