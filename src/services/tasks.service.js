@@ -142,7 +142,13 @@ export async function updateTaskDraft({ userId, taskId, task }) {
 export async function publishTask({ userId, taskId }) {
   const existingTask = await prisma.task.findUnique({
     where: { id: taskId },
-    select: { id: true, ownerUserId: true, status: true, deletedAt: true },
+    select: {
+      id: true,
+      ownerUserId: true,
+      status: true,
+      deletedAt: true,
+      projectId: true,
+    },
   });
 
   if (!existingTask || existingTask.deletedAt) {
@@ -157,12 +163,59 @@ export async function publishTask({ userId, taskId }) {
     throw new ApiError(409, 'INVALID_STATE', 'Only DRAFT tasks can be published');
   }
 
+  // Check max_talents if task belongs to a project
+  if (existingTask.projectId) {
+    const project = await prisma.project.findUnique({
+      where: { id: existingTask.projectId },
+      select: {
+        id: true,
+        maxTalents: true,
+        publishedTasksCount: true,
+      },
+    });
+
+    if (!project) {
+      throw new ApiError(404, 'PROJECT_NOT_FOUND', 'Project not found');
+    }
+
+    if (project.publishedTasksCount >= project.maxTalents) {
+      throw new ApiError(
+        409,
+        'MAX_TALENTS_REACHED',
+        `Project has reached maximum published tasks limit (${project.maxTalents})`
+      );
+    }
+  }
+
+  // Update task status and increment project counter if applicable
+  const updateData = {
+    status: 'PUBLISHED',
+    publishedAt: new Date(),
+  };
+
+  if (existingTask.projectId) {
+    // Use transaction to ensure atomicity
+    const result = await prisma.$transaction(async (tx) => {
+      const published = await tx.task.update({
+        where: { id: taskId },
+        data: updateData,
+        select: { id: true, status: true, publishedAt: true },
+      });
+
+      await tx.project.update({
+        where: { id: existingTask.projectId },
+        data: { publishedTasksCount: { increment: 1 } },
+      });
+
+      return published;
+    });
+
+    return { taskId: result.id, status: result.status, publishedAt: result.publishedAt };
+  }
+
   const published = await prisma.task.update({
     where: { id: taskId },
-    data: {
-      status: 'PUBLISHED',
-      publishedAt: new Date(),
-    },
+    data: updateData,
     select: { id: true, status: true, publishedAt: true },
   });
 
@@ -172,7 +225,13 @@ export async function publishTask({ userId, taskId }) {
 export async function closeTask({ userId, taskId }) {
   const existingTask = await prisma.task.findUnique({
     where: { id: taskId },
-    select: { id: true, ownerUserId: true, status: true, deletedAt: true },
+    select: {
+      id: true,
+      ownerUserId: true,
+      status: true,
+      deletedAt: true,
+      projectId: true,
+    },
   });
 
   if (!existingTask || existingTask.deletedAt) {
@@ -202,7 +261,13 @@ export async function closeTask({ userId, taskId }) {
 export async function deleteTask({ userId, taskId }) {
   const existingTask = await prisma.task.findUnique({
     where: { id: taskId },
-    select: { id: true, ownerUserId: true, status: true, deletedAt: true },
+    select: {
+      id: true,
+      ownerUserId: true,
+      status: true,
+      deletedAt: true,
+      projectId: true,
+    },
   });
 
   if (!existingTask || existingTask.deletedAt) {

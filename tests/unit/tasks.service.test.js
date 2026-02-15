@@ -1,8 +1,10 @@
 import { jest } from '@jest/globals';
 
 const prismaMock = {
+  $transaction: jest.fn(),
   project: {
     findUnique: jest.fn(),
+    update: jest.fn(),
   },
   task: {
     create: jest.fn(),
@@ -951,6 +953,76 @@ describe('tasks.service', () => {
       taskId: 't1',
       status: 'DELETED',
       deletedAt,
+    });
+  });
+
+  describe('publishTask with max_talents check', () => {
+    test('rejects if project reached max_talents', async () => {
+      prismaMock.task.findUnique.mockResolvedValue({
+        id: 't1',
+        ownerUserId: 'u1',
+        status: 'DRAFT',
+        deletedAt: null,
+        projectId: 'p1',
+      });
+
+      prismaMock.project.findUnique.mockResolvedValue({
+        id: 'p1',
+        maxTalents: 2,
+        publishedTasksCount: 2,
+      });
+
+      await expect(tasksService.publishTask({ userId: 'u1', taskId: 't1' })).rejects.toMatchObject({
+        status: 409,
+        code: 'MAX_TALENTS_REACHED',
+      });
+    });
+
+    test('increments project publishedTasksCount on publish', async () => {
+      const publishedAt = new Date('2026-02-14T13:20:00Z');
+      prismaMock.task.findUnique.mockResolvedValue({
+        id: 't1',
+        ownerUserId: 'u1',
+        status: 'DRAFT',
+        deletedAt: null,
+        projectId: 'p1',
+      });
+
+      prismaMock.project.findUnique.mockResolvedValue({
+        id: 'p1',
+        maxTalents: 3,
+        publishedTasksCount: 1,
+      });
+
+      prismaMock.$transaction.mockImplementation((cb) => cb(prismaMock));
+
+      prismaMock.task.update.mockResolvedValue({
+        id: 't1',
+        status: 'PUBLISHED',
+        publishedAt,
+      });
+
+      const result = await tasksService.publishTask({ userId: 'u1', taskId: 't1' });
+
+      expect(prismaMock.task.update).toHaveBeenCalledWith({
+        where: { id: 't1' },
+        data: {
+          status: 'PUBLISHED',
+          publishedAt: expect.any(Date),
+        },
+        select: { id: true, status: true, publishedAt: true },
+      });
+
+      expect(prismaMock.project.update).toHaveBeenCalledWith({
+        where: { id: 'p1' },
+        data: { publishedTasksCount: { increment: 1 } },
+      });
+
+      expect(result).toEqual({
+        taskId: 't1',
+        status: 'PUBLISHED',
+        publishedAt,
+      });
     });
   });
 

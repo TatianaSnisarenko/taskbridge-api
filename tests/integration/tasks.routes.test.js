@@ -2303,7 +2303,157 @@ describe('tasks routes', () => {
       expect(res.body.total).toBe(1);
       expect(res.body.items[0].status).toBe('DELETED');
     });
+  });
 
+  describe('POST /tasks/:taskId/publish with max_talents', () => {
+    test('rejects publish when project reached max_talents limit', async () => {
+      const company = await createUser({ companyProfile: { companyName: 'Dev Corp' } });
+      const token = buildAccessToken({ userId: company.id, email: company.email });
+
+      // Create project with maxTalents = 1
+      const project = await prisma.project.create({
+        data: {
+          ownerUserId: company.id,
+          title: 'Limited project',
+          shortDescription: 'Test',
+          description: 'Test project',
+          maxTalents: 1,
+          publishedTasksCount: 1,
+          technologies: ['Node.js'],
+          visibility: 'PUBLIC',
+        },
+      });
+
+      // Create task for the project
+      const task = await prisma.task.create({
+        data: {
+          ownerUserId: company.id,
+          projectId: project.id,
+          status: 'DRAFT',
+          title: 'Add feature',
+          description: 'Test task',
+          category: 'BACKEND',
+          type: 'PAID',
+          difficulty: 'JUNIOR',
+          requiredSkills: ['Node.js'],
+          estimatedEffortHours: 5,
+          expectedDuration: 'DAYS_1_7',
+          communicationLanguage: 'EN',
+          timezonePreference: 'UTC',
+          applicationDeadline: new Date('2026-03-15'),
+          visibility: 'PUBLIC',
+          deliverables: 'Code',
+          requirements: 'Tests',
+          niceToHave: 'Docs',
+        },
+      });
+
+      const res = await request(app)
+        .post(`/api/v1/tasks/${task.id}/publish`)
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'company');
+
+      expect(res.status).toBe(409);
+      expect(res.body.error.code).toBe('MAX_TALENTS_REACHED');
+    });
+
+    test('publishes task when under max_talents limit', async () => {
+      const company = await createUser({ companyProfile: { companyName: 'Dev Corp' } });
+      const token = buildAccessToken({ userId: company.id, email: company.email });
+
+      // Create project with maxTalents = 3
+      const project = await prisma.project.create({
+        data: {
+          ownerUserId: company.id,
+          title: 'Generous project',
+          shortDescription: 'Test',
+          description: 'Test project',
+          maxTalents: 3,
+          publishedTasksCount: 1,
+          technologies: ['Node.js'],
+          visibility: 'PUBLIC',
+        },
+      });
+
+      // Create task for the project
+      const task = await prisma.task.create({
+        data: {
+          ownerUserId: company.id,
+          projectId: project.id,
+          status: 'DRAFT',
+          title: 'Add feature',
+          description: 'Test task',
+          category: 'BACKEND',
+          type: 'PAID',
+          difficulty: 'JUNIOR',
+          requiredSkills: ['Node.js'],
+          estimatedEffortHours: 5,
+          expectedDuration: 'DAYS_1_7',
+          communicationLanguage: 'EN',
+          timezonePreference: 'UTC',
+          applicationDeadline: new Date('2026-03-15'),
+          visibility: 'PUBLIC',
+          deliverables: 'Code',
+          requirements: 'Tests',
+          niceToHave: 'Docs',
+        },
+      });
+
+      const res = await request(app)
+        .post(`/api/v1/tasks/${task.id}/publish`)
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'company');
+
+      expect(res.status).toBe(200);
+      expect(res.body.task_id).toBe(task.id);
+      expect(res.body.status).toBe('PUBLISHED');
+
+      // Verify counter incremented
+      const updatedProject = await prisma.project.findUnique({
+        where: { id: project.id },
+      });
+      expect(updatedProject.publishedTasksCount).toBe(2);
+    });
+
+    test('publishes task without project', async () => {
+      const company = await createUser({ companyProfile: { companyName: 'Dev Corp' } });
+      const token = buildAccessToken({ userId: company.id, email: company.email });
+
+      // Create standalone task (no project)
+      const task = await prisma.task.create({
+        data: {
+          ownerUserId: company.id,
+          status: 'DRAFT',
+          title: 'Standalone task',
+          description: 'Test task',
+          category: 'BACKEND',
+          type: 'PAID',
+          difficulty: 'JUNIOR',
+          requiredSkills: ['Node.js'],
+          estimatedEffortHours: 5,
+          expectedDuration: 'DAYS_1_7',
+          communicationLanguage: 'EN',
+          timezonePreference: 'UTC',
+          applicationDeadline: new Date('2026-03-15'),
+          visibility: 'PUBLIC',
+          deliverables: 'Code',
+          requirements: 'Tests',
+          niceToHave: 'Docs',
+        },
+      });
+
+      const res = await request(app)
+        .post(`/api/v1/tasks/${task.id}/publish`)
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'company');
+
+      expect(res.status).toBe(200);
+      expect(res.body.task_id).toBe(task.id);
+      expect(res.body.status).toBe('PUBLISHED');
+    });
+  });
+
+  describe('GET /tasks', () => {
     test('filters by project_id', async () => {
       const company = await createUser({ companyProfile: { companyName: 'TeamUp' } });
 

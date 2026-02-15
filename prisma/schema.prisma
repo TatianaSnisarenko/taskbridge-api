@@ -227,18 +227,19 @@ model CompanyProfile {
 }
 
 model Project {
-  id               String            @id @default(uuid()) @db.Uuid
-  ownerUserId      String            @map("owner_user_id") @db.Uuid
-  status           ProjectStatus     @default(ACTIVE)
-  visibility       ProjectVisibility @default(PUBLIC)
-  title            String
-  shortDescription String            @default("") @map("short_description")
-  description      String            @default("")
-  technologies     String[]          @default([])
-  maxTalents       Int               @default(1) @map("max_talents")
-  createdAt        DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt        DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
-  deletedAt        DateTime?         @map("deleted_at") @db.Timestamptz(6)
+  id                  String            @id @default(uuid()) @db.Uuid
+  ownerUserId         String            @map("owner_user_id") @db.Uuid
+  status              ProjectStatus     @default(ACTIVE)
+  visibility          ProjectVisibility @default(PUBLIC)
+  title               String
+  shortDescription    String            @default("") @map("short_description")
+  description         String            @default("")
+  technologies        String[]          @default([])
+  maxTalents          Int               @default(1) @map("max_talents")
+  publishedTasksCount Int               @default(0) @map("published_tasks_count")
+  createdAt           DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt           DateTime?         @map("deleted_at") @db.Timestamptz(6)
 
   owner   User            @relation("ProjectOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
   tasks   Task[]
