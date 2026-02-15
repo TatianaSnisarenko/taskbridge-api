@@ -87,7 +87,7 @@ export async function deleteProject({ userId, projectId }) {
     }),
     prisma.task.updateMany({
       where: { projectId, deletedAt: null },
-      data: { deletedAt, status: 'CLOSED' },
+      data: { deletedAt, status: 'DELETED' },
     }),
   ]);
 

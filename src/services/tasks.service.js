@@ -158,3 +158,34 @@ export async function closeTask({ userId, taskId }) {
 
   return { taskId: closed.id, status: closed.status, closedAt: closed.closedAt };
 }
+
+export async function deleteTask({ userId, taskId }) {
+  const existingTask = await prisma.task.findUnique({
+    where: { id: taskId },
+    select: { id: true, ownerUserId: true, status: true, deletedAt: true },
+  });
+
+  if (!existingTask || existingTask.deletedAt) {
+    throw new ApiError(404, 'NOT_FOUND', 'Task not found');
+  }
+
+  if (existingTask.ownerUserId !== userId) {
+    throw new ApiError(403, 'NOT_OWNER', 'Task does not belong to user');
+  }
+
+  const allowedStatuses = ['DRAFT', 'PUBLISHED', 'CLOSED'];
+  if (!allowedStatuses.includes(existingTask.status)) {
+    throw new ApiError(409, 'INVALID_STATE', 'Task cannot be deleted in current state');
+  }
+
+  const deleted = await prisma.task.update({
+    where: { id: taskId },
+    data: {
+      status: 'DELETED',
+      deletedAt: new Date(),
+    },
+    select: { id: true, status: true, deletedAt: true },
+  });
+
+  return { taskId: deleted.id, status: deleted.status, deletedAt: deleted.deletedAt };
+}

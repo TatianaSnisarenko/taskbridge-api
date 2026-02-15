@@ -598,6 +598,14 @@ export const swaggerSpec = {
           closed_at: { type: 'string', format: 'date-time' },
         },
       },
+      DeleteTaskResponse: {
+        type: 'object',
+        properties: {
+          task_id: { type: 'string', format: 'uuid' },
+          status: { type: 'string', enum: ['DELETED'] },
+          deleted_at: { type: 'string', format: 'date-time' },
+        },
+      },
     },
   },
   paths: {
@@ -1355,6 +1363,42 @@ export const swaggerSpec = {
           403: { description: 'Company persona required or not task owner' },
           404: { description: 'Task or project not found' },
           409: { description: 'Task in invalid state (cannot update IN_PROGRESS/COMPLETED tasks)' },
+        },
+      },
+      delete: {
+        tags: ['Tasks'],
+        summary: 'Delete a task (DRAFT/PUBLISHED/CLOSED -> DELETED)',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'taskId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+          {
+            name: 'X-Persona',
+            in: 'header',
+            required: true,
+            schema: { type: 'string', enum: ['company'] },
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Task deleted',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/DeleteTaskResponse' },
+              },
+            },
+          },
+          400: { description: 'Validation error' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Company persona required or not task owner' },
+          404: { description: 'Task not found' },
+          409: {
+            description: 'Task in invalid state (cannot delete IN_PROGRESS/COMPLETED tasks)',
+          },
         },
       },
     },

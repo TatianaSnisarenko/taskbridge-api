@@ -43,3 +43,11 @@ tasksRouter.post(
   validate(taskIdParamSchema, 'params'),
   tasksController.closeTask
 );
+
+tasksRouter.delete(
+  '/:taskId',
+  requireAuth,
+  requirePersona('company'),
+  validate(taskIdParamSchema, 'params'),
+  tasksController.deleteTask
+);

@@ -62,6 +62,7 @@ enum TaskStatus {
   COMPLETION_REQUESTED
   COMPLETED
   CLOSED
+  DELETED
 }
 
 enum ApplicationStatus {

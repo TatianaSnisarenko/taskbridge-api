@@ -202,7 +202,7 @@ describe('projects.service', () => {
     });
     expect(prismaMock.task.updateMany).toHaveBeenCalledWith({
       where: { projectId: 'p1', deletedAt: null },
-      data: { deletedAt: expect.any(Date), status: 'CLOSED' },
+      data: { deletedAt: expect.any(Date), status: 'DELETED' },
     });
     expect(result).toEqual({ projectId: 'p1', deletedAt });
   });

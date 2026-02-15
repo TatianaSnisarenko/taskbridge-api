@@ -942,7 +942,7 @@ describe('projects routes', () => {
     expect(tasks).toHaveLength(2);
     for (const task of tasks) {
       expect(task.deletedAt).not.toBeNull();
-      expect(task.status).toBe('CLOSED');
+      expect(task.status).toBe('DELETED');
     }
   });
 

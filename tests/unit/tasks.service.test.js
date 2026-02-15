@@ -748,4 +748,209 @@ describe('tasks.service', () => {
       closedAt,
     });
   });
+
+  test('deleteTask rejects task not found', async () => {
+    prismaMock.task.findUnique.mockResolvedValue(null);
+
+    await expect(
+      tasksService.deleteTask({
+        userId: 'u1',
+        taskId: 't1',
+      })
+    ).rejects.toMatchObject({
+      status: 404,
+      code: 'NOT_FOUND',
+    });
+  });
+
+  test('deleteTask rejects deleted task', async () => {
+    prismaMock.task.findUnique.mockResolvedValue({
+      id: 't1',
+      ownerUserId: 'u1',
+      status: 'DRAFT',
+      deletedAt: new Date(),
+    });
+
+    await expect(
+      tasksService.deleteTask({
+        userId: 'u1',
+        taskId: 't1',
+      })
+    ).rejects.toMatchObject({
+      status: 404,
+      code: 'NOT_FOUND',
+    });
+  });
+
+  test('deleteTask rejects non-owner task', async () => {
+    prismaMock.task.findUnique.mockResolvedValue({
+      id: 't1',
+      ownerUserId: 'u2',
+      status: 'DRAFT',
+      deletedAt: null,
+    });
+
+    await expect(
+      tasksService.deleteTask({
+        userId: 'u1',
+        taskId: 't1',
+      })
+    ).rejects.toMatchObject({
+      status: 403,
+      code: 'NOT_OWNER',
+    });
+  });
+
+  test('deleteTask rejects invalid state (IN_PROGRESS)', async () => {
+    prismaMock.task.findUnique.mockResolvedValue({
+      id: 't1',
+      ownerUserId: 'u1',
+      status: 'IN_PROGRESS',
+      deletedAt: null,
+    });
+
+    await expect(
+      tasksService.deleteTask({
+        userId: 'u1',
+        taskId: 't1',
+      })
+    ).rejects.toMatchObject({
+      status: 409,
+      code: 'INVALID_STATE',
+    });
+  });
+
+  test('deleteTask rejects invalid state (COMPLETED)', async () => {
+    prismaMock.task.findUnique.mockResolvedValue({
+      id: 't1',
+      ownerUserId: 'u1',
+      status: 'COMPLETED',
+      deletedAt: null,
+    });
+
+    await expect(
+      tasksService.deleteTask({
+        userId: 'u1',
+        taskId: 't1',
+      })
+    ).rejects.toMatchObject({
+      status: 409,
+      code: 'INVALID_STATE',
+    });
+  });
+
+  test('deleteTask rejects invalid state (DELETED)', async () => {
+    prismaMock.task.findUnique.mockResolvedValue({
+      id: 't1',
+      ownerUserId: 'u1',
+      status: 'DELETED',
+      deletedAt: null,
+    });
+
+    await expect(
+      tasksService.deleteTask({
+        userId: 'u1',
+        taskId: 't1',
+      })
+    ).rejects.toMatchObject({
+      status: 409,
+      code: 'INVALID_STATE',
+    });
+  });
+
+  test('deleteTask deletes DRAFT task', async () => {
+    const deletedAt = new Date('2026-02-14T13:35:00Z');
+    prismaMock.task.findUnique.mockResolvedValue({
+      id: 't1',
+      ownerUserId: 'u1',
+      status: 'DRAFT',
+      deletedAt: null,
+    });
+    prismaMock.task.update.mockResolvedValue({
+      id: 't1',
+      status: 'DELETED',
+      deletedAt,
+    });
+
+    const result = await tasksService.deleteTask({ userId: 'u1', taskId: 't1' });
+
+    expect(prismaMock.task.update).toHaveBeenCalledWith({
+      where: { id: 't1' },
+      data: {
+        status: 'DELETED',
+        deletedAt: expect.any(Date),
+      },
+      select: { id: true, status: true, deletedAt: true },
+    });
+
+    expect(result).toEqual({
+      taskId: 't1',
+      status: 'DELETED',
+      deletedAt,
+    });
+  });
+
+  test('deleteTask deletes PUBLISHED task', async () => {
+    const deletedAt = new Date('2026-02-14T13:40:00Z');
+    prismaMock.task.findUnique.mockResolvedValue({
+      id: 't1',
+      ownerUserId: 'u1',
+      status: 'PUBLISHED',
+      deletedAt: null,
+    });
+    prismaMock.task.update.mockResolvedValue({
+      id: 't1',
+      status: 'DELETED',
+      deletedAt,
+    });
+
+    const result = await tasksService.deleteTask({ userId: 'u1', taskId: 't1' });
+
+    expect(prismaMock.task.update).toHaveBeenCalledWith({
+      where: { id: 't1' },
+      data: {
+        status: 'DELETED',
+        deletedAt: expect.any(Date),
+      },
+      select: { id: true, status: true, deletedAt: true },
+    });
+
+    expect(result).toEqual({
+      taskId: 't1',
+      status: 'DELETED',
+      deletedAt,
+    });
+  });
+
+  test('deleteTask deletes CLOSED task', async () => {
+    const deletedAt = new Date('2026-02-14T13:45:00Z');
+    prismaMock.task.findUnique.mockResolvedValue({
+      id: 't1',
+      ownerUserId: 'u1',
+      status: 'CLOSED',
+      deletedAt: null,
+    });
+    prismaMock.task.update.mockResolvedValue({
+      id: 't1',
+      status: 'DELETED',
+      deletedAt,
+    });
+
+    const result = await tasksService.deleteTask({ userId: 'u1', taskId: 't1' });
+
+    expect(prismaMock.task.update).toHaveBeenCalledWith({
+      where: { id: 't1' },
+      data: {
+        status: 'DELETED',
+        deletedAt: expect.any(Date),
+      },
+      select: { id: true, status: true, deletedAt: true },
+    });
+
+    expect(result).toEqual({
+      taskId: 't1',
+      status: 'DELETED',
+      deletedAt,
+    });
+  });
 });

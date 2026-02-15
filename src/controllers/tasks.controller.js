@@ -53,3 +53,16 @@ export const closeTask = asyncHandler(async (req, res) => {
     closed_at: result.closedAt.toISOString(),
   });
 });
+
+export const deleteTask = asyncHandler(async (req, res) => {
+  const result = await tasksService.deleteTask({
+    userId: req.user.id,
+    taskId: req.params.taskId,
+  });
+
+  return res.status(200).json({
+    task_id: result.taskId,
+    status: result.status,
+    deleted_at: result.deletedAt.toISOString(),
+  });
+});
