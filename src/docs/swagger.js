@@ -582,6 +582,14 @@ export const swaggerSpec = {
           updated_at: { type: 'string', format: 'date-time' },
         },
       },
+      PublishTaskResponse: {
+        type: 'object',
+        properties: {
+          task_id: { type: 'string', format: 'uuid' },
+          status: { type: 'string', enum: ['PUBLISHED'] },
+          published_at: { type: 'string', format: 'date-time' },
+        },
+      },
     },
   },
   paths: {
@@ -1339,6 +1347,42 @@ export const swaggerSpec = {
           403: { description: 'Company persona required or not task owner' },
           404: { description: 'Task or project not found' },
           409: { description: 'Task in invalid state (cannot update IN_PROGRESS/COMPLETED tasks)' },
+        },
+      },
+    },
+    '/api/v1/tasks/{taskId}/publish': {
+      post: {
+        tags: ['Tasks'],
+        summary: 'Publish a task (DRAFT -> PUBLISHED)',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'taskId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+          {
+            name: 'X-Persona',
+            in: 'header',
+            required: true,
+            schema: { type: 'string', enum: ['company'] },
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Task published',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/PublishTaskResponse' },
+              },
+            },
+          },
+          400: { description: 'Validation error' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Company persona required or not task owner' },
+          404: { description: 'Task not found' },
+          409: { description: 'Task in invalid state (only DRAFT tasks can be published)' },
         },
       },
     },

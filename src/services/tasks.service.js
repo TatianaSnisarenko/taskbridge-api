@@ -98,3 +98,33 @@ export async function updateTaskDraft({ userId, taskId, task }) {
 
   return { taskId: updated.id, updated: true, updatedAt: updated.updatedAt };
 }
+
+export async function publishTask({ userId, taskId }) {
+  const existingTask = await prisma.task.findUnique({
+    where: { id: taskId },
+    select: { id: true, ownerUserId: true, status: true, deletedAt: true },
+  });
+
+  if (!existingTask || existingTask.deletedAt) {
+    throw new ApiError(404, 'NOT_FOUND', 'Task not found');
+  }
+
+  if (existingTask.ownerUserId !== userId) {
+    throw new ApiError(403, 'NOT_OWNER', 'Task does not belong to user');
+  }
+
+  if (existingTask.status !== 'DRAFT') {
+    throw new ApiError(409, 'INVALID_STATE', 'Only DRAFT tasks can be published');
+  }
+
+  const published = await prisma.task.update({
+    where: { id: taskId },
+    data: {
+      status: 'PUBLISHED',
+      publishedAt: new Date(),
+    },
+    select: { id: true, status: true, publishedAt: true },
+  });
+
+  return { taskId: published.id, status: published.status, publishedAt: published.publishedAt };
+}

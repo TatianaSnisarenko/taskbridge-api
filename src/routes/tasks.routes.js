@@ -27,3 +27,11 @@ tasksRouter.put(
   validate(updateTaskDraftSchema),
   tasksController.updateTaskDraft
 );
+
+tasksRouter.post(
+  '/:taskId/publish',
+  requireAuth,
+  requirePersona('company'),
+  validate(taskIdParamSchema, 'params'),
+  tasksController.publishTask
+);

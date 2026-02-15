@@ -453,4 +453,126 @@ describe('tasks.service', () => {
 
     expect(result).toEqual({ taskId: 't1', updated: true, updatedAt });
   });
+
+  test('publishTask rejects task not found', async () => {
+    prismaMock.task.findUnique.mockResolvedValue(null);
+
+    await expect(
+      tasksService.publishTask({
+        userId: 'u1',
+        taskId: 't1',
+      })
+    ).rejects.toMatchObject({
+      status: 404,
+      code: 'NOT_FOUND',
+    });
+  });
+
+  test('publishTask rejects deleted task', async () => {
+    prismaMock.task.findUnique.mockResolvedValue({
+      id: 't1',
+      ownerUserId: 'u1',
+      status: 'DRAFT',
+      deletedAt: new Date(),
+    });
+
+    await expect(
+      tasksService.publishTask({
+        userId: 'u1',
+        taskId: 't1',
+      })
+    ).rejects.toMatchObject({
+      status: 404,
+      code: 'NOT_FOUND',
+    });
+  });
+
+  test('publishTask rejects non-owner task', async () => {
+    prismaMock.task.findUnique.mockResolvedValue({
+      id: 't1',
+      ownerUserId: 'u2',
+      status: 'DRAFT',
+      deletedAt: null,
+    });
+
+    await expect(
+      tasksService.publishTask({
+        userId: 'u1',
+        taskId: 't1',
+      })
+    ).rejects.toMatchObject({
+      status: 403,
+      code: 'NOT_OWNER',
+    });
+  });
+
+  test('publishTask rejects invalid state (PUBLISHED)', async () => {
+    prismaMock.task.findUnique.mockResolvedValue({
+      id: 't1',
+      ownerUserId: 'u1',
+      status: 'PUBLISHED',
+      deletedAt: null,
+    });
+
+    await expect(
+      tasksService.publishTask({
+        userId: 'u1',
+        taskId: 't1',
+      })
+    ).rejects.toMatchObject({
+      status: 409,
+      code: 'INVALID_STATE',
+    });
+  });
+
+  test('publishTask rejects invalid state (IN_PROGRESS)', async () => {
+    prismaMock.task.findUnique.mockResolvedValue({
+      id: 't1',
+      ownerUserId: 'u1',
+      status: 'IN_PROGRESS',
+      deletedAt: null,
+    });
+
+    await expect(
+      tasksService.publishTask({
+        userId: 'u1',
+        taskId: 't1',
+      })
+    ).rejects.toMatchObject({
+      status: 409,
+      code: 'INVALID_STATE',
+    });
+  });
+
+  test('publishTask publishes DRAFT task', async () => {
+    const publishedAt = new Date('2026-02-14T13:20:00Z');
+    prismaMock.task.findUnique.mockResolvedValue({
+      id: 't1',
+      ownerUserId: 'u1',
+      status: 'DRAFT',
+      deletedAt: null,
+    });
+    prismaMock.task.update.mockResolvedValue({
+      id: 't1',
+      status: 'PUBLISHED',
+      publishedAt,
+    });
+
+    const result = await tasksService.publishTask({ userId: 'u1', taskId: 't1' });
+
+    expect(prismaMock.task.update).toHaveBeenCalledWith({
+      where: { id: 't1' },
+      data: {
+        status: 'PUBLISHED',
+        publishedAt: expect.any(Date),
+      },
+      select: { id: true, status: true, publishedAt: true },
+    });
+
+    expect(result).toEqual({
+      taskId: 't1',
+      status: 'PUBLISHED',
+      publishedAt,
+    });
+  });
 });
