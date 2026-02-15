@@ -652,6 +652,58 @@ export const swaggerSpec = {
           company: { $ref: '#/components/schemas/TaskCompany' },
         },
       },
+      TaskDetailsResponse: {
+        type: 'object',
+        properties: {
+          task_id: { type: 'string', format: 'uuid' },
+          owner_user_id: { type: 'string', format: 'uuid' },
+          status: {
+            type: 'string',
+            enum: [
+              'DRAFT',
+              'PUBLISHED',
+              'IN_PROGRESS',
+              'COMPLETED',
+              'CLOSED',
+              'DELETED',
+              'COMPLETION_REQUESTED',
+            ],
+          },
+          project: { $ref: '#/components/schemas/TaskProject', nullable: true },
+          title: { type: 'string', minLength: 3, maxLength: 120 },
+          description: { type: 'string', minLength: 10, maxLength: 2000 },
+          category: {
+            type: 'string',
+            enum: ['BACKEND', 'FRONTEND', 'DEVOPS', 'QA', 'DATA', 'MOBILE', 'OTHER'],
+          },
+          type: { type: 'string', enum: ['PAID', 'UNPAID', 'VOLUNTEER', 'EXPERIENCE'] },
+          difficulty: { type: 'string', enum: ['JUNIOR', 'MIDDLE', 'SENIOR', 'ANY'] },
+          required_skills: {
+            type: 'array',
+            items: { type: 'string', minLength: 1, maxLength: 50 },
+            minItems: 1,
+            maxItems: 50,
+            uniqueItems: true,
+          },
+          estimated_effort_hours: { type: 'integer', minimum: 1, maximum: 1000 },
+          expected_duration: {
+            type: 'string',
+            enum: ['DAYS_1_7', 'DAYS_8_14', 'DAYS_15_30', 'DAYS_30_PLUS'],
+          },
+          communication_language: { type: 'string', minLength: 2, maxLength: 50 },
+          timezone_preference: { type: 'string', minLength: 3, maxLength: 60 },
+          application_deadline: { type: 'string', format: 'date', nullable: true },
+          visibility: { type: 'string', enum: ['PUBLIC', 'UNLISTED'] },
+          deliverables: { type: 'string', minLength: 3, maxLength: 2000 },
+          requirements: { type: 'string', minLength: 3, maxLength: 2000 },
+          nice_to_have: { type: 'string', minLength: 3, maxLength: 2000 },
+          created_at: { type: 'string', format: 'date-time' },
+          published_at: { type: 'string', format: 'date-time', nullable: true },
+          accepted_application_id: { type: 'string', format: 'uuid', nullable: true },
+          deleted_at: { type: 'string', format: 'date-time', nullable: true },
+          company: { $ref: '#/components/schemas/TaskCompany' },
+        },
+      },
       GetTasksCatalogResponse: {
         type: 'object',
         properties: {
@@ -1449,6 +1501,40 @@ export const swaggerSpec = {
       },
     },
     '/api/v1/tasks/{taskId}': {
+      get: {
+        tags: ['Tasks'],
+        summary: 'Get task details',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'taskId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+          {
+            name: 'X-Persona',
+            in: 'header',
+            required: false,
+            schema: { type: 'string', enum: ['company'] },
+            description: 'Required for owner access to non-public tasks',
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Task details',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/TaskDetailsResponse' },
+              },
+            },
+          },
+          400: { description: 'Validation error' },
+          401: { description: 'Unauthorized (non-public task without token)' },
+          403: { description: 'Forbidden (not task owner or persona required)' },
+          404: { description: 'Not found' },
+        },
+      },
       put: {
         tags: ['Tasks'],
         summary: 'Update task draft or published task',

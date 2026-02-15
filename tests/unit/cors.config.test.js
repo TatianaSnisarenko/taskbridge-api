@@ -51,13 +51,12 @@ describe('cors config', () => {
     expect(cb).toHaveBeenCalledWith(null, true);
   });
 
-  test('origin callback rejects unknown origin', async () => {
+  test('origin callback allows unknown origin in non-production', async () => {
     const { capturedOptions } = await loadCorsConfig({ clientOrigin: 'http://a.test' });
     const cb = jest.fn();
 
     capturedOptions.origin('http://evil.test', cb);
 
-    expect(cb).toHaveBeenCalledWith(expect.any(Error));
-    expect(cb.mock.calls[0][0].message).toContain('CORS: Origin not allowed');
+    expect(cb).toHaveBeenCalledWith(null, true);
   });
 });

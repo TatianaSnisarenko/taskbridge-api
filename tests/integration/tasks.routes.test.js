@@ -1514,6 +1514,220 @@ describe('tasks routes', () => {
     expect(deleted.deletedAt).toBeInstanceOf(Date);
   });
 
+  describe('GET /tasks/:taskId', () => {
+    test('returns public published task details', async () => {
+      const owner = await createUser({ companyProfile: { companyName: 'TeamUp Studio' } });
+
+      const task = await prisma.task.create({
+        data: {
+          ownerUserId: owner.id,
+          status: 'PUBLISHED',
+          publishedAt: new Date('2026-02-14T13:20:00Z'),
+          title: basePayload.title,
+          description: basePayload.description,
+          category: basePayload.category,
+          type: basePayload.type,
+          difficulty: basePayload.difficulty,
+          requiredSkills: basePayload.required_skills,
+          estimatedEffortHours: basePayload.estimated_effort_hours,
+          expectedDuration: basePayload.expected_duration,
+          communicationLanguage: basePayload.communication_language,
+          timezonePreference: basePayload.timezone_preference,
+          applicationDeadline: new Date('2026-02-20'),
+          visibility: 'PUBLIC',
+          deliverables: basePayload.deliverables,
+          requirements: basePayload.requirements,
+          niceToHave: basePayload.nice_to_have,
+        },
+      });
+
+      const res = await request(app).get(`/api/v1/tasks/${task.id}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body).toMatchObject({
+        task_id: task.id,
+        owner_user_id: owner.id,
+        status: 'PUBLISHED',
+        title: basePayload.title,
+        description: basePayload.description,
+        category: basePayload.category,
+        type: basePayload.type,
+        difficulty: basePayload.difficulty,
+        required_skills: basePayload.required_skills,
+        estimated_effort_hours: basePayload.estimated_effort_hours,
+        expected_duration: basePayload.expected_duration,
+        communication_language: basePayload.communication_language,
+        timezone_preference: basePayload.timezone_preference,
+        application_deadline: '2026-02-20',
+        visibility: 'PUBLIC',
+        deliverables: basePayload.deliverables,
+        requirements: basePayload.requirements,
+        nice_to_have: basePayload.nice_to_have,
+        deleted_at: null,
+        company: {
+          user_id: owner.id,
+          company_name: 'TeamUp Studio',
+          verified: false,
+          avg_rating: expect.any(Number),
+          reviews_count: expect.any(Number),
+        },
+      });
+      expect(Number.isNaN(Date.parse(res.body.created_at))).toBe(false);
+      expect(Number.isNaN(Date.parse(res.body.published_at))).toBe(false);
+    });
+
+    test('rejects invalid taskId', async () => {
+      const res = await request(app).get('/api/v1/tasks/not-a-uuid');
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('VALIDATION_ERROR');
+      expect(res.body.error.details).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            field: 'taskId',
+            issue: 'Task id must be a valid UUID',
+          }),
+        ])
+      );
+    });
+
+    test('rejects non-public task without auth', async () => {
+      const owner = await createUser({ companyProfile: { companyName: 'TeamUp' } });
+
+      const task = await prisma.task.create({
+        data: {
+          ownerUserId: owner.id,
+          status: 'DRAFT',
+          title: 'Draft task',
+          description: 'Draft task description',
+          category: 'BACKEND',
+          type: 'PAID',
+          difficulty: 'JUNIOR',
+          requiredSkills: ['Node.js'],
+          estimatedEffortHours: 5,
+          expectedDuration: 'DAYS_1_7',
+          communicationLanguage: 'EN',
+          timezonePreference: 'UTC',
+          applicationDeadline: new Date('2026-03-01'),
+          visibility: 'PUBLIC',
+          deliverables: 'Code',
+          requirements: 'Reqs',
+          niceToHave: 'Nice',
+        },
+      });
+
+      const res = await request(app).get(`/api/v1/tasks/${task.id}`);
+
+      expect(res.status).toBe(401);
+      expect(res.body.error.code).toBe('AUTH_REQUIRED');
+    });
+
+    test('rejects non-owner access to non-public task', async () => {
+      const owner = await createUser({ companyProfile: { companyName: 'Owner' } });
+      const otherUser = await createUser({ companyProfile: { companyName: 'Other' } });
+      const token = buildAccessToken({ userId: otherUser.id, email: otherUser.email });
+
+      const task = await prisma.task.create({
+        data: {
+          ownerUserId: owner.id,
+          status: 'DRAFT',
+          title: 'Owner task',
+          description: 'Owner task description',
+          category: 'BACKEND',
+          type: 'PAID',
+          difficulty: 'JUNIOR',
+          requiredSkills: ['Node.js'],
+          estimatedEffortHours: 5,
+          expectedDuration: 'DAYS_1_7',
+          communicationLanguage: 'EN',
+          timezonePreference: 'UTC',
+          applicationDeadline: new Date('2026-03-01'),
+          visibility: 'UNLISTED',
+          deliverables: 'Code',
+          requirements: 'Reqs',
+          niceToHave: 'Nice',
+        },
+      });
+
+      const res = await request(app)
+        .get(`/api/v1/tasks/${task.id}`)
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'company');
+
+      expect(res.status).toBe(403);
+      expect(res.body.error.code).toBe('NOT_OWNER');
+    });
+
+    test('returns non-public task details for owner with persona', async () => {
+      const owner = await createUser({ companyProfile: { companyName: 'TeamUp' } });
+      const token = buildAccessToken({ userId: owner.id, email: owner.email });
+
+      const task = await prisma.task.create({
+        data: {
+          ownerUserId: owner.id,
+          status: 'DRAFT',
+          title: 'Draft task',
+          description: 'Draft task description',
+          category: 'BACKEND',
+          type: 'PAID',
+          difficulty: 'JUNIOR',
+          requiredSkills: ['Node.js'],
+          estimatedEffortHours: 5,
+          expectedDuration: 'DAYS_1_7',
+          communicationLanguage: 'EN',
+          timezonePreference: 'UTC',
+          applicationDeadline: new Date('2026-03-01'),
+          visibility: 'UNLISTED',
+          deliverables: 'Code',
+          requirements: 'Reqs',
+          niceToHave: 'Nice',
+        },
+      });
+
+      const res = await request(app)
+        .get(`/api/v1/tasks/${task.id}`)
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'company');
+
+      expect(res.status).toBe(200);
+      expect(res.body.task_id).toBe(task.id);
+      expect(res.body.status).toBe('DRAFT');
+      expect(res.body.visibility).toBe('UNLISTED');
+    });
+
+    test('returns 404 for deleted task', async () => {
+      const owner = await createUser({ companyProfile: { companyName: 'TeamUp' } });
+
+      const task = await prisma.task.create({
+        data: {
+          ownerUserId: owner.id,
+          status: 'DELETED',
+          deletedAt: new Date(),
+          title: 'Deleted task',
+          description: 'Deleted task description',
+          category: 'BACKEND',
+          type: 'PAID',
+          difficulty: 'JUNIOR',
+          requiredSkills: ['Node.js'],
+          estimatedEffortHours: 5,
+          expectedDuration: 'DAYS_1_7',
+          communicationLanguage: 'EN',
+          timezonePreference: 'UTC',
+          applicationDeadline: new Date('2026-03-01'),
+          visibility: 'PUBLIC',
+          deliverables: 'Code',
+          requirements: 'Reqs',
+          niceToHave: 'Nice',
+        },
+      });
+
+      const res = await request(app).get(`/api/v1/tasks/${task.id}`);
+
+      expect(res.status).toBe(404);
+      expect(res.body.error.code).toBe('NOT_FOUND');
+    });
+  });
+
   describe('GET /tasks', () => {
     test('returns empty catalog initially', async () => {
       const res = await request(app).get('/api/v1/tasks');

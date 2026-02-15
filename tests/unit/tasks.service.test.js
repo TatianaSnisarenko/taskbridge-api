@@ -953,4 +953,151 @@ describe('tasks.service', () => {
       deletedAt,
     });
   });
+
+  describe('getTaskById', () => {
+    test('rejects missing task', async () => {
+      prismaMock.task.findUnique.mockResolvedValue(null);
+
+      await expect(tasksService.getTaskById({ taskId: 't1' })).rejects.toMatchObject({
+        status: 404,
+        code: 'NOT_FOUND',
+      });
+    });
+
+    test('rejects deleted task', async () => {
+      prismaMock.task.findUnique.mockResolvedValue({
+        id: 't1',
+        deletedAt: new Date(),
+        status: 'DELETED',
+      });
+
+      await expect(tasksService.getTaskById({ taskId: 't1' })).rejects.toMatchObject({
+        status: 404,
+        code: 'NOT_FOUND',
+      });
+    });
+
+    test('rejects non-public task without auth', async () => {
+      prismaMock.task.findUnique.mockResolvedValue({
+        id: 't1',
+        ownerUserId: 'u1',
+        status: 'DRAFT',
+        visibility: 'PUBLIC',
+        deletedAt: null,
+        owner: { companyProfile: { companyName: 'TeamUp', verified: false } },
+      });
+
+      await expect(tasksService.getTaskById({ taskId: 't1' })).rejects.toMatchObject({
+        status: 401,
+        code: 'AUTH_REQUIRED',
+      });
+    });
+
+    test('rejects non-owner access to non-public task', async () => {
+      prismaMock.task.findUnique.mockResolvedValue({
+        id: 't1',
+        ownerUserId: 'u1',
+        status: 'DRAFT',
+        visibility: 'UNLISTED',
+        deletedAt: null,
+        owner: { companyProfile: { companyName: 'TeamUp', verified: false } },
+      });
+
+      await expect(
+        tasksService.getTaskById({ taskId: 't1', userId: 'u2', persona: 'company' })
+      ).rejects.toMatchObject({
+        status: 403,
+        code: 'NOT_OWNER',
+      });
+    });
+
+    test('rejects owner access without persona', async () => {
+      prismaMock.task.findUnique.mockResolvedValue({
+        id: 't1',
+        ownerUserId: 'u1',
+        status: 'DRAFT',
+        visibility: 'UNLISTED',
+        deletedAt: null,
+        owner: { companyProfile: { companyName: 'TeamUp', verified: false } },
+      });
+
+      await expect(tasksService.getTaskById({ taskId: 't1', userId: 'u1' })).rejects.toMatchObject({
+        status: 400,
+        code: 'PERSONA_REQUIRED',
+      });
+    });
+
+    test('returns public task details', async () => {
+      const task = {
+        id: 't1',
+        ownerUserId: 'u1',
+        status: 'PUBLISHED',
+        project: { id: 'p1', title: 'TeamUp MVP' },
+        title: 'Add filtering to tasks catalog',
+        description: 'Implement filters + pagination.',
+        category: 'BACKEND',
+        type: 'EXPERIENCE',
+        difficulty: 'JUNIOR',
+        requiredSkills: ['Java', 'Spring'],
+        estimatedEffortHours: 6,
+        expectedDuration: 'DAYS_8_14',
+        communicationLanguage: 'EN',
+        timezonePreference: 'Europe/Any',
+        applicationDeadline: new Date('2026-02-20'),
+        visibility: 'PUBLIC',
+        deliverables: 'PR with code + tests',
+        requirements: 'REST + pagination',
+        niceToHave: 'OpenAPI',
+        acceptedApplicationId: null,
+        createdAt: new Date('2026-02-14T13:00:00Z'),
+        publishedAt: new Date('2026-02-14T13:20:00Z'),
+        deletedAt: null,
+        owner: {
+          companyProfile: {
+            companyName: 'TeamUp Studio',
+            verified: false,
+            avgRating: 4.6,
+            reviewsCount: 8,
+          },
+        },
+      };
+
+      prismaMock.task.findUnique.mockResolvedValue(task);
+
+      const result = await tasksService.getTaskById({ taskId: 't1' });
+
+      expect(result).toEqual({
+        task_id: 't1',
+        owner_user_id: 'u1',
+        status: 'PUBLISHED',
+        project: { project_id: 'p1', title: 'TeamUp MVP' },
+        title: 'Add filtering to tasks catalog',
+        description: 'Implement filters + pagination.',
+        category: 'BACKEND',
+        type: 'EXPERIENCE',
+        difficulty: 'JUNIOR',
+        required_skills: ['Java', 'Spring'],
+        estimated_effort_hours: 6,
+        expected_duration: 'DAYS_8_14',
+        communication_language: 'EN',
+        timezone_preference: 'Europe/Any',
+        application_deadline: '2026-02-20',
+        visibility: 'PUBLIC',
+        deliverables: 'PR with code + tests',
+        requirements: 'REST + pagination',
+        nice_to_have: 'OpenAPI',
+        created_at: new Date('2026-02-14T13:00:00Z').toISOString(),
+        published_at: new Date('2026-02-14T13:20:00Z').toISOString(),
+        accepted_application_id: null,
+        deleted_at: null,
+        company: {
+          user_id: 'u1',
+          company_name: 'TeamUp Studio',
+          verified: false,
+          avg_rating: 4.6,
+          reviews_count: 8,
+        },
+      });
+    });
+  });
 });

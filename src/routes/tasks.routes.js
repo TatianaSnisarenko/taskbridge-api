@@ -34,6 +34,18 @@ tasksRouter.post(
   tasksController.createTaskDraft
 );
 
+tasksRouter.get(
+  '/:taskId',
+  validate(taskIdParamSchema, 'params'),
+  (req, res, next) => {
+    if (req.headers.authorization) {
+      return requireAuth(req, res, next);
+    }
+    return next();
+  },
+  tasksController.getTaskById
+);
+
 tasksRouter.put(
   '/:taskId',
   requireAuth,

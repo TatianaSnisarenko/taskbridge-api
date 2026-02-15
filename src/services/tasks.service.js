@@ -21,6 +21,46 @@ function mapTaskInput(input) {
   };
 }
 
+function mapTaskDetailsOutput(task) {
+  const companyProfile = task.owner.companyProfile;
+  const avgRating = companyProfile?.avgRating;
+
+  return {
+    task_id: task.id,
+    owner_user_id: task.ownerUserId,
+    status: task.status,
+    project: task.project ? { project_id: task.project.id, title: task.project.title } : null,
+    title: task.title,
+    description: task.description,
+    category: task.category,
+    type: task.type,
+    difficulty: task.difficulty,
+    required_skills: task.requiredSkills,
+    estimated_effort_hours: task.estimatedEffortHours,
+    expected_duration: task.expectedDuration,
+    communication_language: task.communicationLanguage,
+    timezone_preference: task.timezonePreference,
+    application_deadline: task.applicationDeadline
+      ? task.applicationDeadline.toISOString().slice(0, 10)
+      : null,
+    visibility: task.visibility,
+    deliverables: task.deliverables,
+    requirements: task.requirements,
+    nice_to_have: task.niceToHave,
+    created_at: task.createdAt.toISOString(),
+    published_at: task.publishedAt ? task.publishedAt.toISOString() : null,
+    accepted_application_id: task.acceptedApplicationId,
+    deleted_at: task.deletedAt ? task.deletedAt.toISOString() : null,
+    company: {
+      user_id: task.ownerUserId,
+      company_name: companyProfile?.companyName,
+      verified: companyProfile?.verified,
+      avg_rating: avgRating === null || avgRating === undefined ? null : Number(avgRating),
+      reviews_count: companyProfile?.reviewsCount,
+    },
+  };
+}
+
 export async function createTaskDraft({ userId, task }) {
   const projectId = task.project_id ?? null;
 
@@ -188,6 +228,93 @@ export async function deleteTask({ userId, taskId }) {
   });
 
   return { taskId: deleted.id, status: deleted.status, deletedAt: deleted.deletedAt };
+}
+
+export async function getTaskById({ userId, taskId, persona }) {
+  const task = await prisma.task.findUnique({
+    where: { id: taskId },
+    select: {
+      id: true,
+      ownerUserId: true,
+      status: true,
+      projectId: true,
+      title: true,
+      description: true,
+      category: true,
+      type: true,
+      difficulty: true,
+      requiredSkills: true,
+      estimatedEffortHours: true,
+      expectedDuration: true,
+      communicationLanguage: true,
+      timezonePreference: true,
+      applicationDeadline: true,
+      visibility: true,
+      deliverables: true,
+      requirements: true,
+      niceToHave: true,
+      acceptedApplicationId: true,
+      createdAt: true,
+      publishedAt: true,
+      deletedAt: true,
+      project: {
+        select: {
+          id: true,
+          title: true,
+        },
+      },
+      owner: {
+        select: {
+          companyProfile: {
+            select: {
+              companyName: true,
+              verified: true,
+              avgRating: true,
+              reviewsCount: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!task) {
+    throw new ApiError(404, 'NOT_FOUND', 'Task not found');
+  }
+
+  if (task.deletedAt || task.status === 'DELETED') {
+    throw new ApiError(404, 'NOT_FOUND', 'Task not found');
+  }
+
+  const isPublicVisible = task.status === 'PUBLISHED' && task.visibility === 'PUBLIC';
+
+  if (!isPublicVisible) {
+    if (!userId) {
+      throw new ApiError(401, 'AUTH_REQUIRED', 'Authorization required');
+    }
+
+    if (task.ownerUserId !== userId) {
+      throw new ApiError(403, 'NOT_OWNER', 'Task does not belong to user');
+    }
+
+    if (!persona) {
+      throw new ApiError(400, 'PERSONA_REQUIRED', 'X-Persona header is required');
+    }
+
+    if (persona !== 'developer' && persona !== 'company') {
+      throw new ApiError(400, 'PERSONA_INVALID', 'X-Persona must be developer or company');
+    }
+
+    if (persona !== 'company') {
+      throw new ApiError(403, 'PERSONA_NOT_AVAILABLE', 'Company profile does not exist');
+    }
+
+    if (!task.owner.companyProfile) {
+      throw new ApiError(403, 'PERSONA_NOT_AVAILABLE', 'Company profile does not exist');
+    }
+  }
+
+  return mapTaskDetailsOutput(task);
 }
 
 export async function getTasksCatalog(query) {

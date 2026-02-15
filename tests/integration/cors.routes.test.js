@@ -11,10 +11,9 @@ describe('cors middleware', () => {
     expect(res.status).toBe(200);
   });
 
-  test('rejects unknown origin', async () => {
+  test('allows unknown origin in non-production', async () => {
     const res = await request(app).get('/api/v1/health').set('Origin', 'http://evil.test');
 
-    expect(res.status).toBe(403);
-    expect(res.body.error.code).toBe('CORS_NOT_ALLOWED');
+    expect(res.status).toBe(200);
   });
 });

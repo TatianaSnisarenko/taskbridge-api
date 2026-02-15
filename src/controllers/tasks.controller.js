@@ -67,6 +67,16 @@ export const deleteTask = asyncHandler(async (req, res) => {
   });
 });
 
+export const getTaskById = asyncHandler(async (req, res) => {
+  const result = await tasksService.getTaskById({
+    userId: req.user?.id,
+    taskId: req.params.taskId,
+    persona: req.headers['x-persona'],
+  });
+
+  return res.status(200).json(result);
+});
+
 export const getTasksCatalog = asyncHandler(async (req, res) => {
   const result = await tasksService.getTasksCatalog({
     userId: req.user?.id,
