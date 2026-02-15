@@ -189,3 +189,134 @@ export async function deleteTask({ userId, taskId }) {
 
   return { taskId: deleted.id, status: deleted.status, deletedAt: deleted.deletedAt };
 }
+
+export async function getTasksCatalog(query) {
+  const {
+    userId,
+    page = 1,
+    size = 20,
+    search,
+    category,
+    difficulty,
+    type,
+    skills = [],
+    projectId,
+    owner = false,
+    includeDeleted = false,
+  } = query;
+
+  const skip = (page - 1) * size;
+
+  // Build where clause
+  const where = {};
+
+  // Handle owner/public logic
+  if (owner) {
+    if (!userId) {
+      throw new ApiError(401, 'AUTH_REQUIRED', 'Authorization required');
+    }
+    // Owner's tasks - can see any status except deleted by default
+    where.ownerUserId = userId;
+    if (!includeDeleted) {
+      where.deletedAt = null;
+    }
+  } else {
+    // Public catalog - only published, public, not deleted
+    where.status = 'PUBLISHED';
+    where.visibility = 'PUBLIC';
+    where.deletedAt = null;
+  }
+
+  // Optional filters
+  if (search) {
+    where.OR = [
+      { title: { contains: search, mode: 'insensitive' } },
+      { description: { contains: search, mode: 'insensitive' } },
+    ];
+  }
+
+  if (category) {
+    where.category = category;
+  }
+
+  if (difficulty) {
+    where.difficulty = difficulty;
+  }
+
+  if (type) {
+    where.type = type;
+  }
+
+  if (skills.length > 0) {
+    where.requiredSkills = { hasSome: skills };
+  }
+
+  if (projectId) {
+    where.projectId = projectId;
+  }
+
+  // Fetch tasks with pagination
+  const [items, total] = await Promise.all([
+    prisma.task.findMany({
+      where,
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        category: true,
+        type: true,
+        difficulty: true,
+        requiredSkills: true,
+        publishedAt: true,
+        projectId: true,
+        project: {
+          select: {
+            id: true,
+            title: true,
+          },
+        },
+        ownerUserId: true,
+        owner: {
+          select: {
+            companyProfile: {
+              select: {
+                companyName: true,
+                verified: true,
+                avgRating: true,
+                reviewsCount: true,
+              },
+            },
+          },
+        },
+      },
+      skip,
+      take: size,
+      orderBy: { createdAt: 'desc' },
+    }),
+    prisma.task.count({ where }),
+  ]);
+
+  return {
+    items: items.map((task) => ({
+      task_id: task.id,
+      title: task.title,
+      status: task.status,
+      category: task.category,
+      type: task.type,
+      difficulty: task.difficulty,
+      required_skills: task.requiredSkills,
+      published_at: task.publishedAt,
+      project: task.projectId ? { project_id: task.project.id, title: task.project.title } : null,
+      company: {
+        user_id: task.ownerUserId,
+        company_name: task.owner.companyProfile?.companyName,
+        verified: task.owner.companyProfile?.verified,
+        avg_rating: task.owner.companyProfile?.avgRating,
+        reviews_count: task.owner.companyProfile?.reviewsCount,
+      },
+    })),
+    page,
+    size,
+    total,
+  };
+}

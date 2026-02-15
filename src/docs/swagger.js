@@ -606,6 +606,61 @@ export const swaggerSpec = {
           deleted_at: { type: 'string', format: 'date-time' },
         },
       },
+      TaskCompany: {
+        type: 'object',
+        properties: {
+          user_id: { type: 'string', format: 'uuid' },
+          company_name: { type: 'string' },
+          verified: { type: 'boolean' },
+          avg_rating: { type: 'number', format: 'float' },
+          reviews_count: { type: 'integer' },
+        },
+      },
+      TaskProject: {
+        type: 'object',
+        properties: {
+          project_id: { type: 'string', format: 'uuid' },
+          title: { type: 'string' },
+        },
+      },
+      TaskListItem: {
+        type: 'object',
+        properties: {
+          task_id: { type: 'string', format: 'uuid' },
+          title: { type: 'string' },
+          status: {
+            type: 'string',
+            enum: [
+              'DRAFT',
+              'PUBLISHED',
+              'IN_PROGRESS',
+              'COMPLETED',
+              'CLOSED',
+              'DELETED',
+              'COMPLETION_REQUESTED',
+            ],
+          },
+          category: {
+            type: 'string',
+            enum: ['BACKEND', 'FRONTEND', 'DEVOPS', 'QA', 'DATA', 'MOBILE', 'OTHER'],
+          },
+          type: { type: 'string', enum: ['PAID', 'UNPAID', 'VOLUNTEER', 'EXPERIENCE'] },
+          difficulty: { type: 'string', enum: ['JUNIOR', 'MIDDLE', 'SENIOR', 'ANY'] },
+          required_skills: { type: 'array', items: { type: 'string' } },
+          published_at: { type: 'string', format: 'date-time', nullable: true },
+          project: { $ref: '#/components/schemas/TaskProject', nullable: true },
+          company: { $ref: '#/components/schemas/TaskCompany' },
+        },
+      },
+      GetTasksCatalogResponse: {
+        type: 'object',
+        properties: {
+          items: { type: 'array', items: { $ref: '#/components/schemas/TaskListItem' } },
+          page: { type: 'integer', example: 1 },
+          size: { type: 'integer', example: 20 },
+          total: { type: 'integer', example: 15 },
+        },
+      },
     },
   },
   paths: {
@@ -1250,6 +1305,95 @@ export const swaggerSpec = {
       },
     },
     '/api/v1/tasks': {
+      get: {
+        tags: ['Tasks'],
+        summary: 'Get tasks catalog or my tasks',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'page',
+            in: 'query',
+            schema: { type: 'integer', minimum: 1, default: 1 },
+          },
+          {
+            name: 'size',
+            in: 'query',
+            schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
+          },
+          {
+            name: 'search',
+            in: 'query',
+            schema: { type: 'string', maxLength: 200 },
+            description: 'Search in title and description',
+          },
+          {
+            name: 'category',
+            in: 'query',
+            schema: {
+              type: 'string',
+              enum: ['BACKEND', 'FRONTEND', 'DEVOPS', 'QA', 'DATA', 'MOBILE', 'OTHER'],
+            },
+            description: 'Filter by category',
+          },
+          {
+            name: 'difficulty',
+            in: 'query',
+            schema: { type: 'string', enum: ['JUNIOR', 'MIDDLE', 'SENIOR', 'ANY'] },
+            description: 'Filter by difficulty',
+          },
+          {
+            name: 'type',
+            in: 'query',
+            schema: { type: 'string', enum: ['PAID', 'UNPAID', 'VOLUNTEER', 'EXPERIENCE'] },
+            description: 'Filter by type',
+          },
+          {
+            name: 'skill',
+            in: 'query',
+            schema: { type: 'string', maxLength: 50 },
+            description: 'Filter by required skills (repeatable)',
+          },
+          {
+            name: 'project_id',
+            in: 'query',
+            schema: { type: 'string', format: 'uuid' },
+            description: 'Filter by project',
+          },
+          {
+            name: 'owner',
+            in: 'query',
+            schema: { type: 'boolean', default: false },
+            description:
+              'If true, show only my tasks (requires Authorization header + X-Persona: company)',
+          },
+          {
+            name: 'include_deleted',
+            in: 'query',
+            schema: { type: 'boolean', default: false },
+            description: 'Include deleted tasks (only with owner=true)',
+          },
+          {
+            name: 'X-Persona',
+            in: 'header',
+            required: false,
+            schema: { type: 'string', enum: ['company'] },
+            description: 'Required when owner=true',
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Tasks list',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/GetTasksCatalogResponse' },
+              },
+            },
+          },
+          400: { description: 'Validation error' },
+          401: { description: 'Authentication required (when owner=true)' },
+          403: { description: 'Company persona required (when owner=true)' },
+        },
+      },
       post: {
         tags: ['Tasks'],
         summary: 'Create task draft',

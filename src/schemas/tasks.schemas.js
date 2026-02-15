@@ -251,3 +251,45 @@ export const taskIdParamSchema = Joi.object({
     'any.required': 'Task id is required',
   }),
 });
+
+export const getTasksCatalogSchema = Joi.object({
+  page: Joi.number().min(1).default(1).messages({
+    'number.min': 'Page must be at least 1',
+  }),
+  size: Joi.number().min(1).max(100).default(20).messages({
+    'number.min': 'Size must be at least 1',
+    'number.max': 'Size must not exceed 100',
+  }),
+  search: Joi.string().trim().max(200).optional().messages({
+    'string.max': 'Search must not exceed 200 characters',
+  }),
+  category: Joi.string()
+    .valid(...TASK_CATEGORIES)
+    .optional()
+    .messages({
+      'any.only': 'Category must be one of: BACKEND, FRONTEND, DEVOPS, QA, DATA, MOBILE, OTHER',
+    }),
+  difficulty: Joi.string()
+    .valid(...TASK_DIFFICULTY)
+    .optional()
+    .messages({
+      'any.only': 'Difficulty must be one of: JUNIOR, MIDDLE, SENIOR, ANY',
+    }),
+  type: Joi.string()
+    .valid(...TASK_TYPES)
+    .optional()
+    .messages({
+      'any.only': 'Type must be one of: PAID, UNPAID, VOLUNTEER, EXPERIENCE',
+    }),
+  skill: Joi.alternatives()
+    .try(Joi.string().max(50), Joi.array().items(Joi.string().max(50)))
+    .optional()
+    .messages({
+      'string.max': 'Skill must not exceed 50 characters',
+    }),
+  project_id: Joi.string().guid({ version: 'uuidv4' }).optional().messages({
+    'string.guid': 'Project id must be a valid UUID',
+  }),
+  owner: Joi.any().optional(),
+  include_deleted: Joi.any().optional(),
+});

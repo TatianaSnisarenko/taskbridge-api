@@ -1513,4 +1513,651 @@ describe('tasks routes', () => {
     expect(deleted.status).toBe('DELETED');
     expect(deleted.deletedAt).toBeInstanceOf(Date);
   });
+
+  describe('GET /tasks', () => {
+    test('returns empty catalog initially', async () => {
+      const res = await request(app).get('/api/v1/tasks');
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({
+        items: [],
+        page: 1,
+        size: 20,
+        total: 0,
+      });
+    });
+
+    test('returns only published public tasks in public catalog', async () => {
+      const company = await createUser({ companyProfile: { companyName: 'TeamUp' } });
+
+      // Create published public task
+      const publishedTask = await prisma.task.create({
+        data: {
+          ownerUserId: company.id,
+          status: 'PUBLISHED',
+          publishedAt: new Date(),
+          title: 'Public published task',
+          description: 'Public published task description',
+          category: 'BACKEND',
+          type: 'PAID',
+          difficulty: 'JUNIOR',
+          requiredSkills: ['Node.js'],
+          estimatedEffortHours: 5,
+          expectedDuration: 'DAYS_1_7',
+          communicationLanguage: 'EN',
+          timezonePreference: 'UTC',
+          applicationDeadline: new Date('2026-03-01'),
+          visibility: 'PUBLIC',
+          deliverables: 'Code',
+          requirements: 'Reqs',
+          niceToHave: 'Nice',
+        },
+      });
+
+      // Create draft task (should not appear)
+      await prisma.task.create({
+        data: {
+          ownerUserId: company.id,
+          status: 'DRAFT',
+          title: 'Draft task',
+          description: 'Draft task description',
+          category: 'BACKEND',
+          type: 'PAID',
+          difficulty: 'JUNIOR',
+          requiredSkills: ['Node.js'],
+          estimatedEffortHours: 5,
+          expectedDuration: 'DAYS_1_7',
+          communicationLanguage: 'EN',
+          timezonePreference: 'UTC',
+          applicationDeadline: new Date('2026-03-01'),
+          visibility: 'PUBLIC',
+          deliverables: 'Code',
+          requirements: 'Reqs',
+          niceToHave: 'Nice',
+        },
+      });
+
+      // Create published unlisted task (should not appear)
+      await prisma.task.create({
+        data: {
+          ownerUserId: company.id,
+          status: 'PUBLISHED',
+          publishedAt: new Date(),
+          title: 'Unlisted task',
+          description: 'Unlisted task description',
+          category: 'BACKEND',
+          type: 'PAID',
+          difficulty: 'JUNIOR',
+          requiredSkills: ['Node.js'],
+          estimatedEffortHours: 5,
+          expectedDuration: 'DAYS_1_7',
+          communicationLanguage: 'EN',
+          timezonePreference: 'UTC',
+          applicationDeadline: new Date('2026-03-01'),
+          visibility: 'UNLISTED',
+          deliverables: 'Code',
+          requirements: 'Reqs',
+          niceToHave: 'Nice',
+        },
+      });
+
+      const res = await request(app).get('/api/v1/tasks');
+
+      expect(res.status).toBe(200);
+      expect(res.body.total).toBe(1);
+      expect(res.body.items).toHaveLength(1);
+      expect(res.body.items[0].task_id).toBe(publishedTask.id);
+      expect(res.body.items[0].title).toBe('Public published task');
+      expect(res.body.items[0].status).toBe('PUBLISHED');
+    });
+
+    test('filters by search term in title', async () => {
+      const company = await createUser({ companyProfile: { companyName: 'TeamUp' } });
+
+      await prisma.task.create({
+        data: {
+          ownerUserId: company.id,
+          status: 'PUBLISHED',
+          publishedAt: new Date(),
+          title: 'Java REST API implementation',
+          description: 'Implement REST API',
+          category: 'BACKEND',
+          type: 'PAID',
+          difficulty: 'MIDDLE',
+          requiredSkills: ['Java'],
+          estimatedEffortHours: 8,
+          expectedDuration: 'DAYS_8_14',
+          communicationLanguage: 'EN',
+          timezonePreference: 'UTC',
+          applicationDeadline: new Date('2026-03-01'),
+          visibility: 'PUBLIC',
+          deliverables: 'Code',
+          requirements: 'Reqs',
+          niceToHave: 'Nice',
+        },
+      });
+
+      await prisma.task.create({
+        data: {
+          ownerUserId: company.id,
+          status: 'PUBLISHED',
+          publishedAt: new Date(),
+          title: 'Frontend React development',
+          description: 'Implementing React components',
+          category: 'FRONTEND',
+          type: 'PAID',
+          difficulty: 'JUNIOR',
+          requiredSkills: ['React'],
+          estimatedEffortHours: 6,
+          expectedDuration: 'DAYS_8_14',
+          communicationLanguage: 'EN',
+          timezonePreference: 'UTC',
+          applicationDeadline: new Date('2026-03-01'),
+          visibility: 'PUBLIC',
+          deliverables: 'Code',
+          requirements: 'Reqs',
+          niceToHave: 'Nice',
+        },
+      });
+
+      const res = await request(app).get('/api/v1/tasks?search=REST');
+
+      expect(res.status).toBe(200);
+      expect(res.body.total).toBe(1);
+      expect(res.body.items[0].title).toBe('Java REST API implementation');
+    });
+
+    test('filters by category', async () => {
+      const company = await createUser({ companyProfile: { companyName: 'TeamUp' } });
+
+      await prisma.task.create({
+        data: {
+          ownerUserId: company.id,
+          status: 'PUBLISHED',
+          publishedAt: new Date(),
+          title: 'Backend task',
+          description: 'Backend task',
+          category: 'BACKEND',
+          type: 'PAID',
+          difficulty: 'JUNIOR',
+          requiredSkills: ['Node.js'],
+          estimatedEffortHours: 5,
+          expectedDuration: 'DAYS_1_7',
+          communicationLanguage: 'EN',
+          timezonePreference: 'UTC',
+          applicationDeadline: new Date('2026-03-01'),
+          visibility: 'PUBLIC',
+          deliverables: 'Code',
+          requirements: 'Reqs',
+          niceToHave: 'Nice',
+        },
+      });
+
+      await prisma.task.create({
+        data: {
+          ownerUserId: company.id,
+          status: 'PUBLISHED',
+          publishedAt: new Date(),
+          title: 'Frontend task',
+          description: 'Frontend task',
+          category: 'FRONTEND',
+          type: 'PAID',
+          difficulty: 'JUNIOR',
+          requiredSkills: ['React'],
+          estimatedEffortHours: 5,
+          expectedDuration: 'DAYS_1_7',
+          communicationLanguage: 'EN',
+          timezonePreference: 'UTC',
+          applicationDeadline: new Date('2026-03-01'),
+          visibility: 'PUBLIC',
+          deliverables: 'Code',
+          requirements: 'Reqs',
+          niceToHave: 'Nice',
+        },
+      });
+
+      const res = await request(app).get('/api/v1/tasks?category=BACKEND');
+
+      expect(res.status).toBe(200);
+      expect(res.body.total).toBe(1);
+      expect(res.body.items[0].category).toBe('BACKEND');
+    });
+
+    test('filters by difficulty', async () => {
+      const company = await createUser({ companyProfile: { companyName: 'TeamUp' } });
+
+      await prisma.task.create({
+        data: {
+          ownerUserId: company.id,
+          status: 'PUBLISHED',
+          publishedAt: new Date(),
+          title: 'Junior task',
+          description: 'Junior task',
+          category: 'BACKEND',
+          type: 'PAID',
+          difficulty: 'JUNIOR',
+          requiredSkills: ['Node.js'],
+          estimatedEffortHours: 5,
+          expectedDuration: 'DAYS_1_7',
+          communicationLanguage: 'EN',
+          timezonePreference: 'UTC',
+          applicationDeadline: new Date('2026-03-01'),
+          visibility: 'PUBLIC',
+          deliverables: 'Code',
+          requirements: 'Reqs',
+          niceToHave: 'Nice',
+        },
+      });
+
+      await prisma.task.create({
+        data: {
+          ownerUserId: company.id,
+          status: 'PUBLISHED',
+          publishedAt: new Date(),
+          title: 'Senior task',
+          description: 'Senior task',
+          category: 'BACKEND',
+          type: 'PAID',
+          difficulty: 'SENIOR',
+          requiredSkills: ['Node.js'],
+          estimatedEffortHours: 10,
+          expectedDuration: 'DAYS_15_30',
+          communicationLanguage: 'EN',
+          timezonePreference: 'UTC',
+          applicationDeadline: new Date('2026-03-01'),
+          visibility: 'PUBLIC',
+          deliverables: 'Code',
+          requirements: 'Reqs',
+          niceToHave: 'Nice',
+        },
+      });
+
+      const res = await request(app).get('/api/v1/tasks?difficulty=SENIOR');
+
+      expect(res.status).toBe(200);
+      expect(res.body.total).toBe(1);
+      expect(res.body.items[0].difficulty).toBe('SENIOR');
+    });
+
+    test('filters by type', async () => {
+      const company = await createUser({ companyProfile: { companyName: 'TeamUp' } });
+
+      await prisma.task.create({
+        data: {
+          ownerUserId: company.id,
+          status: 'PUBLISHED',
+          publishedAt: new Date(),
+          title: 'Paid task',
+          description: 'Paid task',
+          category: 'BACKEND',
+          type: 'PAID',
+          difficulty: 'JUNIOR',
+          requiredSkills: ['Node.js'],
+          estimatedEffortHours: 5,
+          expectedDuration: 'DAYS_1_7',
+          communicationLanguage: 'EN',
+          timezonePreference: 'UTC',
+          applicationDeadline: new Date('2026-03-01'),
+          visibility: 'PUBLIC',
+          deliverables: 'Code',
+          requirements: 'Reqs',
+          niceToHave: 'Nice',
+        },
+      });
+
+      await prisma.task.create({
+        data: {
+          ownerUserId: company.id,
+          status: 'PUBLISHED',
+          publishedAt: new Date(),
+          title: 'Experience task',
+          description: 'Experience task',
+          category: 'BACKEND',
+          type: 'EXPERIENCE',
+          difficulty: 'JUNIOR',
+          requiredSkills: ['Node.js'],
+          estimatedEffortHours: 3,
+          expectedDuration: 'DAYS_1_7',
+          communicationLanguage: 'EN',
+          timezonePreference: 'UTC',
+          applicationDeadline: new Date('2026-03-01'),
+          visibility: 'PUBLIC',
+          deliverables: 'Code',
+          requirements: 'Reqs',
+          niceToHave: 'Nice',
+        },
+      });
+
+      const res = await request(app).get('/api/v1/tasks?type=PAID');
+
+      expect(res.status).toBe(200);
+      expect(res.body.total).toBe(1);
+      expect(res.body.items[0].type).toBe('PAID');
+    });
+
+    test('filters by required skills', async () => {
+      const company = await createUser({ companyProfile: { companyName: 'TeamUp' } });
+
+      await prisma.task.create({
+        data: {
+          ownerUserId: company.id,
+          status: 'PUBLISHED',
+          publishedAt: new Date(),
+          title: 'Java Spring task',
+          description: 'Java Spring task',
+          category: 'BACKEND',
+          type: 'PAID',
+          difficulty: 'JUNIOR',
+          requiredSkills: ['Java', 'Spring'],
+          estimatedEffortHours: 5,
+          expectedDuration: 'DAYS_1_7',
+          communicationLanguage: 'EN',
+          timezonePreference: 'UTC',
+          applicationDeadline: new Date('2026-03-01'),
+          visibility: 'PUBLIC',
+          deliverables: 'Code',
+          requirements: 'Reqs',
+          niceToHave: 'Nice',
+        },
+      });
+
+      await prisma.task.create({
+        data: {
+          ownerUserId: company.id,
+          status: 'PUBLISHED',
+          publishedAt: new Date(),
+          title: 'Node.js task',
+          description: 'Node.js task',
+          category: 'BACKEND',
+          type: 'PAID',
+          difficulty: 'JUNIOR',
+          requiredSkills: ['Node.js'],
+          estimatedEffortHours: 5,
+          expectedDuration: 'DAYS_1_7',
+          communicationLanguage: 'EN',
+          timezonePreference: 'UTC',
+          applicationDeadline: new Date('2026-03-01'),
+          visibility: 'PUBLIC',
+          deliverables: 'Code',
+          requirements: 'Reqs',
+          niceToHave: 'Nice',
+        },
+      });
+
+      const res = await request(app).get('/api/v1/tasks?skill=Java&skill=Spring');
+
+      expect(res.status).toBe(200);
+      expect(res.body.total).toBe(1);
+      expect(res.body.items[0].required_skills).toEqual(expect.arrayContaining(['Java', 'Spring']));
+    });
+
+    test('supports pagination', async () => {
+      const company = await createUser({ companyProfile: { companyName: 'TeamUp' } });
+
+      for (let i = 0; i < 25; i++) {
+        await prisma.task.create({
+          data: {
+            ownerUserId: company.id,
+            status: 'PUBLISHED',
+            publishedAt: new Date(),
+            title: `Task ${i}`,
+            description: 'Task description',
+            category: 'BACKEND',
+            type: 'PAID',
+            difficulty: 'JUNIOR',
+            requiredSkills: ['Node.js'],
+            estimatedEffortHours: 5,
+            expectedDuration: 'DAYS_1_7',
+            communicationLanguage: 'EN',
+            timezonePreference: 'UTC',
+            applicationDeadline: new Date('2026-03-01'),
+            visibility: 'PUBLIC',
+            deliverables: 'Code',
+            requirements: 'Reqs',
+            niceToHave: 'Nice',
+          },
+        });
+      }
+
+      const res1 = await request(app).get('/api/v1/tasks?page=1&size=10');
+
+      expect(res1.status).toBe(200);
+      expect(res1.body.page).toBe(1);
+      expect(res1.body.size).toBe(10);
+      expect(res1.body.total).toBe(25);
+      expect(res1.body.items).toHaveLength(10);
+
+      const res2 = await request(app).get('/api/v1/tasks?page=2&size=10');
+
+      expect(res2.status).toBe(200);
+      expect(res2.body.page).toBe(2);
+      expect(res2.body.items).toHaveLength(10);
+    });
+
+    test('owner=true requires authentication', async () => {
+      const res = await request(app).get('/api/v1/tasks?owner=true');
+
+      expect(res.status).toBe(401);
+      expect(res.body.error.code).toBe('AUTH_REQUIRED');
+    });
+
+    test('owner=true requires company persona', async () => {
+      const user = await createUser({ companyProfile: { companyName: 'TeamUp Studio' } });
+      const token = buildAccessToken({ userId: user.id, email: user.email });
+
+      const res = await request(app)
+        .get('/api/v1/tasks?owner=true')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('PERSONA_REQUIRED');
+    });
+
+    test('owner=true returns company tasks in all states', async () => {
+      const company = await createUser({ companyProfile: { companyName: 'TeamUp' } });
+      const token = buildAccessToken({ userId: company.id, email: company.email });
+
+      // Create draft task
+      await prisma.task.create({
+        data: {
+          ownerUserId: company.id,
+          status: 'DRAFT',
+          title: 'Draft task',
+          description: 'Draft task',
+          category: 'BACKEND',
+          type: 'PAID',
+          difficulty: 'JUNIOR',
+          requiredSkills: ['Node.js'],
+          estimatedEffortHours: 5,
+          expectedDuration: 'DAYS_1_7',
+          communicationLanguage: 'EN',
+          timezonePreference: 'UTC',
+          applicationDeadline: new Date('2026-03-01'),
+          visibility: 'PUBLIC',
+          deliverables: 'Code',
+          requirements: 'Reqs',
+          niceToHave: 'Nice',
+        },
+      });
+
+      // Create published task
+      await prisma.task.create({
+        data: {
+          ownerUserId: company.id,
+          status: 'PUBLISHED',
+          publishedAt: new Date(),
+          title: 'Published task',
+          description: 'Published task',
+          category: 'BACKEND',
+          type: 'PAID',
+          difficulty: 'JUNIOR',
+          requiredSkills: ['Node.js'],
+          estimatedEffortHours: 5,
+          expectedDuration: 'DAYS_1_7',
+          communicationLanguage: 'EN',
+          timezonePreference: 'UTC',
+          applicationDeadline: new Date('2026-03-01'),
+          visibility: 'UNLISTED',
+          deliverables: 'Code',
+          requirements: 'Reqs',
+          niceToHave: 'Nice',
+        },
+      });
+
+      const res = await request(app)
+        .get('/api/v1/tasks?owner=true')
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'company');
+
+      expect(res.status).toBe(200);
+      expect(res.body.total).toBe(2);
+      expect(res.body.items).toContainEqual(expect.objectContaining({ status: 'DRAFT' }));
+      expect(res.body.items).toContainEqual(expect.objectContaining({ status: 'PUBLISHED' }));
+    });
+
+    test('owner=true excludes deleted tasks by default', async () => {
+      const company = await createUser({ companyProfile: { companyName: 'TeamUp' } });
+      const token = buildAccessToken({ userId: company.id, email: company.email });
+
+      // Create deleted task
+      await prisma.task.create({
+        data: {
+          ownerUserId: company.id,
+          status: 'DELETED',
+          deletedAt: new Date(),
+          title: 'Deleted task',
+          description: 'Deleted task',
+          category: 'BACKEND',
+          type: 'PAID',
+          difficulty: 'JUNIOR',
+          requiredSkills: ['Node.js'],
+          estimatedEffortHours: 5,
+          expectedDuration: 'DAYS_1_7',
+          communicationLanguage: 'EN',
+          timezonePreference: 'UTC',
+          applicationDeadline: new Date('2026-03-01'),
+          visibility: 'PUBLIC',
+          deliverables: 'Code',
+          requirements: 'Reqs',
+          niceToHave: 'Nice',
+        },
+      });
+
+      const res = await request(app)
+        .get('/api/v1/tasks?owner=true')
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'company');
+
+      expect(res.status).toBe(200);
+      expect(res.body.total).toBe(0);
+    });
+
+    test('include_deleted=true includes deleted tasks when owner=true', async () => {
+      const company = await createUser({ companyProfile: { companyName: 'TeamUp' } });
+      const token = buildAccessToken({ userId: company.id, email: company.email });
+
+      // Create deleted task
+      await prisma.task.create({
+        data: {
+          ownerUserId: company.id,
+          status: 'DELETED',
+          deletedAt: new Date(),
+          title: 'Deleted task',
+          description: 'Deleted task',
+          category: 'BACKEND',
+          type: 'PAID',
+          difficulty: 'JUNIOR',
+          requiredSkills: ['Node.js'],
+          estimatedEffortHours: 5,
+          expectedDuration: 'DAYS_1_7',
+          communicationLanguage: 'EN',
+          timezonePreference: 'UTC',
+          applicationDeadline: new Date('2026-03-01'),
+          visibility: 'PUBLIC',
+          deliverables: 'Code',
+          requirements: 'Reqs',
+          niceToHave: 'Nice',
+        },
+      });
+
+      const res = await request(app)
+        .get('/api/v1/tasks?owner=true&include_deleted=true')
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'company');
+
+      expect(res.status).toBe(200);
+      expect(res.body.total).toBe(1);
+      expect(res.body.items[0].status).toBe('DELETED');
+    });
+
+    test('filters by project_id', async () => {
+      const company = await createUser({ companyProfile: { companyName: 'TeamUp' } });
+
+      const project = await prisma.project.create({
+        data: {
+          ownerUserId: company.id,
+          title: 'Test project',
+          shortDescription: 'Test project',
+          description: 'Test project description',
+          technologies: ['Node.js'],
+          visibility: 'PUBLIC',
+        },
+      });
+
+      // Task for project
+      await prisma.task.create({
+        data: {
+          ownerUserId: company.id,
+          projectId: project.id,
+          status: 'PUBLISHED',
+          publishedAt: new Date(),
+          title: 'Project task',
+          description: 'Project task',
+          category: 'BACKEND',
+          type: 'PAID',
+          difficulty: 'JUNIOR',
+          requiredSkills: ['Node.js'],
+          estimatedEffortHours: 5,
+          expectedDuration: 'DAYS_1_7',
+          communicationLanguage: 'EN',
+          timezonePreference: 'UTC',
+          applicationDeadline: new Date('2026-03-01'),
+          visibility: 'PUBLIC',
+          deliverables: 'Code',
+          requirements: 'Reqs',
+          niceToHave: 'Nice',
+        },
+      });
+
+      // Standalone task
+      await prisma.task.create({
+        data: {
+          ownerUserId: company.id,
+          status: 'PUBLISHED',
+          publishedAt: new Date(),
+          title: 'Standalone task',
+          description: 'Standalone task',
+          category: 'BACKEND',
+          type: 'PAID',
+          difficulty: 'JUNIOR',
+          requiredSkills: ['Node.js'],
+          estimatedEffortHours: 5,
+          expectedDuration: 'DAYS_1_7',
+          communicationLanguage: 'EN',
+          timezonePreference: 'UTC',
+          applicationDeadline: new Date('2026-03-01'),
+          visibility: 'PUBLIC',
+          deliverables: 'Code',
+          requirements: 'Reqs',
+          niceToHave: 'Nice',
+        },
+      });
+
+      const res = await request(app).get(`/api/v1/tasks?project_id=${project.id}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.total).toBe(1);
+      expect(res.body.items[0].project.project_id).toBe(project.id);
+    });
+  });
 });

@@ -66,3 +66,30 @@ export const deleteTask = asyncHandler(async (req, res) => {
     deleted_at: result.deletedAt.toISOString(),
   });
 });
+
+export const getTasksCatalog = asyncHandler(async (req, res) => {
+  const result = await tasksService.getTasksCatalog({
+    userId: req.user?.id,
+    page: parseInt(req.query.page) || 1,
+    size: parseInt(req.query.size) || 20,
+    search: req.query.search,
+    category: req.query.category,
+    difficulty: req.query.difficulty,
+    type: req.query.type,
+    skills: Array.isArray(req.query.skill)
+      ? req.query.skill
+      : req.query.skill
+        ? [req.query.skill]
+        : [],
+    projectId: req.query.project_id,
+    owner: req.query.owner === 'true',
+    includeDeleted: req.query.include_deleted === 'true',
+  });
+
+  return res.status(200).json({
+    items: result.items,
+    page: result.page,
+    size: result.size,
+    total: result.total,
+  });
+});

@@ -29,6 +29,7 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 .DS_Store
+test_output.txt
 
 # Prisma
 prisma/dev.db
