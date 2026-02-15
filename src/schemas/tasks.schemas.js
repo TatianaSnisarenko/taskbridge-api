@@ -252,6 +252,25 @@ export const taskIdParamSchema = Joi.object({
   }),
 });
 
+export const createTaskApplicationSchema = Joi.object({
+  message: Joi.string().trim().min(10).max(1000).required().messages({
+    'string.empty': 'Message is required',
+    'string.min': 'Message must be at least 10 characters',
+    'string.max': 'Message must not exceed 1000 characters',
+    'any.required': 'Message is required',
+  }),
+  proposed_plan: Joi.string().trim().min(10).max(2000).messages({
+    'string.empty': 'Proposed plan must not be empty',
+    'string.min': 'Proposed plan must be at least 10 characters',
+    'string.max': 'Proposed plan must not exceed 2000 characters',
+  }),
+  availability_note: Joi.string().trim().min(2).max(200).messages({
+    'string.empty': 'Availability note must not be empty',
+    'string.min': 'Availability note must be at least 2 characters',
+    'string.max': 'Availability note must not exceed 200 characters',
+  }),
+});
+
 export const getTasksCatalogSchema = Joi.object({
   page: Joi.number().min(1).default(1).messages({
     'number.min': 'Page must be at least 1',

@@ -41,6 +41,22 @@ export const publishTask = asyncHandler(async (req, res) => {
   });
 });
 
+export const applyToTask = asyncHandler(async (req, res) => {
+  const result = await tasksService.applyToTask({
+    userId: req.user.id,
+    taskId: req.params.taskId,
+    application: req.body,
+  });
+
+  return res.status(201).json({
+    application_id: result.applicationId,
+    task_id: result.taskId,
+    developer_user_id: result.developerUserId,
+    status: result.status,
+    created_at: result.createdAt.toISOString(),
+  });
+});
+
 export const closeTask = asyncHandler(async (req, res) => {
   const result = await tasksService.closeTask({
     userId: req.user.id,

@@ -5,6 +5,7 @@ import { validate } from '../middleware/validate.middleware.js';
 import * as tasksController from '../controllers/tasks.controller.js';
 import {
   createTaskDraftSchema,
+  createTaskApplicationSchema,
   updateTaskDraftSchema,
   taskIdParamSchema,
   getTasksCatalogSchema,
@@ -61,6 +62,15 @@ tasksRouter.post(
   requirePersona('company'),
   validate(taskIdParamSchema, 'params'),
   tasksController.publishTask
+);
+
+tasksRouter.post(
+  '/:taskId/applications',
+  requireAuth,
+  requirePersona('developer'),
+  validate(taskIdParamSchema, 'params'),
+  validate(createTaskApplicationSchema),
+  tasksController.applyToTask
 );
 
 tasksRouter.post(

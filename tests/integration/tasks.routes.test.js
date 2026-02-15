@@ -2453,6 +2453,247 @@ describe('tasks routes', () => {
     });
   });
 
+  describe('POST /tasks/:taskId/applications', () => {
+    test('rejects unauthorized', async () => {
+      const res = await request(app)
+        .post('/api/v1/tasks/3fa85f64-5717-4562-b3fc-2c963f66afa6/applications')
+        .send({ message: 'I can do it this week.' });
+
+      expect(res.status).toBe(401);
+      expect(res.body.error.code).toBe('AUTH_REQUIRED');
+    });
+
+    test('rejects missing persona header', async () => {
+      const user = await createUser({ developerProfile: { displayName: 'Dev' } });
+      const token = buildAccessToken({ userId: user.id, email: user.email });
+
+      const res = await request(app)
+        .post('/api/v1/tasks/3fa85f64-5717-4562-b3fc-2c963f66afa6/applications')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ message: 'I can do it this week.' });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('PERSONA_REQUIRED');
+    });
+
+    test('rejects non-developer persona', async () => {
+      const user = await createUser({ developerProfile: { displayName: 'Dev' } });
+      const token = buildAccessToken({ userId: user.id, email: user.email });
+
+      const res = await request(app)
+        .post('/api/v1/tasks/3fa85f64-5717-4562-b3fc-2c963f66afa6/applications')
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'company')
+        .send({ message: 'I can do it this week.' });
+
+      expect(res.status).toBe(403);
+      expect(res.body.error.code).toBe('PERSONA_NOT_AVAILABLE');
+    });
+
+    test('rejects invalid payload', async () => {
+      const user = await createUser({ developerProfile: { displayName: 'Dev' } });
+      const token = buildAccessToken({ userId: user.id, email: user.email });
+
+      const res = await request(app)
+        .post('/api/v1/tasks/3fa85f64-5717-4562-b3fc-2c963f66afa6/applications')
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'developer')
+        .send({ message: 'Too short' });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('VALIDATION_ERROR');
+      expect(res.body.error.details).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            field: 'message',
+            issue: 'Message must be at least 10 characters',
+          }),
+        ])
+      );
+    });
+
+    test('returns 404 for missing task', async () => {
+      const user = await createUser({ developerProfile: { displayName: 'Dev' } });
+      const token = buildAccessToken({ userId: user.id, email: user.email });
+
+      const res = await request(app)
+        .post('/api/v1/tasks/3fa85f64-5717-4562-b3fc-2c963f66afa6/applications')
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'developer')
+        .send({ message: 'I can do it this week.' });
+
+      expect(res.status).toBe(404);
+      expect(res.body.error.code).toBe('TASK_NOT_FOUND');
+    });
+
+    test('returns 409 for non-published task', async () => {
+      const company = await createUser({ companyProfile: { companyName: 'TeamUp' } });
+      const developer = await createUser({ developerProfile: { displayName: 'Dev' } });
+      const token = buildAccessToken({ userId: developer.id, email: developer.email });
+
+      const task = await prisma.task.create({
+        data: {
+          ownerUserId: company.id,
+          status: 'DRAFT',
+          title: 'Draft task',
+          description: 'Draft task description',
+          category: 'BACKEND',
+          type: 'PAID',
+          difficulty: 'JUNIOR',
+          requiredSkills: ['Node.js'],
+          estimatedEffortHours: 5,
+          expectedDuration: 'DAYS_1_7',
+          communicationLanguage: 'EN',
+          timezonePreference: 'UTC',
+          applicationDeadline: new Date('2026-03-01'),
+          visibility: 'PUBLIC',
+          deliverables: 'Code',
+          requirements: 'Tests',
+          niceToHave: 'Docs',
+        },
+      });
+
+      const res = await request(app)
+        .post(`/api/v1/tasks/${task.id}/applications`)
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'developer')
+        .send({ message: 'I can do it this week.' });
+
+      expect(res.status).toBe(409);
+      expect(res.body.error.code).toBe('TASK_NOT_OPEN');
+    });
+
+    test('returns 409 for duplicate application', async () => {
+      const company = await createUser({ companyProfile: { companyName: 'TeamUp' } });
+      const developer = await createUser({ developerProfile: { displayName: 'Dev' } });
+      const token = buildAccessToken({ userId: developer.id, email: developer.email });
+
+      const task = await prisma.task.create({
+        data: {
+          ownerUserId: company.id,
+          status: 'PUBLISHED',
+          publishedAt: new Date('2026-02-14T10:00:00Z'),
+          title: 'Published task',
+          description: 'Published task description',
+          category: 'BACKEND',
+          type: 'PAID',
+          difficulty: 'JUNIOR',
+          requiredSkills: ['Node.js'],
+          estimatedEffortHours: 5,
+          expectedDuration: 'DAYS_1_7',
+          communicationLanguage: 'EN',
+          timezonePreference: 'UTC',
+          applicationDeadline: new Date('2026-03-01'),
+          visibility: 'PUBLIC',
+          deliverables: 'Code',
+          requirements: 'Tests',
+          niceToHave: 'Docs',
+        },
+      });
+
+      await prisma.application.create({
+        data: {
+          taskId: task.id,
+          developerUserId: developer.id,
+          status: 'APPLIED',
+          message: 'First application',
+        },
+      });
+
+      const res = await request(app)
+        .post(`/api/v1/tasks/${task.id}/applications`)
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'developer')
+        .send({ message: 'Second application attempt.' });
+
+      expect(res.status).toBe(409);
+      expect(res.body.error.code).toBe('ALREADY_APPLIED');
+    });
+
+    test('creates application for published task', async () => {
+      const company = await createUser({ companyProfile: { companyName: 'TeamUp' } });
+      const developer = await createUser({ developerProfile: { displayName: 'Dev' } });
+      const token = buildAccessToken({ userId: developer.id, email: developer.email });
+
+      const task = await prisma.task.create({
+        data: {
+          ownerUserId: company.id,
+          status: 'PUBLISHED',
+          publishedAt: new Date('2026-02-14T10:00:00Z'),
+          title: 'Published task',
+          description: 'Published task description',
+          category: 'BACKEND',
+          type: 'PAID',
+          difficulty: 'JUNIOR',
+          requiredSkills: ['Node.js'],
+          estimatedEffortHours: 5,
+          expectedDuration: 'DAYS_1_7',
+          communicationLanguage: 'EN',
+          timezonePreference: 'UTC',
+          applicationDeadline: new Date('2026-03-01'),
+          visibility: 'PUBLIC',
+          deliverables: 'Code',
+          requirements: 'Tests',
+          niceToHave: 'Docs',
+        },
+      });
+
+      const res = await request(app)
+        .post(`/api/v1/tasks/${task.id}/applications`)
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'developer')
+        .send({
+          message: 'I can do it this week.',
+          proposed_plan: 'Day1 filters, Day2 tests.',
+          availability_note: 'Evenings',
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body).toEqual({
+        application_id: expect.any(String),
+        task_id: task.id,
+        developer_user_id: developer.id,
+        status: 'APPLIED',
+        created_at: expect.any(String),
+      });
+      expect(Number.isNaN(Date.parse(res.body.created_at))).toBe(false);
+
+      const application = await prisma.application.findUnique({
+        where: { id: res.body.application_id },
+      });
+
+      expect(application).toMatchObject({
+        taskId: task.id,
+        developerUserId: developer.id,
+        status: 'APPLIED',
+        message: 'I can do it this week.',
+        proposedPlan: 'Day1 filters, Day2 tests.',
+        availabilityNote: 'Evenings',
+      });
+
+      const notification = await prisma.notification.findFirst({
+        where: {
+          userId: company.id,
+          taskId: task.id,
+          type: 'APPLICATION_CREATED',
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      expect(notification).toMatchObject({
+        userId: company.id,
+        actorUserId: developer.id,
+        taskId: task.id,
+        type: 'APPLICATION_CREATED',
+        payload: {
+          task_id: task.id,
+          application_id: res.body.application_id,
+          review_id: null,
+        },
+      });
+    });
+  });
+
   describe('GET /tasks', () => {
     test('filters by project_id', async () => {
       const company = await createUser({ companyProfile: { companyName: 'TeamUp' } });

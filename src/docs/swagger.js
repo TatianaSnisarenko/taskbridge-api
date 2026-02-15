@@ -582,6 +582,25 @@ export const swaggerSpec = {
           updated_at: { type: 'string', format: 'date-time' },
         },
       },
+      CreateTaskApplicationRequest: {
+        type: 'object',
+        required: ['message'],
+        properties: {
+          message: { type: 'string', minLength: 10, maxLength: 1000 },
+          proposed_plan: { type: 'string', minLength: 10, maxLength: 2000 },
+          availability_note: { type: 'string', minLength: 2, maxLength: 200 },
+        },
+      },
+      CreateTaskApplicationResponse: {
+        type: 'object',
+        properties: {
+          application_id: { type: 'string', format: 'uuid' },
+          task_id: { type: 'string', format: 'uuid' },
+          developer_user_id: { type: 'string', format: 'uuid' },
+          status: { type: 'string', enum: ['APPLIED'] },
+          created_at: { type: 'string', format: 'date-time' },
+        },
+      },
       PublishTaskResponse: {
         type: 'object',
         properties: {
@@ -1666,6 +1685,65 @@ export const swaggerSpec = {
           404: { description: 'Task not found' },
           409: { description: 'Task in invalid state (only DRAFT tasks can be published)' },
         },
+      },
+    },
+    '/api/v1/tasks/{taskId}/applications': {
+      post: {
+        tags: ['Tasks'],
+        summary: 'Apply to a published task',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'taskId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+          {
+            name: 'X-Persona',
+            in: 'header',
+            required: true,
+            schema: { type: 'string', enum: ['developer'] },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/CreateTaskApplicationRequest' },
+              example: {
+                message: 'I can do it this week.',
+                proposed_plan: 'Day1 filters, Day2 tests...',
+                availability_note: 'Evenings',
+              },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: 'Application created',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/CreateTaskApplicationResponse' },
+              },
+            },
+          },
+          400: { description: 'Validation error (VALIDATION_ERROR)' },
+          401: { description: 'Unauthorized (AUTH_REQUIRED or INVALID_TOKEN)' },
+          403: { description: 'Developer persona required (PERSONA_NOT_AVAILABLE)' },
+          404: { description: 'Task not found (TASK_NOT_FOUND)' },
+          409: {
+            description: 'Task not open (TASK_NOT_OPEN) or already applied (ALREADY_APPLIED)',
+          },
+        },
+        'x-side-effects': [
+          {
+            type: 'APPLICATION_CREATED',
+            recipient: 'task.owner_user_id',
+            actor: 'developer',
+            payload: { task_id: 'uuid', application_id: 'uuid', review_id: null },
+          },
+        ],
       },
     },
     '/api/v1/tasks/{taskId}/close': {

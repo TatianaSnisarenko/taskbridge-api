@@ -1,5 +1,6 @@
 import { prisma } from '../db/prisma.js';
 import { ApiError } from '../utils/ApiError.js';
+import { createApplicationCreatedNotification } from './notifications.service.js';
 
 function mapTaskInput(input) {
   return {
@@ -220,6 +221,68 @@ export async function publishTask({ userId, taskId }) {
   });
 
   return { taskId: published.id, status: published.status, publishedAt: published.publishedAt };
+}
+
+export async function applyToTask({ userId, taskId, application }) {
+  const task = await prisma.task.findUnique({
+    where: { id: taskId },
+    select: { id: true, ownerUserId: true, status: true, deletedAt: true },
+  });
+
+  if (!task || task.deletedAt) {
+    throw new ApiError(404, 'TASK_NOT_FOUND', 'Task not found');
+  }
+
+  if (task.status !== 'PUBLISHED') {
+    throw new ApiError(409, 'TASK_NOT_OPEN', 'Task is not open for applications');
+  }
+
+  const existingApplication = await prisma.application.findFirst({
+    where: { taskId, developerUserId: userId },
+    select: { id: true },
+  });
+
+  if (existingApplication) {
+    throw new ApiError(409, 'ALREADY_APPLIED', 'Application already exists');
+  }
+
+  const created = await prisma.$transaction(async (tx) => {
+    const applicationRecord = await tx.application.create({
+      data: {
+        taskId,
+        developerUserId: userId,
+        status: 'APPLIED',
+        message: application.message,
+        proposedPlan: application.proposed_plan,
+        availabilityNote: application.availability_note,
+      },
+      select: {
+        id: true,
+        taskId: true,
+        developerUserId: true,
+        status: true,
+        createdAt: true,
+      },
+    });
+
+    await createApplicationCreatedNotification({
+      client: tx,
+      userId: task.ownerUserId,
+      actorUserId: userId,
+      taskId: task.id,
+      applicationId: applicationRecord.id,
+    });
+
+    return applicationRecord;
+  });
+
+  return {
+    applicationId: created.id,
+    taskId: created.taskId,
+    developerUserId: created.developerUserId,
+    status: created.status,
+    createdAt: created.createdAt,
+  };
 }
 
 export async function closeTask({ userId, taskId }) {

@@ -11,9 +11,21 @@ const prismaMock = {
     findUnique: jest.fn(),
     update: jest.fn(),
   },
+  application: {
+    findFirst: jest.fn(),
+    create: jest.fn(),
+  },
+};
+
+const notificationsServiceMock = {
+  createApplicationCreatedNotification: jest.fn(),
 };
 
 jest.unstable_mockModule('../../src/db/prisma.js', () => ({ prisma: prismaMock }));
+jest.unstable_mockModule(
+  '../../src/services/notifications.service.js',
+  () => notificationsServiceMock
+);
 
 const tasksService = await import('../../src/services/tasks.service.js');
 
@@ -575,6 +587,142 @@ describe('tasks.service', () => {
       taskId: 't1',
       status: 'PUBLISHED',
       publishedAt,
+    });
+  });
+
+  test('applyToTask rejects task not found', async () => {
+    prismaMock.task.findUnique.mockResolvedValue(null);
+
+    await expect(
+      tasksService.applyToTask({
+        userId: 'u1',
+        taskId: 't1',
+        application: { message: 'I can do it this week.' },
+      })
+    ).rejects.toMatchObject({
+      status: 404,
+      code: 'TASK_NOT_FOUND',
+    });
+  });
+
+  test('applyToTask rejects deleted task', async () => {
+    prismaMock.task.findUnique.mockResolvedValue({
+      id: 't1',
+      status: 'PUBLISHED',
+      deletedAt: new Date(),
+    });
+
+    await expect(
+      tasksService.applyToTask({
+        userId: 'u1',
+        taskId: 't1',
+        application: { message: 'I can do it this week.' },
+      })
+    ).rejects.toMatchObject({
+      status: 404,
+      code: 'TASK_NOT_FOUND',
+    });
+  });
+
+  test('applyToTask rejects non-published task', async () => {
+    prismaMock.task.findUnique.mockResolvedValue({
+      id: 't1',
+      status: 'DRAFT',
+      deletedAt: null,
+    });
+
+    await expect(
+      tasksService.applyToTask({
+        userId: 'u1',
+        taskId: 't1',
+        application: { message: 'I can do it this week.' },
+      })
+    ).rejects.toMatchObject({
+      status: 409,
+      code: 'TASK_NOT_OPEN',
+    });
+  });
+
+  test('applyToTask rejects duplicate application', async () => {
+    prismaMock.task.findUnique.mockResolvedValue({
+      id: 't1',
+      status: 'PUBLISHED',
+      deletedAt: null,
+    });
+    prismaMock.application.findFirst.mockResolvedValue({ id: 'a1' });
+
+    await expect(
+      tasksService.applyToTask({
+        userId: 'u1',
+        taskId: 't1',
+        application: { message: 'I can do it this week.' },
+      })
+    ).rejects.toMatchObject({
+      status: 409,
+      code: 'ALREADY_APPLIED',
+    });
+  });
+
+  test('applyToTask creates application', async () => {
+    const createdAt = new Date('2026-02-14T14:00:00Z');
+    prismaMock.task.findUnique.mockResolvedValue({
+      id: 't1',
+      ownerUserId: 'owner1',
+      status: 'PUBLISHED',
+      deletedAt: null,
+    });
+    prismaMock.application.findFirst.mockResolvedValue(null);
+    prismaMock.application.create.mockResolvedValue({
+      id: 'a1',
+      taskId: 't1',
+      developerUserId: 'u1',
+      status: 'APPLIED',
+      createdAt,
+    });
+    prismaMock.$transaction.mockImplementation(async (cb) => cb(prismaMock));
+
+    const result = await tasksService.applyToTask({
+      userId: 'u1',
+      taskId: 't1',
+      application: {
+        message: 'I can do it this week.',
+        proposed_plan: 'Day 1 plan, day 2 tests.',
+        availability_note: 'Evenings',
+      },
+    });
+
+    expect(prismaMock.application.create).toHaveBeenCalledWith({
+      data: {
+        taskId: 't1',
+        developerUserId: 'u1',
+        status: 'APPLIED',
+        message: 'I can do it this week.',
+        proposedPlan: 'Day 1 plan, day 2 tests.',
+        availabilityNote: 'Evenings',
+      },
+      select: {
+        id: true,
+        taskId: true,
+        developerUserId: true,
+        status: true,
+        createdAt: true,
+      },
+    });
+
+    expect(notificationsServiceMock.createApplicationCreatedNotification).toHaveBeenCalledWith({
+      client: prismaMock,
+      userId: 'owner1',
+      actorUserId: 'u1',
+      taskId: 't1',
+      applicationId: 'a1',
+    });
+
+    expect(result).toEqual({
+      applicationId: 'a1',
+      taskId: 't1',
+      developerUserId: 'u1',
+      status: 'APPLIED',
+      createdAt,
     });
   });
 
