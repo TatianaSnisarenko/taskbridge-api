@@ -403,6 +403,24 @@ export const swaggerSpec = {
           total: { type: 'integer', example: 1 },
         },
       },
+      ReportProjectRequest: {
+        type: 'object',
+        required: ['reason'],
+        properties: {
+          reason: {
+            type: 'string',
+            enum: ['SPAM', 'SCAM', 'INAPPROPRIATE_CONTENT', 'MISLEADING', 'OTHER'],
+          },
+          comment: { type: 'string', maxLength: 1000 },
+        },
+      },
+      ReportProjectResponse: {
+        type: 'object',
+        properties: {
+          report_id: { type: 'string', format: 'uuid' },
+          created_at: { type: 'string', format: 'date-time' },
+        },
+      },
       DeveloperPublicProfileResponse: {
         type: 'object',
         properties: {
@@ -1027,6 +1045,54 @@ export const swaggerSpec = {
           401: { description: 'Unauthorized' },
           403: { description: 'Not owner' },
           404: { description: 'Not found' },
+        },
+      },
+    },
+    '/api/v1/projects/{projectId}/reports': {
+      post: {
+        tags: ['Projects'],
+        summary: 'Report a project',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'projectId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+          {
+            name: 'X-Persona',
+            in: 'header',
+            required: true,
+            schema: { type: 'string', enum: ['developer', 'company'] },
+            description: 'Report as developer or company persona',
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/ReportProjectRequest' },
+              example: {
+                reason: 'SPAM',
+                comment: 'This project appears to be spam',
+              },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: 'Report created',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ReportProjectResponse' },
+              },
+            },
+          },
+          400: { description: 'Validation error' },
+          401: { description: 'Unauthorized' },
+          404: { description: 'Project not found' },
+          409: { description: 'Already reported' },
         },
       },
     },

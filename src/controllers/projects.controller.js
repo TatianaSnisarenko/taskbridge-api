@@ -57,3 +57,17 @@ export const getProjectById = asyncHandler(async (req, res) => {
 
   return res.status(200).json(result);
 });
+
+export const reportProject = asyncHandler(async (req, res) => {
+  const result = await projectsService.reportProject({
+    userId: req.user.id,
+    persona: req.persona,
+    projectId: req.params.projectId,
+    report: req.body,
+  });
+
+  return res.status(201).json({
+    report_id: result.reportId,
+    created_at: result.createdAt.toISOString(),
+  });
+});

@@ -9,6 +9,8 @@ import {
   getProjectParamsSchema,
   getProjectQuerySchema,
   getProjectsQuerySchema,
+  reportProjectParamsSchema,
+  reportProjectSchema,
   updateProjectParamsSchema,
   updateProjectSchema,
 } from '../schemas/projects.schemas.js';
@@ -68,4 +70,13 @@ projectsRouter.delete(
   requirePersona('company'),
   validate(deleteProjectParamsSchema, 'params'),
   projectsController.deleteProject
+);
+
+projectsRouter.post(
+  '/:projectId/reports',
+  requireAuth,
+  requirePersona(),
+  validate(reportProjectParamsSchema, 'params'),
+  validate(reportProjectSchema),
+  projectsController.reportProject
 );

@@ -2,6 +2,7 @@ import Joi from 'joi';
 
 const PROJECT_VISIBILITY = ['PUBLIC', 'UNLISTED'];
 const PROJECT_STATUS = ['ACTIVE', 'ARCHIVED'];
+const PROJECT_REPORT_REASONS = ['SPAM', 'SCAM', 'INAPPROPRIATE_CONTENT', 'MISLEADING', 'OTHER'];
 
 export const createProjectSchema = Joi.object({
   title: Joi.string().trim().min(3).max(120).required().messages({
@@ -167,5 +168,27 @@ export const getProjectsQuerySchema = Joi.object({
   }),
   include_deleted: Joi.boolean().messages({
     'boolean.base': 'Include deleted must be true or false',
+  }),
+});
+
+export const reportProjectParamsSchema = Joi.object({
+  projectId: Joi.string().guid({ version: 'uuidv4' }).required().messages({
+    'string.empty': 'Project id is required',
+    'string.guid': 'Project id must be a valid UUID',
+    'any.required': 'Project id is required',
+  }),
+});
+
+export const reportProjectSchema = Joi.object({
+  reason: Joi.string()
+    .valid(...PROJECT_REPORT_REASONS)
+    .required()
+    .messages({
+      'string.empty': 'Reason is required',
+      'any.only': 'Reason must be one of: SPAM, SCAM, INAPPROPRIATE_CONTENT, MISLEADING, OTHER',
+      'any.required': 'Reason is required',
+    }),
+  comment: Joi.string().trim().max(1000).messages({
+    'string.max': 'Comment must not exceed 1000 characters',
   }),
 });

@@ -945,4 +945,328 @@ describe('projects routes', () => {
       expect(task.status).toBe('CLOSED');
     }
   });
+
+  describe('POST /projects/:projectId/reports', () => {
+    test('rejects unauthorized', async () => {
+      const res = await request(app)
+        .post('/api/v1/projects/3fa85f64-5717-4562-b3fc-2c963f66afa6/reports')
+        .send({ reason: 'SPAM' });
+
+      expect(res.status).toBe(401);
+      expect(res.body.error.code).toBe('AUTH_REQUIRED');
+    });
+
+    test('rejects missing persona header', async () => {
+      const user = await createUser();
+      const token = buildAccessToken({ userId: user.id, email: user.email });
+
+      const res = await request(app)
+        .post('/api/v1/projects/3fa85f64-5717-4562-b3fc-2c963f66afa6/reports')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ reason: 'SPAM' });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('PERSONA_REQUIRED');
+    });
+
+    test('rejects invalid persona header', async () => {
+      const user = await createUser();
+      const token = buildAccessToken({ userId: user.id, email: user.email });
+
+      const res = await request(app)
+        .post('/api/v1/projects/3fa85f64-5717-4562-b3fc-2c963f66afa6/reports')
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'invalid')
+        .send({ reason: 'SPAM' });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('PERSONA_INVALID');
+    });
+
+    test('rejects invalid projectId', async () => {
+      const user = await createUser({ developerProfile: { displayName: 'Test Dev' } });
+      const token = buildAccessToken({ userId: user.id, email: user.email });
+
+      const res = await request(app)
+        .post('/api/v1/projects/not-a-uuid/reports')
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'developer')
+        .send({ reason: 'SPAM' });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('VALIDATION_ERROR');
+      expect(res.body.error.details).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            field: 'projectId',
+            issue: 'Project id must be a valid UUID',
+          }),
+        ])
+      );
+    });
+
+    test('rejects missing reason', async () => {
+      const user = await createUser({ developerProfile: { displayName: 'Test Dev' } });
+      const token = buildAccessToken({ userId: user.id, email: user.email });
+
+      const res = await request(app)
+        .post('/api/v1/projects/3fa85f64-5717-4562-b3fc-2c963f66afa6/reports')
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'developer')
+        .send({});
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('VALIDATION_ERROR');
+      expect(res.body.error.details).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            field: 'reason',
+            issue: 'Reason is required',
+          }),
+        ])
+      );
+    });
+
+    test('rejects invalid reason', async () => {
+      const user = await createUser({ developerProfile: { displayName: 'Test Dev' } });
+      const token = buildAccessToken({ userId: user.id, email: user.email });
+
+      const res = await request(app)
+        .post('/api/v1/projects/3fa85f64-5717-4562-b3fc-2c963f66afa6/reports')
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'developer')
+        .send({ reason: 'INVALID_REASON' });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('VALIDATION_ERROR');
+      expect(res.body.error.details).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            field: 'reason',
+            issue: 'Reason must be one of: SPAM, SCAM, INAPPROPRIATE_CONTENT, MISLEADING, OTHER',
+          }),
+        ])
+      );
+    });
+
+    test('rejects comment exceeding max length', async () => {
+      const user = await createUser({ developerProfile: { displayName: 'Test Dev' } });
+      const token = buildAccessToken({ userId: user.id, email: user.email });
+
+      const res = await request(app)
+        .post('/api/v1/projects/3fa85f64-5717-4562-b3fc-2c963f66afa6/reports')
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'developer')
+        .send({ reason: 'SPAM', comment: 'x'.repeat(1001) });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('VALIDATION_ERROR');
+      expect(res.body.error.details).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            field: 'comment',
+            issue: 'Comment must not exceed 1000 characters',
+          }),
+        ])
+      );
+    });
+
+    test('returns 404 for non-existent project', async () => {
+      const user = await createUser({ developerProfile: { displayName: 'Test Dev' } });
+      const token = buildAccessToken({ userId: user.id, email: user.email });
+
+      const res = await request(app)
+        .post('/api/v1/projects/3fa85f64-5717-4562-b3fc-2c963f66afa6/reports')
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'developer')
+        .send({ reason: 'SPAM' });
+
+      expect(res.status).toBe(404);
+      expect(res.body.error.code).toBe('NOT_FOUND');
+    });
+
+    test('returns 404 for deleted project', async () => {
+      const owner = await createUser({ companyProfile: { companyName: 'TeamUp' } });
+      const reporter = await createUser({ developerProfile: { displayName: 'Test Dev' } });
+      const token = buildAccessToken({ userId: reporter.id, email: reporter.email });
+
+      const project = await prisma.project.create({
+        data: {
+          ownerUserId: owner.id,
+          title: 'Deleted project',
+          shortDescription: 'Deleted',
+          description: 'Deleted',
+          technologies: ['Node.js'],
+          visibility: 'PUBLIC',
+          deletedAt: new Date(),
+        },
+      });
+
+      const res = await request(app)
+        .post(`/api/v1/projects/${project.id}/reports`)
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'developer')
+        .send({ reason: 'SPAM' });
+
+      expect(res.status).toBe(404);
+      expect(res.body.error.code).toBe('NOT_FOUND');
+    });
+
+    test('creates report successfully', async () => {
+      const owner = await createUser({ companyProfile: { companyName: 'TeamUp' } });
+      const reporter = await createUser({ developerProfile: { displayName: 'Reporter' } });
+      const token = buildAccessToken({ userId: reporter.id, email: reporter.email });
+
+      const project = await prisma.project.create({
+        data: {
+          ownerUserId: owner.id,
+          title: 'Reportable project',
+          shortDescription: 'Short',
+          description: 'Description',
+          technologies: ['Node.js'],
+          visibility: 'PUBLIC',
+        },
+      });
+
+      const res = await request(app)
+        .post(`/api/v1/projects/${project.id}/reports`)
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'developer')
+        .send({ reason: 'SPAM', comment: 'This is spam' });
+
+      expect(res.status).toBe(201);
+      expect(res.body).toEqual({
+        report_id: expect.any(String),
+        created_at: expect.any(String),
+      });
+      expect(Number.isNaN(Date.parse(res.body.created_at))).toBe(false);
+
+      const report = await prisma.projectReport.findUnique({
+        where: { id: res.body.report_id },
+      });
+
+      expect(report).toMatchObject({
+        projectId: project.id,
+        reporterUserId: reporter.id,
+        reporterPersona: 'developer',
+        reason: 'SPAM',
+        comment: 'This is spam',
+      });
+    });
+
+    test('creates report without comment', async () => {
+      const owner = await createUser({ companyProfile: { companyName: 'TeamUp' } });
+      const reporter = await createUser({ companyProfile: { companyName: 'Other' } });
+      const token = buildAccessToken({ userId: reporter.id, email: reporter.email });
+
+      const project = await prisma.project.create({
+        data: {
+          ownerUserId: owner.id,
+          title: 'Reportable project',
+          shortDescription: 'Short',
+          description: 'Description',
+          technologies: ['Node.js'],
+          visibility: 'PUBLIC',
+        },
+      });
+
+      const res = await request(app)
+        .post(`/api/v1/projects/${project.id}/reports`)
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'company')
+        .send({ reason: 'SCAM' });
+
+      expect(res.status).toBe(201);
+      expect(res.body).toEqual({
+        report_id: expect.any(String),
+        created_at: expect.any(String),
+      });
+
+      const report = await prisma.projectReport.findUnique({
+        where: { id: res.body.report_id },
+      });
+
+      expect(report).toMatchObject({
+        projectId: project.id,
+        reporterUserId: reporter.id,
+        reporterPersona: 'company',
+        reason: 'SCAM',
+        comment: '',
+      });
+    });
+
+    test('rejects duplicate report from same user', async () => {
+      const owner = await createUser({ companyProfile: { companyName: 'TeamUp' } });
+      const reporter = await createUser({ developerProfile: { displayName: 'Reporter' } });
+      const token = buildAccessToken({ userId: reporter.id, email: reporter.email });
+
+      const project = await prisma.project.create({
+        data: {
+          ownerUserId: owner.id,
+          title: 'Reportable project',
+          shortDescription: 'Short',
+          description: 'Description',
+          technologies: ['Node.js'],
+          visibility: 'PUBLIC',
+        },
+      });
+
+      await request(app)
+        .post(`/api/v1/projects/${project.id}/reports`)
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'developer')
+        .send({ reason: 'SPAM' });
+
+      const res = await request(app)
+        .post(`/api/v1/projects/${project.id}/reports`)
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'developer')
+        .send({ reason: 'SCAM' });
+
+      expect(res.status).toBe(409);
+      expect(res.body.error.code).toBe('ALREADY_REPORTED');
+    });
+
+    test('allows different users to report same project', async () => {
+      const owner = await createUser({ companyProfile: { companyName: 'TeamUp' } });
+      const reporter1 = await createUser({ developerProfile: { displayName: 'Reporter1' } });
+      const reporter2 = await createUser({ companyProfile: { companyName: 'Reporter2' } });
+      const token1 = buildAccessToken({ userId: reporter1.id, email: reporter1.email });
+      const token2 = buildAccessToken({ userId: reporter2.id, email: reporter2.email });
+
+      const project = await prisma.project.create({
+        data: {
+          ownerUserId: owner.id,
+          title: 'Reportable project',
+          shortDescription: 'Short',
+          description: 'Description',
+          technologies: ['Node.js'],
+          visibility: 'PUBLIC',
+        },
+      });
+
+      const res1 = await request(app)
+        .post(`/api/v1/projects/${project.id}/reports`)
+        .set('Authorization', `Bearer ${token1}`)
+        .set('X-Persona', 'developer')
+        .send({ reason: 'SPAM' });
+
+      expect(res1.status).toBe(201);
+
+      const res2 = await request(app)
+        .post(`/api/v1/projects/${project.id}/reports`)
+        .set('Authorization', `Bearer ${token2}`)
+        .set('X-Persona', 'company')
+        .send({ reason: 'SCAM' });
+
+      expect(res2.status).toBe(201);
+
+      const reports = await prisma.projectReport.findMany({
+        where: { projectId: project.id },
+      });
+      expect(reports).toHaveLength(2);
+      expect(reports[0].reporterPersona).toBe('developer');
+      expect(reports[1].reporterPersona).toBe('company');
+    });
+  });
 });

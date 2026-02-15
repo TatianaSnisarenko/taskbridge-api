@@ -307,3 +307,34 @@ export async function getProjectById({ userId, projectId, includeDeleted }) {
   const taskSummary = buildTaskSummary(taskGroups);
   return mapProjectDetailsOutput(project, taskSummary);
 }
+
+export async function reportProject({ userId, persona, projectId, report }) {
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    select: { id: true, deletedAt: true },
+  });
+
+  if (!project || project.deletedAt) {
+    throw new ApiError(404, 'NOT_FOUND', 'Project not found');
+  }
+
+  try {
+    const created = await prisma.projectReport.create({
+      data: {
+        projectId,
+        reporterUserId: userId,
+        reporterPersona: persona,
+        reason: report.reason,
+        comment: report.comment || '',
+      },
+      select: { id: true, createdAt: true },
+    });
+
+    return { reportId: created.id, createdAt: created.createdAt };
+  } catch (error) {
+    if (error.code === 'P2002') {
+      throw new ApiError(409, 'ALREADY_REPORTED', 'You have already reported this project');
+    }
+    throw error;
+  }
+}
