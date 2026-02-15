@@ -862,4 +862,306 @@ describe('tasks routes', () => {
     expect(published.status).toBe('PUBLISHED');
     expect(published.publishedAt).toBeInstanceOf(Date);
   });
+
+  test('POST /tasks/:taskId/close rejects unauthorized', async () => {
+    const res = await request(app).post('/api/v1/tasks/3fa85f64-5717-4562-b3fc-2c963f66afa6/close');
+
+    expect(res.status).toBe(401);
+    expect(res.body.error.code).toBe('AUTH_REQUIRED');
+  });
+
+  test('POST /tasks/:taskId/close rejects missing persona header', async () => {
+    const user = await createUser({ companyProfile: { companyName: 'TeamUp' } });
+    const token = buildAccessToken({ userId: user.id, email: user.email });
+
+    const res = await request(app)
+      .post('/api/v1/tasks/3fa85f64-5717-4562-b3fc-2c963f66afa6/close')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('PERSONA_REQUIRED');
+  });
+
+  test('POST /tasks/:taskId/close rejects non-company persona', async () => {
+    const user = await createUser({ developerProfile: { displayName: 'Dev' } });
+    const token = buildAccessToken({ userId: user.id, email: user.email });
+
+    const res = await request(app)
+      .post('/api/v1/tasks/3fa85f64-5717-4562-b3fc-2c963f66afa6/close')
+      .set('Authorization', `Bearer ${token}`)
+      .set('X-Persona', 'developer');
+
+    expect(res.status).toBe(403);
+    expect(res.body.error.code).toBe('PERSONA_NOT_AVAILABLE');
+  });
+
+  test('POST /tasks/:taskId/close rejects invalid task ID', async () => {
+    const user = await createUser({ companyProfile: { companyName: 'TeamUp' } });
+    const token = buildAccessToken({ userId: user.id, email: user.email });
+
+    const res = await request(app)
+      .post('/api/v1/tasks/not-a-uuid/close')
+      .set('Authorization', `Bearer ${token}`)
+      .set('X-Persona', 'company');
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    expect(res.body.error.details).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          field: 'taskId',
+          issue: 'Task id must be a valid UUID',
+        }),
+      ])
+    );
+  });
+
+  test('POST /tasks/:taskId/close rejects task not found', async () => {
+    const user = await createUser({ companyProfile: { companyName: 'TeamUp' } });
+    const token = buildAccessToken({ userId: user.id, email: user.email });
+
+    const res = await request(app)
+      .post('/api/v1/tasks/3fa85f64-5717-4562-b3fc-2c963f66afa6/close')
+      .set('Authorization', `Bearer ${token}`)
+      .set('X-Persona', 'company');
+
+    expect(res.status).toBe(404);
+    expect(res.body.error.code).toBe('NOT_FOUND');
+  });
+
+  test('POST /tasks/:taskId/close rejects non-owner task', async () => {
+    const owner = await createUser({ companyProfile: { companyName: 'Owner' } });
+    const otherUser = await createUser({ companyProfile: { companyName: 'Other' } });
+    const token = buildAccessToken({ userId: otherUser.id, email: otherUser.email });
+
+    const task = await prisma.task.create({
+      data: {
+        ownerUserId: owner.id,
+        status: 'DRAFT',
+        title: 'Owner task',
+        description: 'Owner task description',
+        category: 'BACKEND',
+        type: 'PAID',
+        difficulty: 'JUNIOR',
+        requiredSkills: ['Node.js'],
+        estimatedEffortHours: 5,
+        expectedDuration: 'DAYS_1_7',
+        communicationLanguage: 'EN',
+        timezonePreference: 'UTC',
+        applicationDeadline: new Date('2026-03-01'),
+        visibility: 'PUBLIC',
+        deliverables: 'Code',
+        requirements: 'Reqs',
+        niceToHave: 'Nice',
+      },
+    });
+
+    const res = await request(app)
+      .post(`/api/v1/tasks/${task.id}/close`)
+      .set('Authorization', `Bearer ${token}`)
+      .set('X-Persona', 'company');
+
+    expect(res.status).toBe(403);
+    expect(res.body.error.code).toBe('NOT_OWNER');
+  });
+
+  test('POST /tasks/:taskId/close rejects invalid state (IN_PROGRESS)', async () => {
+    const user = await createUser({ companyProfile: { companyName: 'TeamUp' } });
+    const token = buildAccessToken({ userId: user.id, email: user.email });
+
+    const task = await prisma.task.create({
+      data: {
+        ownerUserId: user.id,
+        status: 'IN_PROGRESS',
+        publishedAt: new Date(),
+        title: 'In progress task',
+        description: 'In progress task description',
+        category: 'BACKEND',
+        type: 'PAID',
+        difficulty: 'JUNIOR',
+        requiredSkills: ['Node.js'],
+        estimatedEffortHours: 5,
+        expectedDuration: 'DAYS_1_7',
+        communicationLanguage: 'EN',
+        timezonePreference: 'UTC',
+        applicationDeadline: new Date('2026-03-01'),
+        visibility: 'PUBLIC',
+        deliverables: 'Code',
+        requirements: 'Reqs',
+        niceToHave: 'Nice',
+      },
+    });
+
+    const res = await request(app)
+      .post(`/api/v1/tasks/${task.id}/close`)
+      .set('Authorization', `Bearer ${token}`)
+      .set('X-Persona', 'company');
+
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe('INVALID_STATE');
+  });
+
+  test('POST /tasks/:taskId/close rejects invalid state (COMPLETED)', async () => {
+    const user = await createUser({ companyProfile: { companyName: 'TeamUp' } });
+    const token = buildAccessToken({ userId: user.id, email: user.email });
+
+    const task = await prisma.task.create({
+      data: {
+        ownerUserId: user.id,
+        status: 'COMPLETED',
+        publishedAt: new Date(),
+        title: 'Completed task',
+        description: 'Completed task description',
+        category: 'BACKEND',
+        type: 'PAID',
+        difficulty: 'JUNIOR',
+        requiredSkills: ['Node.js'],
+        estimatedEffortHours: 5,
+        expectedDuration: 'DAYS_1_7',
+        communicationLanguage: 'EN',
+        timezonePreference: 'UTC',
+        applicationDeadline: new Date('2026-03-01'),
+        visibility: 'PUBLIC',
+        deliverables: 'Code',
+        requirements: 'Reqs',
+        niceToHave: 'Nice',
+      },
+    });
+
+    const res = await request(app)
+      .post(`/api/v1/tasks/${task.id}/close`)
+      .set('Authorization', `Bearer ${token}`)
+      .set('X-Persona', 'company');
+
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe('INVALID_STATE');
+  });
+
+  test('POST /tasks/:taskId/close rejects invalid state (CLOSED)', async () => {
+    const user = await createUser({ companyProfile: { companyName: 'TeamUp' } });
+    const token = buildAccessToken({ userId: user.id, email: user.email });
+
+    const task = await prisma.task.create({
+      data: {
+        ownerUserId: user.id,
+        status: 'CLOSED',
+        closedAt: new Date(),
+        publishedAt: new Date(),
+        title: 'Closed task',
+        description: 'Closed task description',
+        category: 'BACKEND',
+        type: 'PAID',
+        difficulty: 'JUNIOR',
+        requiredSkills: ['Node.js'],
+        estimatedEffortHours: 5,
+        expectedDuration: 'DAYS_1_7',
+        communicationLanguage: 'EN',
+        timezonePreference: 'UTC',
+        applicationDeadline: new Date('2026-03-01'),
+        visibility: 'PUBLIC',
+        deliverables: 'Code',
+        requirements: 'Reqs',
+        niceToHave: 'Nice',
+      },
+    });
+
+    const res = await request(app)
+      .post(`/api/v1/tasks/${task.id}/close`)
+      .set('Authorization', `Bearer ${token}`)
+      .set('X-Persona', 'company');
+
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe('INVALID_STATE');
+  });
+
+  test('POST /tasks/:taskId/close closes DRAFT task', async () => {
+    const user = await createUser({ companyProfile: { companyName: 'TeamUp' } });
+    const token = buildAccessToken({ userId: user.id, email: user.email });
+
+    const task = await prisma.task.create({
+      data: {
+        ownerUserId: user.id,
+        status: 'DRAFT',
+        title: 'Draft task',
+        description: 'Draft task description',
+        category: 'BACKEND',
+        type: 'PAID',
+        difficulty: 'JUNIOR',
+        requiredSkills: ['Node.js'],
+        estimatedEffortHours: 5,
+        expectedDuration: 'DAYS_1_7',
+        communicationLanguage: 'EN',
+        timezonePreference: 'UTC',
+        applicationDeadline: new Date('2026-03-01'),
+        visibility: 'PUBLIC',
+        deliverables: 'Code',
+        requirements: 'Reqs',
+        niceToHave: 'Nice',
+      },
+    });
+
+    const res = await request(app)
+      .post(`/api/v1/tasks/${task.id}/close`)
+      .set('Authorization', `Bearer ${token}`)
+      .set('X-Persona', 'company');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      task_id: task.id,
+      status: 'CLOSED',
+      closed_at: expect.any(String),
+    });
+    expect(Number.isNaN(Date.parse(res.body.closed_at))).toBe(false);
+
+    const closed = await prisma.task.findUnique({ where: { id: task.id } });
+
+    expect(closed.status).toBe('CLOSED');
+    expect(closed.closedAt).toBeInstanceOf(Date);
+  });
+
+  test('POST /tasks/:taskId/close closes PUBLISHED task', async () => {
+    const user = await createUser({ companyProfile: { companyName: 'TeamUp' } });
+    const token = buildAccessToken({ userId: user.id, email: user.email });
+
+    const task = await prisma.task.create({
+      data: {
+        ownerUserId: user.id,
+        status: 'PUBLISHED',
+        publishedAt: new Date(),
+        title: 'Published task',
+        description: 'Published task description',
+        category: 'BACKEND',
+        type: 'PAID',
+        difficulty: 'JUNIOR',
+        requiredSkills: ['Node.js'],
+        estimatedEffortHours: 5,
+        expectedDuration: 'DAYS_1_7',
+        communicationLanguage: 'EN',
+        timezonePreference: 'UTC',
+        applicationDeadline: new Date('2026-03-01'),
+        visibility: 'PUBLIC',
+        deliverables: 'Code',
+        requirements: 'Reqs',
+        niceToHave: 'Nice',
+      },
+    });
+
+    const res = await request(app)
+      .post(`/api/v1/tasks/${task.id}/close`)
+      .set('Authorization', `Bearer ${token}`)
+      .set('X-Persona', 'company');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      task_id: task.id,
+      status: 'CLOSED',
+      closed_at: expect.any(String),
+    });
+    expect(Number.isNaN(Date.parse(res.body.closed_at))).toBe(false);
+
+    const closed = await prisma.task.findUnique({ where: { id: task.id } });
+
+    expect(closed.status).toBe('CLOSED');
+    expect(closed.closedAt).toBeInstanceOf(Date);
+  });
 });

@@ -590,6 +590,14 @@ export const swaggerSpec = {
           published_at: { type: 'string', format: 'date-time' },
         },
       },
+      CloseTaskResponse: {
+        type: 'object',
+        properties: {
+          task_id: { type: 'string', format: 'uuid' },
+          status: { type: 'string', enum: ['CLOSED'] },
+          closed_at: { type: 'string', format: 'date-time' },
+        },
+      },
     },
   },
   paths: {
@@ -1383,6 +1391,44 @@ export const swaggerSpec = {
           403: { description: 'Company persona required or not task owner' },
           404: { description: 'Task not found' },
           409: { description: 'Task in invalid state (only DRAFT tasks can be published)' },
+        },
+      },
+    },
+    '/api/v1/tasks/{taskId}/close': {
+      post: {
+        tags: ['Tasks'],
+        summary: 'Close a task without execution (DRAFT/PUBLISHED -> CLOSED)',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'taskId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+          {
+            name: 'X-Persona',
+            in: 'header',
+            required: true,
+            schema: { type: 'string', enum: ['company'] },
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Task closed',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/CloseTaskResponse' },
+              },
+            },
+          },
+          400: { description: 'Validation error' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Company persona required or not task owner' },
+          404: { description: 'Task not found' },
+          409: {
+            description: 'Task in invalid state (cannot close IN_PROGRESS/COMPLETED/CLOSED tasks)',
+          },
         },
       },
     },

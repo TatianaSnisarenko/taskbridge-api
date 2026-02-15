@@ -35,3 +35,11 @@ tasksRouter.post(
   validate(taskIdParamSchema, 'params'),
   tasksController.publishTask
 );
+
+tasksRouter.post(
+  '/:taskId/close',
+  requireAuth,
+  requirePersona('company'),
+  validate(taskIdParamSchema, 'params'),
+  tasksController.closeTask
+);

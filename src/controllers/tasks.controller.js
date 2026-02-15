@@ -40,3 +40,16 @@ export const publishTask = asyncHandler(async (req, res) => {
     published_at: result.publishedAt.toISOString(),
   });
 });
+
+export const closeTask = asyncHandler(async (req, res) => {
+  const result = await tasksService.closeTask({
+    userId: req.user.id,
+    taskId: req.params.taskId,
+  });
+
+  return res.status(200).json({
+    task_id: result.taskId,
+    status: result.status,
+    closed_at: result.closedAt.toISOString(),
+  });
+});

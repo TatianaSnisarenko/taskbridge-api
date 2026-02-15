@@ -575,4 +575,177 @@ describe('tasks.service', () => {
       publishedAt,
     });
   });
+
+  test('closeTask rejects task not found', async () => {
+    prismaMock.task.findUnique.mockResolvedValue(null);
+
+    await expect(
+      tasksService.closeTask({
+        userId: 'u1',
+        taskId: 't1',
+      })
+    ).rejects.toMatchObject({
+      status: 404,
+      code: 'NOT_FOUND',
+    });
+  });
+
+  test('closeTask rejects deleted task', async () => {
+    prismaMock.task.findUnique.mockResolvedValue({
+      id: 't1',
+      ownerUserId: 'u1',
+      status: 'DRAFT',
+      deletedAt: new Date(),
+    });
+
+    await expect(
+      tasksService.closeTask({
+        userId: 'u1',
+        taskId: 't1',
+      })
+    ).rejects.toMatchObject({
+      status: 404,
+      code: 'NOT_FOUND',
+    });
+  });
+
+  test('closeTask rejects non-owner task', async () => {
+    prismaMock.task.findUnique.mockResolvedValue({
+      id: 't1',
+      ownerUserId: 'u2',
+      status: 'DRAFT',
+      deletedAt: null,
+    });
+
+    await expect(
+      tasksService.closeTask({
+        userId: 'u1',
+        taskId: 't1',
+      })
+    ).rejects.toMatchObject({
+      status: 403,
+      code: 'NOT_OWNER',
+    });
+  });
+
+  test('closeTask rejects invalid state (IN_PROGRESS)', async () => {
+    prismaMock.task.findUnique.mockResolvedValue({
+      id: 't1',
+      ownerUserId: 'u1',
+      status: 'IN_PROGRESS',
+      deletedAt: null,
+    });
+
+    await expect(
+      tasksService.closeTask({
+        userId: 'u1',
+        taskId: 't1',
+      })
+    ).rejects.toMatchObject({
+      status: 409,
+      code: 'INVALID_STATE',
+    });
+  });
+
+  test('closeTask rejects invalid state (COMPLETED)', async () => {
+    prismaMock.task.findUnique.mockResolvedValue({
+      id: 't1',
+      ownerUserId: 'u1',
+      status: 'COMPLETED',
+      deletedAt: null,
+    });
+
+    await expect(
+      tasksService.closeTask({
+        userId: 'u1',
+        taskId: 't1',
+      })
+    ).rejects.toMatchObject({
+      status: 409,
+      code: 'INVALID_STATE',
+    });
+  });
+
+  test('closeTask rejects invalid state (CLOSED)', async () => {
+    prismaMock.task.findUnique.mockResolvedValue({
+      id: 't1',
+      ownerUserId: 'u1',
+      status: 'CLOSED',
+      deletedAt: null,
+    });
+
+    await expect(
+      tasksService.closeTask({
+        userId: 'u1',
+        taskId: 't1',
+      })
+    ).rejects.toMatchObject({
+      status: 409,
+      code: 'INVALID_STATE',
+    });
+  });
+
+  test('closeTask closes DRAFT task', async () => {
+    const closedAt = new Date('2026-02-14T13:30:00Z');
+    prismaMock.task.findUnique.mockResolvedValue({
+      id: 't1',
+      ownerUserId: 'u1',
+      status: 'DRAFT',
+      deletedAt: null,
+    });
+    prismaMock.task.update.mockResolvedValue({
+      id: 't1',
+      status: 'CLOSED',
+      closedAt,
+    });
+
+    const result = await tasksService.closeTask({ userId: 'u1', taskId: 't1' });
+
+    expect(prismaMock.task.update).toHaveBeenCalledWith({
+      where: { id: 't1' },
+      data: {
+        status: 'CLOSED',
+        closedAt: expect.any(Date),
+      },
+      select: { id: true, status: true, closedAt: true },
+    });
+
+    expect(result).toEqual({
+      taskId: 't1',
+      status: 'CLOSED',
+      closedAt,
+    });
+  });
+
+  test('closeTask closes PUBLISHED task', async () => {
+    const closedAt = new Date('2026-02-14T13:35:00Z');
+    prismaMock.task.findUnique.mockResolvedValue({
+      id: 't1',
+      ownerUserId: 'u1',
+      status: 'PUBLISHED',
+      deletedAt: null,
+    });
+    prismaMock.task.update.mockResolvedValue({
+      id: 't1',
+      status: 'CLOSED',
+      closedAt,
+    });
+
+    const result = await tasksService.closeTask({ userId: 'u1', taskId: 't1' });
+
+    expect(prismaMock.task.update).toHaveBeenCalledWith({
+      where: { id: 't1' },
+      data: {
+        status: 'CLOSED',
+        closedAt: expect.any(Date),
+      },
+      select: { id: true, status: true, closedAt: true },
+    });
+
+    expect(result).toEqual({
+      taskId: 't1',
+      status: 'CLOSED',
+      closedAt,
+    });
+  });
 });
