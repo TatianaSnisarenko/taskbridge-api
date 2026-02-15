@@ -9,11 +9,13 @@ function parseOrigins(value) {
 }
 
 const allowedOrigins = parseOrigins(env.clientOrigin);
+const allowAllOrigins = env.nodeEnv !== 'production';
 
 export const corsMiddleware = cors({
   origin: (origin, cb) => {
     // allow non-browser tools (no Origin header)
     if (!origin) return cb(null, true);
+    if (allowAllOrigins) return cb(null, true);
     if (allowedOrigins.includes(origin)) return cb(null, true);
     return cb(new Error(`CORS: Origin not allowed: ${origin}`));
   },
