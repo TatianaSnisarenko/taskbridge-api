@@ -1668,6 +1668,67 @@ export const swaggerSpec = {
         },
       },
     },
+    '/api/v1/projects/{projectId}/tasks': {
+      get: {
+        tags: ['Projects'],
+        summary: 'Get tasks for a project',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'projectId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+          {
+            name: 'page',
+            in: 'query',
+            schema: { type: 'integer', minimum: 1, default: 1 },
+          },
+          {
+            name: 'size',
+            in: 'query',
+            schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
+          },
+          {
+            name: 'status',
+            in: 'query',
+            schema: {
+              type: 'string',
+              enum: [
+                'DRAFT',
+                'PUBLISHED',
+                'IN_PROGRESS',
+                'COMPLETION_REQUESTED',
+                'COMPLETED',
+                'CLOSED',
+                'DELETED',
+              ],
+            },
+            description: 'Filter by task status',
+          },
+          {
+            name: 'include_deleted',
+            in: 'query',
+            schema: { type: 'boolean', default: false },
+            description: 'Include deleted tasks (project owner only)',
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Project tasks list',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/GetTasksResponse' },
+              },
+            },
+          },
+          400: { description: 'Validation error' },
+          403: { description: 'Forbidden (include_deleted without owner)' },
+          404: { description: 'Project not found' },
+        },
+      },
+    },
     '/api/v1/projects/{projectId}/reports': {
       post: {
         tags: ['Projects'],

@@ -326,3 +326,35 @@ export const createReviewSchema = Joi.object({
     'string.max': 'Review text must not exceed 1000 characters',
   }),
 });
+
+export const getProjectTasksQuerySchema = Joi.object({
+  page: Joi.number().integer().min(1).default(1).messages({
+    'number.base': 'Page must be a number',
+    'number.integer': 'Page must be an integer',
+    'number.min': 'Page must be at least 1',
+  }),
+  size: Joi.number().integer().min(1).max(100).default(20).messages({
+    'number.base': 'Size must be a number',
+    'number.integer': 'Size must be an integer',
+    'number.min': 'Size must be at least 1',
+    'number.max': 'Size must not exceed 100',
+  }),
+  status: Joi.string()
+    .valid(
+      'DRAFT',
+      'PUBLISHED',
+      'IN_PROGRESS',
+      'COMPLETION_REQUESTED',
+      'COMPLETED',
+      'CLOSED',
+      'DELETED'
+    )
+    .optional()
+    .messages({
+      'any.only':
+        'Status must be one of: DRAFT, PUBLISHED, IN_PROGRESS, COMPLETION_REQUESTED, COMPLETED, CLOSED, DELETED',
+    }),
+  include_deleted: Joi.boolean().default(false).messages({
+    'boolean.base': 'The include_deleted parameter must be true or false',
+  }),
+});

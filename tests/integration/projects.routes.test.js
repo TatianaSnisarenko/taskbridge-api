@@ -1,4 +1,5 @@
 import { jest } from '@jest/globals';
+import { randomUUID } from 'crypto';
 import request from 'supertest';
 import { prisma } from '../../src/db/prisma.js';
 import { resetDatabase } from '../helpers/db.js';
@@ -1267,6 +1268,438 @@ describe('projects routes', () => {
       expect(reports).toHaveLength(2);
       expect(reports[0].reporterPersona).toBe('developer');
       expect(reports[1].reporterPersona).toBe('company');
+    });
+  });
+
+  describe('GET /projects/{projectId}/tasks', () => {
+    test('returns published public tasks for public users', async () => {
+      const owner = await createUser({ companyProfile: { companyName: 'TeamUp' } });
+      const token = buildAccessToken({ userId: owner.id, email: owner.email });
+
+      const project = await prisma.project.create({
+        data: {
+          ownerUserId: owner.id,
+          title: 'Project with tasks',
+          shortDescription: 'Short',
+          description: 'Description',
+          technologies: ['Node.js'],
+          visibility: 'PUBLIC',
+        },
+      });
+
+      // Create published public task
+      await prisma.task.create({
+        data: {
+          ownerUserId: owner.id,
+          projectId: project.id,
+          title: 'Published Public Task',
+          description: 'Public task description',
+          status: 'PUBLISHED',
+          visibility: 'PUBLIC',
+          category: 'BACKEND',
+          type: 'PAID',
+          difficulty: 'MIDDLE',
+        },
+      });
+
+      // Create draft task (should not appear for public)
+      await prisma.task.create({
+        data: {
+          ownerUserId: owner.id,
+          projectId: project.id,
+          title: 'Draft Task',
+          description: 'Draft task description',
+          status: 'DRAFT',
+          visibility: 'PUBLIC',
+          category: 'BACKEND',
+          type: 'PAID',
+          difficulty: 'MIDDLE',
+        },
+      });
+
+      // Create published unlisted task (should not appear for public)
+      await prisma.task.create({
+        data: {
+          ownerUserId: owner.id,
+          projectId: project.id,
+          title: 'Published Unlisted Task',
+          description: 'Unlisted task description',
+          status: 'PUBLISHED',
+          visibility: 'UNLISTED',
+          category: 'BACKEND',
+          type: 'PAID',
+          difficulty: 'MIDDLE',
+        },
+      });
+
+      const res = await request(app).get(`/api/v1/projects/${project.id}/tasks`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.items).toHaveLength(1);
+      expect(res.body.items[0].title).toBe('Published Public Task');
+      expect(res.body.total).toBe(1);
+    });
+
+    test('project owner can see all tasks including drafts', async () => {
+      const owner = await createUser({ companyProfile: { companyName: 'TeamUp' } });
+      const token = buildAccessToken({ userId: owner.id, email: owner.email });
+
+      const project = await prisma.project.create({
+        data: {
+          ownerUserId: owner.id,
+          title: 'Project with tasks',
+          shortDescription: 'Short',
+          description: 'Description',
+          technologies: ['Node.js'],
+          visibility: 'PUBLIC',
+        },
+      });
+
+      await prisma.task.create({
+        data: {
+          ownerUserId: owner.id,
+          projectId: project.id,
+          title: 'Published Public Task',
+          description: 'Published public task',
+          status: 'PUBLISHED',
+          visibility: 'PUBLIC',
+          category: 'BACKEND',
+          type: 'PAID',
+          difficulty: 'MIDDLE',
+        },
+      });
+
+      await prisma.task.create({
+        data: {
+          ownerUserId: owner.id,
+          projectId: project.id,
+          title: 'Draft Task',
+          description: 'Draft task description',
+          status: 'DRAFT',
+          visibility: 'UNLISTED',
+          category: 'BACKEND',
+          type: 'PAID',
+          difficulty: 'MIDDLE',
+        },
+      });
+
+      const res = await request(app)
+        .get(`/api/v1/projects/${project.id}/tasks`)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.items).toHaveLength(2);
+      expect(res.body.total).toBe(2);
+    });
+
+    test('non-owner authenticated user sees only public published tasks', async () => {
+      const owner = await createUser({ companyProfile: { companyName: 'TeamUp' } });
+      const otherUser = await createUser({ developerProfile: { displayName: 'Developer' } });
+      const otherToken = buildAccessToken({ userId: otherUser.id, email: otherUser.email });
+
+      const project = await prisma.project.create({
+        data: {
+          ownerUserId: owner.id,
+          title: 'Project with tasks',
+          shortDescription: 'Short',
+          description: 'Description',
+          technologies: ['Node.js'],
+          visibility: 'PUBLIC',
+        },
+      });
+
+      await prisma.task.create({
+        data: {
+          ownerUserId: owner.id,
+          projectId: project.id,
+          title: 'Published Public Task',
+          description: 'Public task description',
+          status: 'PUBLISHED',
+          visibility: 'PUBLIC',
+          category: 'BACKEND',
+          type: 'PAID',
+          difficulty: 'MIDDLE',
+        },
+      });
+
+      await prisma.task.create({
+        data: {
+          ownerUserId: owner.id,
+          projectId: project.id,
+          title: 'Draft Task',
+          description: 'Draft task description',
+          status: 'DRAFT',
+          visibility: 'PUBLIC',
+          category: 'BACKEND',
+          type: 'PAID',
+          difficulty: 'MIDDLE',
+        },
+      });
+
+      const res = await request(app)
+        .get(`/api/v1/projects/${project.id}/tasks`)
+        .set('Authorization', `Bearer ${otherToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.items).toHaveLength(1);
+      expect(res.body.items[0].title).toBe('Published Public Task');
+    });
+
+    test('returns 404 for non-existent project', async () => {
+      const res = await request(app).get(`/api/v1/projects/${randomUUID()}/tasks`);
+
+      expect(res.status).toBe(404);
+      expect(res.body.error.code).toBe('NOT_FOUND');
+    });
+
+    test('owner can include deleted tasks', async () => {
+      const owner = await createUser({ companyProfile: { companyName: 'TeamUp' } });
+      const token = buildAccessToken({ userId: owner.id, email: owner.email });
+
+      const project = await prisma.project.create({
+        data: {
+          ownerUserId: owner.id,
+          title: 'Project with tasks',
+          shortDescription: 'Short',
+          description: 'Description',
+          technologies: ['Node.js'],
+          visibility: 'PUBLIC',
+        },
+      });
+
+      await prisma.task.create({
+        data: {
+          ownerUserId: owner.id,
+          projectId: project.id,
+          title: 'Active Task',
+          description: 'Active task description',
+          status: 'PUBLISHED',
+          visibility: 'PUBLIC',
+          category: 'BACKEND',
+          type: 'PAID',
+          difficulty: 'MIDDLE',
+        },
+      });
+
+      await prisma.task.create({
+        data: {
+          ownerUserId: owner.id,
+          projectId: project.id,
+          title: 'Deleted Task',
+          description: 'Deleted task description',
+          status: 'PUBLISHED',
+          visibility: 'PUBLIC',
+          category: 'BACKEND',
+          type: 'PAID',
+          difficulty: 'MIDDLE',
+          deletedAt: new Date(),
+        },
+      });
+
+      // Without include_deleted
+      const res1 = await request(app)
+        .get(`/api/v1/projects/${project.id}/tasks`)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res1.status).toBe(200);
+      expect(res1.body.items).toHaveLength(1);
+      expect(res1.body.total).toBe(1);
+
+      // With include_deleted
+      const res2 = await request(app)
+        .get(`/api/v1/projects/${project.id}/tasks?include_deleted=true`)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res2.status).toBe(200);
+      expect(res2.body.items).toHaveLength(2);
+      expect(res2.body.total).toBe(2);
+    });
+
+    test('non-owner cannot use include_deleted', async () => {
+      const owner = await createUser({ companyProfile: { companyName: 'TeamUp' } });
+      const otherUser = await createUser({ developerProfile: { displayName: 'Developer' } });
+      const otherToken = buildAccessToken({ userId: otherUser.id, email: otherUser.email });
+
+      const project = await prisma.project.create({
+        data: {
+          ownerUserId: owner.id,
+          title: 'Project with tasks',
+          shortDescription: 'Short',
+          description: 'Description',
+          technologies: ['Node.js'],
+          visibility: 'PUBLIC',
+        },
+      });
+
+      const res = await request(app)
+        .get(`/api/v1/projects/${project.id}/tasks?include_deleted=true`)
+        .set('Authorization', `Bearer ${otherToken}`);
+
+      expect(res.status).toBe(403);
+      expect(res.body.error.code).toBe('NOT_OWNER');
+    });
+
+    test('filters tasks by status', async () => {
+      const owner = await createUser({ companyProfile: { companyName: 'TeamUp' } });
+      const token = buildAccessToken({ userId: owner.id, email: owner.email });
+
+      const project = await prisma.project.create({
+        data: {
+          ownerUserId: owner.id,
+          title: 'Project with tasks',
+          shortDescription: 'Short',
+          description: 'Description',
+          technologies: ['Node.js'],
+          visibility: 'PUBLIC',
+        },
+      });
+
+      await prisma.task.create({
+        data: {
+          ownerUserId: owner.id,
+          projectId: project.id,
+          title: 'Published Task',
+          description: 'Published task description',
+          status: 'PUBLISHED',
+          visibility: 'PUBLIC',
+          category: 'BACKEND',
+          type: 'PAID',
+          difficulty: 'MIDDLE',
+        },
+      });
+
+      await prisma.task.create({
+        data: {
+          ownerUserId: owner.id,
+          projectId: project.id,
+          title: 'Draft Task',
+          description: 'Draft task description',
+          status: 'DRAFT',
+          visibility: 'PUBLIC',
+          category: 'BACKEND',
+          type: 'PAID',
+          difficulty: 'MIDDLE',
+        },
+      });
+
+      const res = await request(app)
+        .get(`/api/v1/projects/${project.id}/tasks?status=DRAFT`)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.items).toHaveLength(1);
+      expect(res.body.items[0].title).toBe('Draft Task');
+      expect(res.body.total).toBe(1);
+    });
+
+    test('supports pagination', async () => {
+      const owner = await createUser({ companyProfile: { companyName: 'TeamUp' } });
+
+      const project = await prisma.project.create({
+        data: {
+          ownerUserId: owner.id,
+          title: 'Project with tasks',
+          shortDescription: 'Short',
+          description: 'Description',
+          technologies: ['Node.js'],
+          visibility: 'PUBLIC',
+        },
+      });
+
+      // Create 5 tasks
+      for (let i = 0; i < 5; i++) {
+        await prisma.task.create({
+          data: {
+            ownerUserId: owner.id,
+            projectId: project.id,
+            title: `Task ${i + 1}`,
+            description: `Task ${i + 1} description`,
+            status: 'PUBLISHED',
+            visibility: 'PUBLIC',
+            category: 'BACKEND',
+            type: 'PAID',
+            difficulty: 'MIDDLE',
+          },
+        });
+      }
+
+      // Get first page
+      const res1 = await request(app).get(`/api/v1/projects/${project.id}/tasks?page=1&size=2`);
+
+      expect(res1.status).toBe(200);
+      expect(res1.body.items).toHaveLength(2);
+      expect(res1.body.page).toBe(1);
+      expect(res1.body.size).toBe(2);
+      expect(res1.body.total).toBe(5);
+
+      // Get second page
+      const res2 = await request(app).get(`/api/v1/projects/${project.id}/tasks?page=2&size=2`);
+
+      expect(res2.status).toBe(200);
+      expect(res2.body.items).toHaveLength(2);
+      expect(res2.body.page).toBe(2);
+
+      // Get third page
+      const res3 = await request(app).get(`/api/v1/projects/${project.id}/tasks?page=3&size=2`);
+
+      expect(res3.status).toBe(200);
+      expect(res3.body.items).toHaveLength(1);
+      expect(res3.body.page).toBe(3);
+    });
+
+    test('returns correct task response structure', async () => {
+      const owner = await createUser({ companyProfile: { companyName: 'TeamUp Studio' } });
+
+      const project = await prisma.project.create({
+        data: {
+          ownerUserId: owner.id,
+          title: 'Project with tasks',
+          shortDescription: 'Short',
+          description: 'Description',
+          technologies: ['Node.js'],
+          visibility: 'PUBLIC',
+        },
+      });
+
+      await prisma.task.create({
+        data: {
+          ownerUserId: owner.id,
+          projectId: project.id,
+          title: 'Test Task',
+          description: 'Test task description',
+          status: 'PUBLISHED',
+          visibility: 'PUBLIC',
+          category: 'BACKEND',
+          type: 'PAID',
+          difficulty: 'MIDDLE',
+          requiredSkills: ['Node.js', 'PostgreSQL'],
+        },
+      });
+
+      const res = await request(app).get(`/api/v1/projects/${project.id}/tasks`);
+
+      expect(res.status).toBe(200);
+      expect(res.body).toMatchObject({
+        items: expect.any(Array),
+        page: expect.any(Number),
+        size: expect.any(Number),
+        total: expect.any(Number),
+      });
+      expect(res.body.items[0]).toMatchObject({
+        task_id: expect.any(String),
+        title: expect.any(String),
+        status: expect.any(String),
+        category: expect.any(String),
+        type: expect.any(String),
+        difficulty: expect.any(String),
+        required_skills: expect.any(Array),
+        project: expect.any(Object),
+        company: expect.any(Object),
+      });
+      expect(res.body.items[0].company).toMatchObject({
+        user_id: expect.any(String),
+        company_name: expect.any(String),
+      });
     });
   });
 });

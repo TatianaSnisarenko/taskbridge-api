@@ -1077,3 +1077,120 @@ export async function createReview({ userId, taskId, review }) {
 
   return result;
 }
+
+/**
+ * Get tasks for a specific project with pagination and filtering
+ */
+export async function getProjectTasks({
+  projectId,
+  userId,
+  page = 1,
+  size = 20,
+  status,
+  includeDeleted = false,
+}) {
+  const skip = (page - 1) * size;
+
+  // Check if project exists
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    select: { id: true, ownerUserId: true, visibility: true, deletedAt: true },
+  });
+
+  if (!project || project.deletedAt) {
+    throw new ApiError(404, 'NOT_FOUND', 'Project not found');
+  }
+
+  // Determine if user is owner
+  const isOwner = userId && project.ownerUserId === userId;
+
+  // Check if include_deleted was requested by non-owner
+  if (includeDeleted && !isOwner) {
+    throw new ApiError(403, 'NOT_OWNER', 'Only project owner can view deleted tasks');
+  }
+
+  // Build where clause
+  const where = { projectId };
+
+  if (isOwner) {
+    // Owner can see all tasks (optionally including deleted)
+    if (!includeDeleted) {
+      where.deletedAt = null;
+    }
+  } else {
+    // Public view: only PUBLISHED + PUBLIC + not deleted
+    where.status = 'PUBLISHED';
+    where.visibility = 'PUBLIC';
+    where.deletedAt = null;
+  }
+
+  // Optional status filter
+  if (status) {
+    where.status = status;
+  }
+
+  // Fetch tasks with pagination
+  const [items, total] = await Promise.all([
+    prisma.task.findMany({
+      where,
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        category: true,
+        type: true,
+        difficulty: true,
+        requiredSkills: true,
+        publishedAt: true,
+        projectId: true,
+        project: {
+          select: {
+            id: true,
+            title: true,
+          },
+        },
+        ownerUserId: true,
+        owner: {
+          select: {
+            companyProfile: {
+              select: {
+                companyName: true,
+                verified: true,
+                avgRating: true,
+                reviewsCount: true,
+              },
+            },
+          },
+        },
+      },
+      skip,
+      take: size,
+      orderBy: { createdAt: 'desc' },
+    }),
+    prisma.task.count({ where }),
+  ]);
+
+  return {
+    items: items.map((task) => ({
+      task_id: task.id,
+      title: task.title,
+      status: task.status,
+      category: task.category,
+      type: task.type,
+      difficulty: task.difficulty,
+      required_skills: task.requiredSkills,
+      published_at: task.publishedAt,
+      project: task.projectId ? { project_id: task.project.id, title: task.project.title } : null,
+      company: {
+        user_id: task.ownerUserId,
+        company_name: task.owner.companyProfile?.companyName,
+        verified: task.owner.companyProfile?.verified,
+        avg_rating: task.owner.companyProfile?.avgRating,
+        reviews_count: task.owner.companyProfile?.reviewsCount,
+      },
+    })),
+    page,
+    size,
+    total,
+  };
+}

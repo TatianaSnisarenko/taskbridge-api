@@ -14,6 +14,7 @@ import {
   updateProjectParamsSchema,
   updateProjectSchema,
 } from '../schemas/projects.schemas.js';
+import { getProjectTasksQuerySchema } from '../schemas/tasks.schemas.js';
 
 export const projectsRouter = Router();
 
@@ -45,6 +46,22 @@ projectsRouter.get(
     return next();
   },
   projectsController.getProjectById
+);
+
+projectsRouter.get(
+  '/:projectId/tasks',
+  validate(getProjectParamsSchema, 'params'),
+  validate(getProjectTasksQuerySchema, 'query'),
+  (req, res, next) => {
+    if (req.query.include_deleted === true) {
+      return requireAuth(req, res, next);
+    }
+    if (req.headers.authorization) {
+      return requireAuth(req, res, next);
+    }
+    return next();
+  },
+  projectsController.getProjectTasks
 );
 
 projectsRouter.post(
