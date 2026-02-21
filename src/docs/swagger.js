@@ -665,6 +665,14 @@ export const swaggerSpec = {
           accepted_developer_user_id: { type: 'string', format: 'uuid' },
         },
       },
+      RejectApplicationResponse: {
+        type: 'object',
+        properties: {
+          application_id: { type: 'string', format: 'uuid' },
+          status: { type: 'string', enum: ['REJECTED'] },
+          updated_at: { type: 'string', format: 'date-time' },
+        },
+      },
       TaskCompany: {
         type: 'object',
         properties: {
@@ -2011,6 +2019,44 @@ export const swaggerSpec = {
           409: {
             description: 'Invalid state - task must be PUBLISHED and application must be APPLIED',
           },
+        },
+      },
+    },
+    '/api/v1/applications/{applicationId}/reject': {
+      post: {
+        tags: ['Applications'],
+        summary: 'Reject an application for a task',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'applicationId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+            description: 'Application UUID',
+          },
+          {
+            name: 'X-Persona',
+            in: 'header',
+            required: true,
+            schema: { type: 'string', enum: ['company'] },
+            description: 'Must be company persona',
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Application rejected',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/RejectApplicationResponse' },
+              },
+            },
+          },
+          400: { description: 'Validation error' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Not task owner or company persona required' },
+          404: { description: 'Application not found' },
+          409: { description: 'Invalid state - application already accepted or rejected' },
         },
       },
     },

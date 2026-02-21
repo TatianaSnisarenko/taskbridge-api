@@ -148,3 +148,16 @@ export const acceptApplication = asyncHandler(async (req, res) => {
     accepted_developer_user_id: result.accepted_developer_user_id,
   });
 });
+
+export const rejectApplication = asyncHandler(async (req, res) => {
+  const result = await tasksService.rejectApplication({
+    userId: req.user.id,
+    applicationId: req.params.applicationId,
+  });
+
+  return res.status(200).json({
+    application_id: result.application_id,
+    status: result.status,
+    updated_at: result.updated_at,
+  });
+});

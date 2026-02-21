@@ -786,3 +786,58 @@ export async function acceptApplication({ userId, applicationId }) {
 
   return result;
 }
+
+export async function rejectApplication({ userId, applicationId }) {
+  const result = await prisma.$transaction(async (tx) => {
+    const application = await tx.application.findUnique({
+      where: { id: applicationId },
+      include: {
+        task: {
+          select: {
+            id: true,
+            ownerUserId: true,
+          },
+        },
+      },
+    });
+
+    if (!application) {
+      throw new ApiError(404, 'NOT_FOUND', 'Application not found');
+    }
+
+    if (application.task.ownerUserId !== userId) {
+      throw new ApiError(403, 'NOT_OWNER', 'User is not the task owner');
+    }
+
+    if (application.status !== 'APPLIED') {
+      throw new ApiError(409, 'INVALID_STATE', 'Application already processed');
+    }
+
+    const updatedApplication = await tx.application.update({
+      where: { id: applicationId },
+      data: {
+        status: 'REJECTED',
+      },
+    });
+
+    await createNotification({
+      client: tx,
+      userId: application.developerUserId,
+      actorUserId: userId,
+      taskId: application.task.id,
+      type: 'APPLICATION_REJECTED',
+      payload: buildTaskNotificationPayload({
+        taskId: application.task.id,
+        applicationId: applicationId,
+      }),
+    });
+
+    return {
+      application_id: updatedApplication.id,
+      status: updatedApplication.status,
+      updated_at: updatedApplication.updatedAt.toISOString(),
+    };
+  });
+
+  return result;
+}
