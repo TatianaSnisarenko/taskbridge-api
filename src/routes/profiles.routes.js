@@ -64,3 +64,10 @@ profilesRouter.post(
   upload.single('file'),
   profilesController.uploadDeveloperAvatar
 );
+
+profilesRouter.delete(
+  '/developer/avatar',
+  requireAuth,
+  requirePersona('developer'),
+  profilesController.deleteDeveloperAvatar
+);

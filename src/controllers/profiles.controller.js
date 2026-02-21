@@ -115,3 +115,15 @@ export const uploadDeveloperAvatar = asyncHandler(async (req, res) => {
     updated_at: result.updatedAt.toISOString(),
   });
 });
+
+export const deleteDeveloperAvatar = asyncHandler(async (req, res) => {
+  const result = await profilesService.deleteDeveloperAvatar({
+    userId: req.user.id,
+  });
+
+  return res.status(200).json({
+    user_id: result.userId,
+    avatar_url: result.avatarUrl,
+    updated_at: result.updatedAt.toISOString(),
+  });
+});

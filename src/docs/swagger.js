@@ -959,6 +959,15 @@ export const swaggerSpec = {
           updated_at: { type: 'string', format: 'date-time' },
         },
       },
+      DeleteAvatarResponse: {
+        type: 'object',
+        required: ['user_id', 'avatar_url', 'updated_at'],
+        properties: {
+          user_id: { type: 'string', format: 'uuid' },
+          avatar_url: { type: 'null', description: 'Avatar URL is null after deletion' },
+          updated_at: { type: 'string', format: 'date-time' },
+        },
+      },
       ErrorResponse: {
         type: 'object',
         required: ['error'],
@@ -1471,11 +1480,59 @@ export const swaggerSpec = {
               },
             },
           },
-          401: { description: 'Unauthorized' },
+            401: { description: 'Unauthorized' },
           403: { description: 'Developer profile does not exist' },
           404: { description: 'Profile not found' },
           500: {
             description: 'Upload failed',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+              },
+            },
+          },
+        },
+      },
+      delete: {
+        tags: ['Profiles'],
+        summary: 'Delete developer avatar',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'X-Persona',
+            in: 'header',
+            required: true,
+            schema: { type: 'string', enum: ['developer'] },
+            description: 'User persona (must be developer)',
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Avatar deleted successfully',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/DeleteAvatarResponse' },
+              },
+            },
+          },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Developer profile does not exist' },
+          404: {
+            description: 'Avatar not found',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+                example: {
+                  error: {
+                    code: 'AVATAR_NOT_FOUND',
+                    message: 'Avatar not found',
+                  },
+                },
+              },
+            },
+          },
+          500: {
+            description: 'Delete failed',
             content: {
               'application/json': {
                 schema: { $ref: '#/components/schemas/ErrorResponse' },

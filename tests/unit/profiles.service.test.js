@@ -619,4 +619,89 @@ describe('profiles.service', () => {
       expect(cloudinaryMock.deleteImage).toHaveBeenCalledWith('teamup/dev-avatars/old-avatar');
     });
   });
+
+  describe('deleteDeveloperAvatar', () => {
+    test('rejects missing profile', async () => {
+      prismaMock.developerProfile.findUnique.mockResolvedValue(null);
+
+      await expect(
+        profilesService.deleteDeveloperAvatar({
+          userId: 'u1',
+        })
+      ).rejects.toMatchObject({
+        status: 404,
+        code: 'PROFILE_NOT_FOUND',
+      });
+    });
+
+    test('rejects when avatar does not exist', async () => {
+      prismaMock.developerProfile.findUnique.mockResolvedValue({
+        userId: 'u1',
+        avatarUrl: null,
+      });
+
+      await expect(
+        profilesService.deleteDeveloperAvatar({
+          userId: 'u1',
+        })
+      ).rejects.toMatchObject({
+        status: 404,
+        code: 'AVATAR_NOT_FOUND',
+      });
+    });
+
+    test('deletes avatar successfully', async () => {
+      prismaMock.developerProfile.findUnique.mockResolvedValue({
+        userId: 'u1',
+        avatarUrl: 'https://res.cloudinary.com/example/image/upload/avatar.webp',
+        avatarPublicId: 'teamup/dev-avatars/avatar',
+      });
+      prismaMock.developerProfile.update.mockResolvedValue({
+        userId: 'u1',
+        avatarUrl: null,
+        updatedAt: new Date('2026-02-21T12:00:00Z'),
+      });
+
+      const result = await profilesService.deleteDeveloperAvatar({
+        userId: 'u1',
+      });
+
+      expect(cloudinaryMock.deleteImage).toHaveBeenCalledWith('teamup/dev-avatars/avatar');
+      expect(prismaMock.developerProfile.update).toHaveBeenCalledWith({
+        where: { userId: 'u1' },
+        data: {
+          avatarUrl: null,
+          avatarPublicId: null,
+        },
+        select: { userId: true, avatarUrl: true, updatedAt: true },
+      });
+
+      expect(result).toEqual({
+        userId: 'u1',
+        avatarUrl: null,
+        updatedAt: new Date('2026-02-21T12:00:00Z'),
+      });
+    });
+
+    test('handles deletion when avatarPublicId is null', async () => {
+      prismaMock.developerProfile.findUnique.mockResolvedValue({
+        userId: 'u1',
+        avatarUrl: 'https://example.com/avatar.jpg',
+        avatarPublicId: null,
+      });
+      prismaMock.developerProfile.update.mockResolvedValue({
+        userId: 'u1',
+        avatarUrl: null,
+        updatedAt: new Date('2026-02-21T12:00:00Z'),
+      });
+
+      const result = await profilesService.deleteDeveloperAvatar({
+        userId: 'u1',
+      });
+
+      expect(cloudinaryMock.deleteImage).not.toHaveBeenCalled();
+      expect(prismaMock.developerProfile.update).toHaveBeenCalled();
+      expect(result.avatarUrl).toBeNull();
+    });
+  });
 });

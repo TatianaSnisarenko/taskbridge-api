@@ -934,20 +934,6 @@ describe('profiles routes', () => {
       );
     });
 
-    test.skip('rejects file larger than 5MB', async () => {
-      // Note: Testing file size validation with supertest and multer memoryStorage
-      // has limitations. The Joi schema correctly validates file.size <= 5MB.
-      // This is validated in unit tests.
-      expect(true).toBe(true); // Silence unused variable warning
-    });
-
-    test.skip('rejects image smaller than 512x512', async () => {
-      // Note: Testing image dimension validation with supertest requires proper
-      // file upload mocking. The sharp validation in service layer is covered
-      // in unit tests.
-      expect(true).toBe(true); // Silence unused variable warning
-    });
-
     test('uploads avatar successfully (mocked Cloudinary)', async () => {
       const user = await createUser({ developerProfile: { displayName: 'Dev' } });
       const token = buildAccessToken({ userId: user.id, email: user.email });
@@ -1010,6 +996,82 @@ describe('profiles routes', () => {
       // In a real test with mocked Cloudinary, upload would succeed
       // and old avatar would be deleted
       console.log('Avatar update test structure verified');
+    });
+
+    test('deletes avatar rejects unauthorized', async () => {
+      const res = await request(app).delete('/api/v1/profiles/developer/avatar');
+
+      expect(res.status).toBe(401);
+    });
+
+    test('deletes avatar rejects missing X-Persona header', async () => {
+      const user = await createUser({ developerProfile: { displayName: 'Dev' } });
+      const token = buildAccessToken({ userId: user.id, email: user.email });
+
+      const res = await request(app)
+        .delete('/api/v1/profiles/developer/avatar')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('PERSONA_REQUIRED');
+    });
+
+    test('deletes avatar rejects missing developer profile', async () => {
+      const user = await createUser(); // No developer profile
+      const token = buildAccessToken({ userId: user.id, email: user.email });
+
+      const res = await request(app)
+        .delete('/api/v1/profiles/developer/avatar')
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'developer');
+
+      expect(res.status).toBe(403);
+      expect(res.body.error.code).toBe('PERSONA_NOT_AVAILABLE');
+    });
+
+    test('deletes avatar rejects when avatar does not exist', async () => {
+      const user = await createUser({ developerProfile: { displayName: 'Dev' } }); // No avatar
+      const token = buildAccessToken({ userId: user.id, email: user.email });
+
+      const res = await request(app)
+        .delete('/api/v1/profiles/developer/avatar')
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'developer');
+
+      expect(res.status).toBe(404);
+      expect(res.body.error.code).toBe('AVATAR_NOT_FOUND');
+    });
+
+    test('deletes avatar successfully', async () => {
+      const user = await createUser({
+        developerProfile: {
+          displayName: 'Dev',
+          avatarUrl:
+            'https://res.cloudinary.com/example/image/upload/v123/teamup/dev-avatars/test.webp',
+          avatarPublicId: 'teamup/dev-avatars/test',
+        },
+      });
+      const token = buildAccessToken({ userId: user.id, email: user.email });
+
+      const res = await request(app)
+        .delete('/api/v1/profiles/developer/avatar')
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'developer');
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({
+        user_id: user.id,
+        avatar_url: null,
+        updated_at: expect.any(String),
+      });
+
+      // Verify avatar is deleted from database
+      const profile = await prisma.developerProfile.findUnique({
+        where: { userId: user.id },
+        select: { avatarUrl: true, avatarPublicId: true },
+      });
+      expect(profile.avatarUrl).toBeNull();
+      expect(profile.avatarPublicId).toBeNull();
     });
   });
 });

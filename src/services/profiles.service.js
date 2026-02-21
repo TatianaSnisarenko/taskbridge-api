@@ -281,3 +281,37 @@ export async function uploadDeveloperAvatar({ userId, file }) {
     updatedAt: updated.updatedAt,
   };
 }
+
+export async function deleteDeveloperAvatar({ userId }) {
+  // Check profile exists
+  const profile = await prisma.developerProfile.findUnique({ where: { userId } });
+  if (!profile) {
+    throw new ApiError(404, 'PROFILE_NOT_FOUND', 'Developer profile not found');
+  }
+
+  // Check avatar exists
+  if (!profile.avatarUrl) {
+    throw new ApiError(404, 'AVATAR_NOT_FOUND', 'Avatar not found');
+  }
+
+  // Delete from Cloudinary if exists
+  if (profile.avatarPublicId) {
+    await deleteImage(profile.avatarPublicId);
+  }
+
+  // Update database - set avatar fields to null
+  const updated = await prisma.developerProfile.update({
+    where: { userId },
+    data: {
+      avatarUrl: null,
+      avatarPublicId: null,
+    },
+    select: { userId: true, avatarUrl: true, updatedAt: true },
+  });
+
+  return {
+    userId: updated.userId,
+    avatarUrl: updated.avatarUrl,
+    updatedAt: updated.updatedAt,
+  };
+}
