@@ -681,6 +681,15 @@ export const swaggerSpec = {
           deleted_at: { type: 'string', format: 'date-time' },
         },
       },
+      GetTasksResponse: {
+        type: 'object',
+        properties: {
+          items: { type: 'array', items: { $ref: '#/components/schemas/TaskListItem' } },
+          page: { type: 'integer', example: 1 },
+          size: { type: 'integer', example: 20 },
+          total: { type: 'integer', example: 100 },
+        },
+      },
       TaskDeveloper: {
         type: 'object',
         properties: {

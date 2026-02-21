@@ -6,6 +6,7 @@ import {
   buildTaskNotificationPayload,
 } from './notifications.service.js';
 import { getOrCreateChatThread } from './chat.service.js';
+import { sendImportantNotificationEmail } from './notification-email.service.js';
 
 function mapTaskInput(input) {
   return {
@@ -794,6 +795,39 @@ export async function acceptApplication({ userId, applicationId }) {
     developerUserId: result.accepted_developer_user_id,
   });
 
+  // Send email notification to accepted developer
+  const developedUser = await prisma.user.findUnique({
+    where: { id: result.accepted_developer_user_id },
+    select: {
+      id: true,
+      email: true,
+      emailVerified: true,
+      developerProfile: {
+        select: { displayName: true },
+      },
+    },
+  });
+
+  const task = await prisma.task.findUnique({
+    where: { id: result.task_id },
+    select: { id: true, title: true },
+  });
+
+  if (developedUser && task) {
+    await sendImportantNotificationEmail({
+      type: 'APPLICATION_ACCEPTED',
+      recipient: {
+        email: developedUser.email,
+        name: developedUser.developerProfile?.displayName || 'Developer',
+        email_verified: developedUser.emailVerified,
+      },
+      task: {
+        id: task.id,
+        title: task.title,
+      },
+    });
+  }
+
   return {
     ...result,
     thread_id: thread?.id ?? null,
@@ -890,7 +924,7 @@ export async function requestTaskCompletion({ userId, taskId }) {
       data: {
         status: 'COMPLETION_REQUESTED',
       },
-      select: { id: true, status: true },
+      select: { id: true, title: true, status: true },
     });
 
     await createNotification({
@@ -904,10 +938,43 @@ export async function requestTaskCompletion({ userId, taskId }) {
       },
     });
 
-    return { taskId: updated.id, status: updated.status };
+    return {
+      taskId: updated.id,
+      taskTitle: updated.title,
+      status: updated.status,
+      companyUserId: task.ownerUserId,
+    };
   });
 
-  return result;
+  // Send email notification to company owner after transaction
+  const companyUser = await prisma.user.findUnique({
+    where: { id: result.companyUserId },
+    select: {
+      id: true,
+      email: true,
+      emailVerified: true,
+      companyProfile: {
+        select: { companyName: true },
+      },
+    },
+  });
+
+  if (companyUser) {
+    await sendImportantNotificationEmail({
+      type: 'COMPLETION_REQUESTED',
+      recipient: {
+        email: companyUser.email,
+        name: companyUser.companyProfile?.companyName || 'Company',
+        email_verified: companyUser.emailVerified,
+      },
+      task: {
+        id: result.taskId,
+        title: result.taskTitle,
+      },
+    });
+  }
+
+  return { taskId: result.taskId, status: result.status };
 }
 
 export async function confirmTaskCompletion({ userId, taskId }) {
@@ -952,7 +1019,7 @@ export async function confirmTaskCompletion({ userId, taskId }) {
         status: 'COMPLETED',
         completedAt,
       },
-      select: { id: true, status: true, completedAt: true },
+      select: { id: true, title: true, status: true, completedAt: true },
     });
 
     await createNotification({
@@ -969,12 +1036,46 @@ export async function confirmTaskCompletion({ userId, taskId }) {
 
     return {
       taskId: updated.id,
+      taskTitle: updated.title,
       status: updated.status,
       completedAt: updated.completedAt,
+      developerUserId: task.acceptedApplication.developerUserId,
     };
   });
 
-  return result;
+  // Send email notification to developer after transaction
+  const developerUser = await prisma.user.findUnique({
+    where: { id: result.developerUserId },
+    select: {
+      id: true,
+      email: true,
+      emailVerified: true,
+      developerProfile: {
+        select: { displayName: true },
+      },
+    },
+  });
+
+  if (developerUser) {
+    await sendImportantNotificationEmail({
+      type: 'TASK_COMPLETED',
+      recipient: {
+        email: developerUser.email,
+        name: developerUser.developerProfile?.displayName || 'Developer',
+        email_verified: developerUser.emailVerified,
+      },
+      task: {
+        id: result.taskId,
+        title: result.taskTitle,
+      },
+    });
+  }
+
+  return {
+    taskId: result.taskId,
+    status: result.status,
+    completedAt: result.completedAt,
+  };
 }
 
 export async function createReview({ userId, taskId, review }) {

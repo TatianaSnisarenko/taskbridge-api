@@ -26,4 +26,7 @@ export const env = {
   appBaseUrl: process.env.APP_BASE_URL ?? 'http://localhost:3000',
   emailVerificationTtlHours: Number(process.env.EMAIL_VERIFICATION_TTL_HOURS ?? 24),
   verificationTokenRetentionDays: Number(process.env.VERIFICATION_TOKEN_RETENTION_DAYS ?? 7),
+  emailNotificationsEnabled:
+    String(process.env.EMAIL_NOTIFICATIONS_ENABLED ?? 'false').toLowerCase() === 'true',
+  frontendBaseUrl: process.env.FRONTEND_BASE_URL ?? 'http://localhost:3000/api/v1/docs',
 };

@@ -11,6 +11,9 @@ const prismaMock = {
     findUnique: jest.fn(),
     update: jest.fn(),
   },
+  user: {
+    findUnique: jest.fn(),
+  },
   application: {
     findFirst: jest.fn(),
     create: jest.fn(),
@@ -1197,7 +1200,14 @@ describe('tasks.service', () => {
       });
       prismaMock.task.update.mockResolvedValue({
         id: 't1',
+        title: 'Test Task',
         status: 'COMPLETION_REQUESTED',
+      });
+      prismaMock.user.findUnique.mockResolvedValue({
+        id: 'owner1',
+        email: 'owner@example.com',
+        emailVerified: true,
+        companyProfile: { companyName: 'Test Company' },
       });
 
       const result = await tasksService.requestTaskCompletion({
@@ -1210,7 +1220,7 @@ describe('tasks.service', () => {
         data: {
           status: 'COMPLETION_REQUESTED',
         },
-        select: { id: true, status: true },
+        select: { id: true, title: true, status: true },
       });
 
       expect(notificationsServiceMock.createNotification).toHaveBeenCalledWith({
@@ -1345,8 +1355,15 @@ describe('tasks.service', () => {
       });
       prismaMock.task.update.mockResolvedValue({
         id: 't1',
+        title: 'Test Task',
         status: 'COMPLETED',
         completedAt,
+      });
+      prismaMock.user.findUnique.mockResolvedValue({
+        id: 'dev1',
+        email: 'dev@example.com',
+        emailVerified: true,
+        developerProfile: { displayName: 'Test Developer' },
       });
 
       const result = await tasksService.confirmTaskCompletion({
@@ -1360,7 +1377,7 @@ describe('tasks.service', () => {
           status: 'COMPLETED',
           completedAt: expect.any(Date),
         },
-        select: { id: true, status: true, completedAt: true },
+        select: { id: true, title: true, status: true, completedAt: true },
       });
 
       expect(notificationsServiceMock.createNotification).toHaveBeenCalledWith({

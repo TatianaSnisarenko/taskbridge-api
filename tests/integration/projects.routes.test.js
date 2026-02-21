@@ -1274,7 +1274,6 @@ describe('projects routes', () => {
   describe('GET /projects/{projectId}/tasks', () => {
     test('returns published public tasks for public users', async () => {
       const owner = await createUser({ companyProfile: { companyName: 'TeamUp' } });
-      const token = buildAccessToken({ userId: owner.id, email: owner.email });
 
       const project = await prisma.project.create({
         data: {
