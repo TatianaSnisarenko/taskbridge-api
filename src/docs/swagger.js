@@ -916,6 +916,13 @@ export const swaggerSpec = {
           unread_total: { type: 'integer', example: 3 },
         },
       },
+      MarkNotificationAsReadResponse: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          read_at: { type: 'string', format: 'date-time' },
+        },
+      },
     },
   },
   paths: {
@@ -1161,6 +1168,34 @@ export const swaggerSpec = {
           },
           400: { description: 'Validation error' },
           401: { description: 'Unauthorized' },
+        },
+      },
+    },
+    '/api/v1/me/notifications/{id}/read': {
+      post: {
+        tags: ['Me'],
+        summary: 'Mark notification as read',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+            description: 'Notification ID',
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Notification marked as read',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/MarkNotificationAsReadResponse' },
+              },
+            },
+          },
+          401: { description: 'Unauthorized' },
+          404: { description: 'Notification not found' },
         },
       },
     },

@@ -48,3 +48,15 @@ export const getMyNotifications = asyncHandler(async (req, res) => {
     unread_total: result.unread_total,
   });
 });
+
+export const markNotificationAsRead = asyncHandler(async (req, res) => {
+  const result = await meService.markNotificationAsRead({
+    userId: req.user.id,
+    notificationId: req.params.id,
+  });
+
+  return res.status(200).json({
+    id: result.id,
+    read_at: result.read_at,
+  });
+});

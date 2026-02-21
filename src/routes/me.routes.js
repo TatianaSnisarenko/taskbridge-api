@@ -26,3 +26,5 @@ meRouter.get(
   validate(getMyNotificationsQuerySchema, 'query'),
   meController.getMyNotifications
 );
+
+meRouter.post('/notifications/:id/read', requireAuth, meController.markNotificationAsRead);

@@ -156,3 +156,39 @@ export async function getMyNotifications({ userId, page = 1, size = 20, unreadOn
     unread_total: unreadTotal,
   };
 }
+
+/**
+ * Mark a notification as read for the current user
+ */
+export async function markNotificationAsRead({ userId, notificationId }) {
+  // Find the notification and verify it belongs to the current user
+  const notification = await prisma.notification.findUnique({
+    where: { id: notificationId },
+    select: {
+      id: true,
+      userId: true,
+      readAt: true,
+      createdAt: true,
+    },
+  });
+
+  // Check if notification exists and belongs to current user
+  if (!notification || notification.userId !== userId) {
+    throw new ApiError(404, 'NOT_FOUND', 'Notification not found');
+  }
+
+  // Update notification with read timestamp
+  const updated = await prisma.notification.update({
+    where: { id: notificationId },
+    data: { readAt: new Date() },
+    select: {
+      id: true,
+      readAt: true,
+    },
+  });
+
+  return {
+    id: updated.id,
+    read_at: updated.readAt.toISOString(),
+  };
+}

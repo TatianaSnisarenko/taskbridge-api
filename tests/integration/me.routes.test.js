@@ -885,4 +885,190 @@ describe('me routes', () => {
       expect(res.body.items[0].created_at).toMatch(/^\d{4}-\d{2}-\d{2}T/);
     });
   });
+
+  describe('POST /me/notifications/{id}/read', () => {
+    test('rejects unauthorized', async () => {
+      const res = await request(app).post('/api/v1/me/notifications/test-id/read');
+
+      expect(res.status).toBe(401);
+      expect(res.body.error.code).toBe('AUTH_REQUIRED');
+    });
+
+    test('rejects invalid token', async () => {
+      const res = await request(app)
+        .post('/api/v1/me/notifications/test-id/read')
+        .set('Authorization', 'Bearer invalid');
+
+      expect(res.status).toBe(401);
+      expect(res.body.error.code).toBe('INVALID_TOKEN');
+    });
+
+    test('returns 404 if notification does not exist', async () => {
+      const user = await createUser({ developerProfile: { displayName: 'Dev' } });
+      const token = buildAccessToken({ userId: user.id, email: user.email });
+
+      const res = await request(app)
+        .post('/api/v1/me/notifications/00000000-0000-0000-0000-000000000000/read')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(404);
+      expect(res.body.error.code).toBe('NOT_FOUND');
+      expect(res.body.error.message).toContain('Notification not found');
+    });
+
+    test('returns 404 if notification belongs to another user', async () => {
+      const user1 = await createUser({ developerProfile: { displayName: 'Dev1' } });
+      const user2 = await createUser({ developerProfile: { displayName: 'Dev2' } });
+      const actor = await createUser({ companyProfile: { companyName: 'Company' } });
+      const token1 = buildAccessToken({ userId: user1.id, email: user1.email });
+
+      // Create notification for user2
+      const notif = await prisma.notification.create({
+        data: {
+          userId: user2.id,
+          actorUserId: actor.id,
+          type: 'APPLICATION_ACCEPTED',
+          payload: { application_id: 'test-id' },
+        },
+      });
+
+      // Try to mark it as read as user1
+      const res = await request(app)
+        .post(`/api/v1/me/notifications/${notif.id}/read`)
+        .set('Authorization', `Bearer ${token1}`);
+
+      expect(res.status).toBe(404);
+      expect(res.body.error.code).toBe('NOT_FOUND');
+    });
+
+    test('marks notification as read successfully', async () => {
+      const user = await createUser({ developerProfile: { displayName: 'Dev' } });
+      const actor = await createUser({ companyProfile: { companyName: 'Company' } });
+      const token = buildAccessToken({ userId: user.id, email: user.email });
+
+      // Create unread notification
+      const notif = await prisma.notification.create({
+        data: {
+          userId: user.id,
+          actorUserId: actor.id,
+          type: 'APPLICATION_ACCEPTED',
+          payload: { application_id: 'test-id' },
+        },
+      });
+
+      // Verify it's unread initially
+      expect(notif.readAt).toBeNull();
+
+      // Mark as read
+      const res = await request(app)
+        .post(`/api/v1/me/notifications/${notif.id}/read`)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty('id', notif.id);
+      expect(res.body).toHaveProperty('read_at');
+
+      // Verify read_at is ISO format
+      expect(typeof res.body.read_at).toBe('string');
+      expect(res.body.read_at).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+
+      // Verify notification is actually marked as read in DB
+      const updated = await prisma.notification.findUnique({
+        where: { id: notif.id },
+        select: { readAt: true },
+      });
+
+      expect(updated.readAt).not.toBeNull();
+    });
+
+    test('can mark already-read notification as read again (idempotent)', async () => {
+      const user = await createUser({ developerProfile: { displayName: 'Dev' } });
+      const actor = await createUser({ companyProfile: { companyName: 'Company' } });
+      const token = buildAccessToken({ userId: user.id, email: user.email });
+
+      // Create notification and mark it as read
+      const notif = await prisma.notification.create({
+        data: {
+          userId: user.id,
+          actorUserId: actor.id,
+          type: 'APPLICATION_ACCEPTED',
+          payload: { application_id: 'test-id' },
+          readAt: new Date('2026-02-14T10:00:00Z'),
+        },
+      });
+
+      const firstReadAt = notif.readAt;
+
+      // Mark as read again
+      const res = await request(app)
+        .post(`/api/v1/me/notifications/${notif.id}/read`)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty('id', notif.id);
+      expect(res.body).toHaveProperty('read_at');
+
+      // Verify the new read_at is after (or equal to) the original
+      const newReadAt = new Date(res.body.read_at);
+      expect(newReadAt >= firstReadAt).toBe(true);
+    });
+
+    test('reduces unread_total when notification is marked as read', async () => {
+      const user = await createUser({ developerProfile: { displayName: 'Dev' } });
+      const actor = await createUser({ companyProfile: { companyName: 'Company' } });
+      const token = buildAccessToken({ userId: user.id, email: user.email });
+
+      // Create first notification with specific timestamp
+      const notif1 = await prisma.notification.create({
+        data: {
+          userId: user.id,
+          actorUserId: actor.id,
+          type: 'APPLICATION_ACCEPTED',
+          payload: { application_id: 'test-id-1' },
+          createdAt: new Date('2026-02-14T10:00:00Z'),
+        },
+      });
+
+      // Create second notification with later timestamp
+      const notif2 = await prisma.notification.create({
+        data: {
+          userId: user.id,
+          actorUserId: actor.id,
+          type: 'TASK_COMPLETED',
+          payload: { task_id: 'test-id-2' },
+          createdAt: new Date('2026-02-14T10:00:01Z'),
+        },
+      });
+
+      // Check unread_total before
+      let notificationsRes = await request(app)
+        .get('/api/v1/me/notifications')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(notificationsRes.body.unread_total).toBe(2);
+      expect(notificationsRes.body.total).toBe(2);
+
+      // Mark first notification as read
+      const markRes = await request(app)
+        .post(`/api/v1/me/notifications/${notif1.id}/read`)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(markRes.status).toBe(200);
+
+      // Check unread_total after
+      notificationsRes = await request(app)
+        .get('/api/v1/me/notifications')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(notificationsRes.body.unread_total).toBe(1);
+      expect(notificationsRes.body.total).toBe(2); // Both still in list
+
+      // Find the response items by ID to check read_at status
+      const item1 = notificationsRes.body.items.find((n) => n.id === notif1.id);
+      const item2 = notificationsRes.body.items.find((n) => n.id === notif2.id);
+
+      expect(item1.read_at).not.toBeNull(); // Marked one is read
+      expect(item2.read_at).toBeNull(); // Unmarked one is still unread
+    });
+  });
 });
