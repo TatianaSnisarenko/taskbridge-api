@@ -71,3 +71,11 @@ profilesRouter.delete(
   requirePersona('developer'),
   profilesController.deleteDeveloperAvatar
 );
+
+profilesRouter.post(
+  '/company/logo',
+  requireAuth,
+  requirePersona('company'),
+  upload.single('file'),
+  profilesController.uploadCompanyLogo
+);

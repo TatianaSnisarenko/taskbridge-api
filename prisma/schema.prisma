@@ -216,6 +216,8 @@ model CompanyProfile {
   teamSize     Int?         @map("team_size")
   country      String?
   timezone     String?
+  logoUrl      String?      @map("logo_url")
+  logoPublicId String?      @map("logo_public_id")
   contactEmail String?      @map("contact_email")
   websiteUrl   String?      @map("website_url")
   links        Json         @default("{}")

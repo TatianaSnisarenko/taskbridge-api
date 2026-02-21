@@ -127,3 +127,41 @@ export const deleteDeveloperAvatar = asyncHandler(async (req, res) => {
     updated_at: result.updatedAt.toISOString(),
   });
 });
+
+export const uploadCompanyLogo = asyncHandler(async (req, res) => {
+  // Validate file exists
+  if (!req.file) {
+    throw new ApiError(400, 'VALIDATION_ERROR', 'Validation failed', [
+      { field: 'file', issue: 'File is required' },
+    ]);
+  }
+
+  // Validate file type
+  const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp'];
+  if (!allowedMimeTypes.includes(req.file.mimetype)) {
+    throw new ApiError(400, 'VALIDATION_ERROR', 'Validation failed', [
+      {
+        field: 'file',
+        issue: 'File type must be one of: image/jpeg, image/png, image/webp',
+      },
+    ]);
+  }
+
+  // Validate file size (5MB = 5242880 bytes)
+  if (req.file.size > 5242880) {
+    throw new ApiError(400, 'VALIDATION_ERROR', 'Validation failed', [
+      { field: 'file', issue: 'File size must not exceed 5MB' },
+    ]);
+  }
+
+  const result = await profilesService.uploadCompanyLogo({
+    userId: req.user.id,
+    file: req.file,
+  });
+
+  return res.status(200).json({
+    user_id: result.userId,
+    logo_url: result.logoUrl,
+    updated_at: result.updatedAt.toISOString(),
+  });
+});

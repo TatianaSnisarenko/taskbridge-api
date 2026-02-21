@@ -71,6 +71,7 @@ function mapCompanyProfileOutput(profile) {
     team_size: profile.teamSize,
     country: profile.country,
     timezone: profile.timezone,
+    logo_url: profile.logoUrl,
     website_url: profile.websiteUrl,
     links: profile.links,
     verified: profile.verified,
@@ -312,6 +313,62 @@ export async function deleteDeveloperAvatar({ userId }) {
   return {
     userId: updated.userId,
     avatarUrl: updated.avatarUrl,
+    updatedAt: updated.updatedAt,
+  };
+}
+
+export async function uploadCompanyLogo({ userId, file }) {
+  // Check profile exists
+  const profile = await prisma.companyProfile.findUnique({ where: { userId } });
+  if (!profile) {
+    throw new ApiError(404, 'PROFILE_NOT_FOUND', 'Company profile not found');
+  }
+
+  // Validate image dimensions using sharp
+  let metadata;
+  try {
+    metadata = await sharp(file.buffer).metadata();
+  } catch {
+    throw new ApiError(400, 'INVALID_FILE_TYPE', 'Invalid image file');
+  }
+
+  if (!metadata.width || !metadata.height) {
+    throw new ApiError(400, 'INVALID_FILE_TYPE', 'Unable to determine image dimensions');
+  }
+
+  if (metadata.width < 512 || metadata.height < 512) {
+    throw new ApiError(400, 'IMAGE_TOO_SMALL', 'Image resolution must be at least 512x512 pixels');
+  }
+
+  // Upload to Cloudinary
+  const uploadResult = await uploadImage(file.buffer, {
+    folder: 'teamup/company-logos',
+    width: 512,
+    height: 512,
+    crop: 'fill',
+    gravity: 'center',
+    quality: 'auto',
+    fetch_format: 'auto',
+  });
+
+  // Delete old logo if exists
+  if (profile.logoPublicId) {
+    await deleteImage(profile.logoPublicId);
+  }
+
+  // Update database
+  const updated = await prisma.companyProfile.update({
+    where: { userId },
+    data: {
+      logoUrl: uploadResult.secure_url,
+      logoPublicId: uploadResult.public_id,
+    },
+    select: { userId: true, logoUrl: true, updatedAt: true },
+  });
+
+  return {
+    userId: updated.userId,
+    logoUrl: updated.logoUrl,
     updatedAt: updated.updatedAt,
   };
 }

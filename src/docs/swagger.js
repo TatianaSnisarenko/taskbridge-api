@@ -260,6 +260,12 @@ export const swaggerSpec = {
           team_size: { type: 'integer', minimum: 1, maximum: 100000 },
           country: { type: 'string', pattern: '^[A-Z]{2}$' },
           timezone: { type: 'string', minLength: 3, maxLength: 50 },
+          logo_url: {
+            type: 'string',
+            format: 'uri',
+            nullable: true,
+            description: 'Company logo URL from Cloudinary, null if not uploaded',
+          },
           website_url: { type: 'string', format: 'uri' },
           links: {
             type: 'object',
@@ -968,6 +974,20 @@ export const swaggerSpec = {
           updated_at: { type: 'string', format: 'date-time' },
         },
       },
+      UploadLogoResponse: {
+        type: 'object',
+        required: ['user_id', 'logo_url', 'updated_at'],
+        properties: {
+          user_id: { type: 'string', format: 'uuid' },
+          logo_url: {
+            type: 'string',
+            format: 'uri',
+            example:
+              'https://res.cloudinary.com/example/image/upload/v1234567890/teamup/company-logos/example.webp',
+          },
+          updated_at: { type: 'string', format: 'date-time' },
+        },
+      },
       ErrorResponse: {
         type: 'object',
         required: ['error'],
@@ -1641,6 +1661,69 @@ export const swaggerSpec = {
           },
           400: { description: 'Validation error' },
           404: { description: 'Profile not found' },
+        },
+      },
+    },
+    '/api/v1/profiles/company/logo': {
+      post: {
+        tags: ['Profiles'],
+        summary: 'Upload company logo',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'X-Persona',
+            in: 'header',
+            required: true,
+            schema: { type: 'string', enum: ['company'] },
+            description: 'User persona (must be company)',
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'multipart/form-data': {
+              schema: {
+                type: 'object',
+                required: ['file'],
+                properties: {
+                  file: {
+                    type: 'string',
+                    format: 'binary',
+                    description: 'Image file (JPEG, PNG, or WebP, max 5MB, min 512x512)',
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'Logo uploaded successfully',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/UploadLogoResponse' },
+              },
+            },
+          },
+          400: {
+            description: 'Validation error or invalid image',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+              },
+            },
+          },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Company profile does not exist' },
+          404: { description: 'Profile not found' },
+          500: {
+            description: 'Upload failed',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+              },
+            },
+          },
         },
       },
     },

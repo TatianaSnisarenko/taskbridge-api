@@ -39,6 +39,19 @@ const companyPayload = {
   links: { linkedin: 'https://linkedin.com/company/teamup' },
 };
 
+async function createValidImage(width = 512, height = 512) {
+  return sharp({
+    create: {
+      width,
+      height,
+      channels: 3,
+      background: { r: 255, g: 0, b: 0 },
+    },
+  })
+    .png()
+    .toBuffer();
+}
+
 describe('profiles routes', () => {
   beforeAll(async () => {
     await prisma.$connect();
@@ -571,6 +584,7 @@ describe('profiles routes', () => {
       team_size: 4,
       country: 'UA',
       timezone: 'Europe/Zaporozhye',
+      logo_url: null,
       website_url: 'https://teamup.dev',
       links: { linkedin: 'https://linkedin.com/company/teamup' },
       verified: false,
@@ -806,19 +820,6 @@ describe('profiles routes', () => {
   });
 
   describe('POST /profiles/developer/avatar', () => {
-    async function createValidImage(width = 512, height = 512) {
-      return sharp({
-        create: {
-          width,
-          height,
-          channels: 3,
-          background: { r: 255, g: 0, b: 0 },
-        },
-      })
-        .png()
-        .toBuffer();
-    }
-
     test('rejects unauthorized', async () => {
       const buffer = await createValidImage();
 
@@ -1072,6 +1073,125 @@ describe('profiles routes', () => {
       });
       expect(profile.avatarUrl).toBeNull();
       expect(profile.avatarPublicId).toBeNull();
+    });
+  });
+
+  describe('POST /profiles/company/logo', () => {
+    test('uploads logo rejects unauthorized', async () => {
+      const res = await request(app).post('/api/v1/profiles/company/logo');
+
+      expect(res.status).toBe(401);
+    });
+
+    test('uploads logo rejects missing X-Persona header', async () => {
+      const user = await createUser({ companyProfile: { companyName: 'Test Corp' } });
+      const token = buildAccessToken({ userId: user.id, email: user.email });
+
+      const res = await request(app)
+        .post('/api/v1/profiles/company/logo')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('PERSONA_REQUIRED');
+    });
+
+    test('uploads logo rejects missing company profile', async () => {
+      const user = await createUser(); // No company profile
+      const token = buildAccessToken({ userId: user.id, email: user.email });
+
+      const res = await request(app)
+        .post('/api/v1/profiles/company/logo')
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'company');
+
+      expect(res.status).toBe(403);
+      expect(res.body.error.code).toBe('PERSONA_NOT_AVAILABLE');
+    });
+
+    test('uploads logo rejects missing file', async () => {
+      const user = await createUser({ companyProfile: { companyName: 'Test Corp' } });
+      const token = buildAccessToken({ userId: user.id, email: user.email });
+
+      const res = await request(app)
+        .post('/api/v1/profiles/company/logo')
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'company');
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('VALIDATION_ERROR');
+      expect(res.body.error.details).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            field: 'file',
+          }),
+        ])
+      );
+    });
+
+    test('uploads logo rejects invalid file type', async () => {
+      const user = await createUser({ companyProfile: { companyName: 'Test Corp' } });
+      const token = buildAccessToken({ userId: user.id, email: user.email });
+
+      const res = await request(app)
+        .post('/api/v1/profiles/company/logo')
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'company')
+        .attach('file', Buffer.from('invalid'), { filename: 'file.txt' });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('VALIDATION_ERROR');
+      expect(res.body.error.details).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            field: 'file',
+          }),
+        ])
+      );
+    });
+
+    test('uploads logo successfully', async () => {
+      const user = await createUser({ companyProfile: { companyName: 'Test Corp' } });
+      const token = buildAccessToken({ userId: user.id, email: user.email });
+      const buffer = await createValidImage(512, 512);
+
+      const res = await request(app)
+        .post('/api/v1/profiles/company/logo')
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'company')
+        .attach('file', buffer, { filename: 'logo.png' });
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({
+        user_id: user.id,
+        logo_url: expect.any(String),
+        updated_at: expect.any(String),
+      });
+
+      // Verify logo is saved in database
+      const profile = await prisma.companyProfile.findUnique({
+        where: { userId: user.id },
+        select: { logoUrl: true, logoPublicId: true },
+      });
+      expect(profile.logoUrl).toBeTruthy();
+      expect(profile.logoPublicId).toBeTruthy();
+    });
+
+    test('updates existing logo', async () => {
+      const user = await createUser({
+        companyProfile: {
+          companyName: 'Test Corp',
+          logoUrl: 'https://old.example.com/logo.jpg',
+          logoPublicId: 'teamup/company-logos/old',
+        },
+      });
+
+      // Verify old logo exists in DB
+      let profile = await prisma.companyProfile.findUnique({
+        where: { userId: user.id },
+        select: { logoUrl: true, logoPublicId: true },
+      });
+      expect(profile.logoUrl).toBe('https://old.example.com/logo.jpg');
+      expect(profile.logoPublicId).toBe('teamup/company-logos/old');
     });
   });
 });

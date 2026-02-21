@@ -704,4 +704,132 @@ describe('profiles.service', () => {
       expect(result.avatarUrl).toBeNull();
     });
   });
+
+  describe('uploadCompanyLogo', () => {
+    test('rejects missing profile', async () => {
+      prismaMock.companyProfile.findUnique.mockResolvedValue(null);
+
+      await expect(
+        profilesService.uploadCompanyLogo({
+          userId: 'u1',
+          file: { buffer: Buffer.from('fake') },
+        })
+      ).rejects.toMatchObject({
+        status: 404,
+        code: 'PROFILE_NOT_FOUND',
+      });
+    });
+
+    test('rejects invalid image', async () => {
+      prismaMock.companyProfile.findUnique.mockResolvedValue({ userId: 'u1' });
+      sharpMock.mockReturnValue({
+        metadata: jest.fn().mockRejectedValue(new Error('Invalid image')),
+      });
+
+      await expect(
+        profilesService.uploadCompanyLogo({
+          userId: 'u1',
+          file: { buffer: Buffer.from('invalid') },
+        })
+      ).rejects.toMatchObject({
+        status: 400,
+        code: 'INVALID_FILE_TYPE',
+      });
+    });
+
+    test('rejects image smaller than 512x512', async () => {
+      prismaMock.companyProfile.findUnique.mockResolvedValue({ userId: 'u1' });
+      sharpMock.mockReturnValue({
+        metadata: jest.fn().mockResolvedValue({ width: 256, height: 256 }),
+      });
+
+      await expect(
+        profilesService.uploadCompanyLogo({
+          userId: 'u1',
+          file: { buffer: Buffer.from('small') },
+        })
+      ).rejects.toMatchObject({
+        status: 400,
+        code: 'IMAGE_TOO_SMALL',
+      });
+    });
+
+    test('uploads logo and updates profile', async () => {
+      prismaMock.companyProfile.findUnique.mockResolvedValue({
+        userId: 'u1',
+        logoPublicId: null,
+      });
+      sharpMock.mockReturnValue({
+        metadata: jest.fn().mockResolvedValue({ width: 512, height: 512 }),
+      });
+      cloudinaryMock.uploadImage.mockResolvedValue({
+        secure_url: 'https://res.cloudinary.com/example/image/upload/logo.webp',
+        public_id: 'teamup/company-logos/logo',
+      });
+      prismaMock.companyProfile.update.mockResolvedValue({
+        userId: 'u1',
+        logoUrl: 'https://res.cloudinary.com/example/image/upload/logo.webp',
+        updatedAt: new Date('2026-02-21T12:00:00Z'),
+      });
+
+      const result = await profilesService.uploadCompanyLogo({
+        userId: 'u1',
+        file: { buffer: Buffer.from('validimage') },
+      });
+
+      expect(cloudinaryMock.uploadImage).toHaveBeenCalledWith(
+        Buffer.from('validimage'),
+        expect.objectContaining({
+          folder: 'teamup/company-logos',
+          width: 512,
+          height: 512,
+          crop: 'fill',
+          gravity: 'center',
+          quality: 'auto',
+          fetch_format: 'auto',
+        })
+      );
+
+      expect(prismaMock.companyProfile.update).toHaveBeenCalledWith({
+        where: { userId: 'u1' },
+        data: {
+          logoUrl: 'https://res.cloudinary.com/example/image/upload/logo.webp',
+          logoPublicId: 'teamup/company-logos/logo',
+        },
+        select: { userId: true, logoUrl: true, updatedAt: true },
+      });
+
+      expect(result).toEqual({
+        userId: 'u1',
+        logoUrl: 'https://res.cloudinary.com/example/image/upload/logo.webp',
+        updatedAt: new Date('2026-02-21T12:00:00Z'),
+      });
+    });
+
+    test('deletes old logo when updating', async () => {
+      prismaMock.companyProfile.findUnique.mockResolvedValue({
+        userId: 'u1',
+        logoPublicId: 'teamup/company-logos/old-logo',
+      });
+      sharpMock.mockReturnValue({
+        metadata: jest.fn().mockResolvedValue({ width: 512, height: 512 }),
+      });
+      cloudinaryMock.uploadImage.mockResolvedValue({
+        secure_url: 'https://res.cloudinary.com/example/image/upload/new-logo.webp',
+        public_id: 'teamup/company-logos/new-logo',
+      });
+      prismaMock.companyProfile.update.mockResolvedValue({
+        userId: 'u1',
+        logoUrl: 'https://res.cloudinary.com/example/image/upload/new-logo.webp',
+        updatedAt: new Date('2026-02-21T12:00:00Z'),
+      });
+
+      await profilesService.uploadCompanyLogo({
+        userId: 'u1',
+        file: { buffer: Buffer.from('newimage') },
+      });
+
+      expect(cloudinaryMock.deleteImage).toHaveBeenCalledWith('teamup/company-logos/old-logo');
+    });
+  });
 });
