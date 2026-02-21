@@ -53,7 +53,16 @@ export const logout = asyncHandler(async (req, res) => {
 
 export const verifyEmail = asyncHandler(async (req, res) => {
   const { email } = await authService.verifyEmail({ token: req.query?.token });
-  return res.status(200).json({ status: 'ok', email });
+
+  // Return HTML page instead of JSON
+  const { buildVerifyEmailSuccessPage } =
+    await import('../templates/email/verify-email-success.js');
+  const html = buildVerifyEmailSuccessPage({
+    email,
+    frontendUrl: env.frontendBaseUrl,
+  });
+
+  return res.status(200).set('Content-Type', 'text/html').send(html);
 });
 
 export const resendVerification = asyncHandler(async (req, res) => {
