@@ -1,5 +1,7 @@
 import { prisma } from '../db/prisma.js';
 import { ApiError } from '../utils/ApiError.js';
+import sharp from 'sharp';
+import { uploadImage, deleteImage } from '../utils/cloudinary.js';
 
 function mapDeveloperProfileInput(input) {
   return {
@@ -54,6 +56,7 @@ function mapDeveloperProfileOutput(profile) {
     portfolio_url: profile.portfolioUrl,
     github_url: profile.githubUrl,
     linkedin_url: profile.linkedinUrl,
+    avatar_url: profile.avatarUrl,
     avg_rating: toNumber(profile.avgRating),
     reviews_count: profile.reviewsCount,
   };
@@ -220,5 +223,61 @@ export async function getUserReviews({ userId, page = 1, size = 20 }) {
     page,
     size,
     total,
+  };
+}
+
+export async function uploadDeveloperAvatar({ userId, file }) {
+  // Check profile exists
+  const profile = await prisma.developerProfile.findUnique({ where: { userId } });
+  if (!profile) {
+    throw new ApiError(404, 'PROFILE_NOT_FOUND', 'Developer profile not found');
+  }
+
+  // Validate image dimensions using sharp
+  let metadata;
+  try {
+    metadata = await sharp(file.buffer).metadata();
+  } catch {
+    throw new ApiError(400, 'INVALID_FILE_TYPE', 'Invalid image file');
+  }
+
+  if (!metadata.width || !metadata.height) {
+    throw new ApiError(400, 'INVALID_FILE_TYPE', 'Unable to determine image dimensions');
+  }
+
+  if (metadata.width < 512 || metadata.height < 512) {
+    throw new ApiError(400, 'IMAGE_TOO_SMALL', 'Image resolution must be at least 512x512 pixels');
+  }
+
+  // Upload to Cloudinary
+  const uploadResult = await uploadImage(file.buffer, {
+    folder: 'teamup/dev-avatars',
+    width: 512,
+    height: 512,
+    crop: 'fill',
+    gravity: 'center',
+    quality: 'auto',
+    fetch_format: 'auto',
+  });
+
+  // Delete old avatar if exists
+  if (profile.avatarPublicId) {
+    await deleteImage(profile.avatarPublicId);
+  }
+
+  // Update database
+  const updated = await prisma.developerProfile.update({
+    where: { userId },
+    data: {
+      avatarUrl: uploadResult.secure_url,
+      avatarPublicId: uploadResult.public_id,
+    },
+    select: { userId: true, avatarUrl: true, updatedAt: true },
+  });
+
+  return {
+    userId: updated.userId,
+    avatarUrl: updated.avatarUrl,
+    updatedAt: updated.updatedAt,
   };
 }

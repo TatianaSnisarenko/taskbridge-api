@@ -1,4 +1,5 @@
 import { jest } from '@jest/globals';
+import { Buffer } from 'node:buffer';
 
 const prismaMock = {
   developerProfile: {
@@ -20,7 +21,18 @@ const prismaMock = {
   },
 };
 
+// Mock cloudinary utilities
+const cloudinaryMock = {
+  uploadImage: jest.fn(),
+  deleteImage: jest.fn(),
+};
+
+// Mock sharp
+const sharpMock = jest.fn();
+
 jest.unstable_mockModule('../../src/db/prisma.js', () => ({ prisma: prismaMock }));
+jest.unstable_mockModule('../../src/utils/cloudinary.js', () => cloudinaryMock);
+jest.unstable_mockModule('sharp', () => ({ default: sharpMock }));
 
 const profilesService = await import('../../src/services/profiles.service.js');
 
@@ -477,6 +489,134 @@ describe('profiles.service', () => {
           take: 10,
         })
       );
+    });
+  });
+
+  describe('uploadDeveloperAvatar', () => {
+    test('rejects missing profile', async () => {
+      prismaMock.developerProfile.findUnique.mockResolvedValue(null);
+
+      await expect(
+        profilesService.uploadDeveloperAvatar({
+          userId: 'u1',
+          file: { buffer: Buffer.from('fake') },
+        })
+      ).rejects.toMatchObject({
+        status: 404,
+        code: 'PROFILE_NOT_FOUND',
+      });
+    });
+
+    test('rejects invalid image', async () => {
+      prismaMock.developerProfile.findUnique.mockResolvedValue({ userId: 'u1' });
+      sharpMock.mockReturnValue({
+        metadata: jest.fn().mockRejectedValue(new Error('Invalid image')),
+      });
+
+      await expect(
+        profilesService.uploadDeveloperAvatar({
+          userId: 'u1',
+          file: { buffer: Buffer.from('invalid') },
+        })
+      ).rejects.toMatchObject({
+        status: 400,
+        code: 'INVALID_FILE_TYPE',
+      });
+    });
+
+    test('rejects image smaller than 512x512', async () => {
+      prismaMock.developerProfile.findUnique.mockResolvedValue({ userId: 'u1' });
+      sharpMock.mockReturnValue({
+        metadata: jest.fn().mockResolvedValue({ width: 256, height: 256 }),
+      });
+
+      await expect(
+        profilesService.uploadDeveloperAvatar({
+          userId: 'u1',
+          file: { buffer: Buffer.from('small') },
+        })
+      ).rejects.toMatchObject({
+        status: 400,
+        code: 'IMAGE_TOO_SMALL',
+      });
+    });
+
+    test('uploads avatar and updates profile', async () => {
+      prismaMock.developerProfile.findUnique.mockResolvedValue({
+        userId: 'u1',
+        avatarPublicId: null,
+      });
+      sharpMock.mockReturnValue({
+        metadata: jest.fn().mockResolvedValue({ width: 512, height: 512 }),
+      });
+      cloudinaryMock.uploadImage.mockResolvedValue({
+        secure_url: 'https://res.cloudinary.com/example/image/upload/avatar.webp',
+        public_id: 'teamup/dev-avatars/avatar',
+      });
+      prismaMock.developerProfile.update.mockResolvedValue({
+        userId: 'u1',
+        avatarUrl: 'https://res.cloudinary.com/example/image/upload/avatar.webp',
+        updatedAt: new Date('2026-02-21T12:00:00Z'),
+      });
+
+      const result = await profilesService.uploadDeveloperAvatar({
+        userId: 'u1',
+        file: { buffer: Buffer.from('validimage') },
+      });
+
+      expect(cloudinaryMock.uploadImage).toHaveBeenCalledWith(
+        Buffer.from('validimage'),
+        expect.objectContaining({
+          folder: 'teamup/dev-avatars',
+          width: 512,
+          height: 512,
+          crop: 'fill',
+          gravity: 'center',
+          quality: 'auto',
+          fetch_format: 'auto',
+        })
+      );
+
+      expect(prismaMock.developerProfile.update).toHaveBeenCalledWith({
+        where: { userId: 'u1' },
+        data: {
+          avatarUrl: 'https://res.cloudinary.com/example/image/upload/avatar.webp',
+          avatarPublicId: 'teamup/dev-avatars/avatar',
+        },
+        select: { userId: true, avatarUrl: true, updatedAt: true },
+      });
+
+      expect(result).toEqual({
+        userId: 'u1',
+        avatarUrl: 'https://res.cloudinary.com/example/image/upload/avatar.webp',
+        updatedAt: new Date('2026-02-21T12:00:00Z'),
+      });
+    });
+
+    test('deletes old avatar when updating', async () => {
+      prismaMock.developerProfile.findUnique.mockResolvedValue({
+        userId: 'u1',
+        avatarPublicId: 'teamup/dev-avatars/old-avatar',
+      });
+      sharpMock.mockReturnValue({
+        metadata: jest.fn().mockResolvedValue({ width: 512, height: 512 }),
+      });
+      cloudinaryMock.uploadImage.mockResolvedValue({
+        secure_url: 'https://res.cloudinary.com/example/image/upload/new-avatar.webp',
+        public_id: 'teamup/dev-avatars/new-avatar',
+      });
+      prismaMock.developerProfile.update.mockResolvedValue({
+        userId: 'u1',
+        avatarUrl: 'https://res.cloudinary.com/example/image/upload/new-avatar.webp',
+        updatedAt: new Date('2026-02-21T12:00:00Z'),
+      });
+
+      await profilesService.uploadDeveloperAvatar({
+        userId: 'u1',
+        file: { buffer: Buffer.from('newimage') },
+      });
+
+      expect(cloudinaryMock.deleteImage).toHaveBeenCalledWith('teamup/dev-avatars/old-avatar');
     });
   });
 });

@@ -435,6 +435,12 @@ export const swaggerSpec = {
           },
           location: { type: 'string', minLength: 2, maxLength: 100 },
           timezone: { type: 'string', minLength: 3, maxLength: 50 },
+          avatar_url: {
+            type: 'string',
+            format: 'uri',
+            nullable: true,
+            description: 'Avatar image URL from Cloudinary, null if not uploaded',
+          },
           skills: {
             type: 'array',
             items: { type: 'string', minLength: 1, maxLength: 50 },
@@ -939,6 +945,44 @@ export const swaggerSpec = {
           read_at: { type: 'string', format: 'date-time' },
         },
       },
+      UploadAvatarResponse: {
+        type: 'object',
+        required: ['user_id', 'avatar_url', 'updated_at'],
+        properties: {
+          user_id: { type: 'string', format: 'uuid' },
+          avatar_url: {
+            type: 'string',
+            format: 'uri',
+            example:
+              'https://res.cloudinary.com/example/image/upload/v1234567890/teamup/dev-avatars/example.webp',
+          },
+          updated_at: { type: 'string', format: 'date-time' },
+        },
+      },
+      ErrorResponse: {
+        type: 'object',
+        required: ['error'],
+        properties: {
+          error: {
+            type: 'object',
+            required: ['code', 'message'],
+            properties: {
+              code: { type: 'string', example: 'VALIDATION_ERROR' },
+              message: { type: 'string', example: 'Validation failed' },
+              details: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    field: { type: 'string', example: 'email' },
+                    issue: { type: 'string', example: 'Email is required' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
     },
   },
   paths: {
@@ -1340,6 +1384,104 @@ export const swaggerSpec = {
           },
           400: { description: 'Validation error' },
           404: { description: 'Profile not found' },
+        },
+      },
+    },
+    '/api/v1/profiles/developer/avatar': {
+      post: {
+        tags: ['Profiles'],
+        summary: 'Upload developer avatar',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'X-Persona',
+            in: 'header',
+            required: true,
+            schema: { type: 'string', enum: ['developer'] },
+            description: 'User persona (must be developer)',
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'multipart/form-data': {
+              schema: {
+                type: 'object',
+                required: ['file'],
+                properties: {
+                  file: {
+                    type: 'string',
+                    format: 'binary',
+                    description: 'Image file (JPEG, PNG, or WebP, max 5MB, min 512x512)',
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'Avatar uploaded successfully',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/UploadAvatarResponse' },
+              },
+            },
+          },
+          400: {
+            description: 'Validation error or invalid image',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+                examples: {
+                  missingFile: {
+                    value: {
+                      error: {
+                        code: 'VALIDATION_ERROR',
+                        message: 'Validation failed',
+                        details: [{ field: 'file', issue: 'File is required' }],
+                      },
+                    },
+                  },
+                  invalidFileType: {
+                    value: {
+                      error: {
+                        code: 'INVALID_FILE_TYPE',
+                        message: 'File type must be one of: image/jpeg, image/png, image/webp',
+                      },
+                    },
+                  },
+                  fileTooLarge: {
+                    value: {
+                      error: {
+                        code: 'FILE_TOO_LARGE',
+                        message: 'File size must not exceed 5MB',
+                      },
+                    },
+                  },
+                  imageTooSmall: {
+                    value: {
+                      error: {
+                        code: 'IMAGE_TOO_SMALL',
+                        message: 'Image resolution must be at least 512x512 pixels',
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Developer profile does not exist' },
+          404: { description: 'Profile not found' },
+          500: {
+            description: 'Upload failed',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+              },
+            },
+          },
         },
       },
     },

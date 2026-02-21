@@ -1,5 +1,7 @@
 import { Router } from 'express';
+import multer from 'multer';
 import { requireAuth } from '../middleware/auth.middleware.js';
+import { requirePersona } from '../middleware/persona.middleware.js';
 import { validate } from '../middleware/validate.middleware.js';
 import * as profilesController from '../controllers/profiles.controller.js';
 import {
@@ -10,6 +12,8 @@ import {
   updateCompanyProfileSchema,
   updateDeveloperProfileSchema,
 } from '../schemas/profiles.schemas.js';
+
+const upload = multer({ storage: multer.memoryStorage() });
 
 export const profilesRouter = Router();
 
@@ -51,4 +55,12 @@ profilesRouter.get(
   '/company/:userId',
   validate(getCompanyProfileParamsSchema, 'params'),
   profilesController.getCompanyProfile
+);
+
+profilesRouter.post(
+  '/developer/avatar',
+  requireAuth,
+  requirePersona('developer'),
+  upload.single('file'),
+  profilesController.uploadDeveloperAvatar
 );

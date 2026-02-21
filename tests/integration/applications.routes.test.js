@@ -502,7 +502,7 @@ describe('applications routes', () => {
       expect(thread.id).toBe(res.body.thread_id);
       expect(thread.companyUserId).toBe(company.id);
       expect(thread.developerUserId).toBe(developer.id);
-      expect(thread.lastMessageAt).toBeUndefined();
+      expect(thread.lastMessageAt).toBeNull();
     });
 
     test('rejects invalid applicationId parameter', async () => {

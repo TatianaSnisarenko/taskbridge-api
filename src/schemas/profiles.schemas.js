@@ -176,3 +176,26 @@ export const getUserReviewsSchema = Joi.object({
     'number.max': 'Size must not exceed 100',
   }),
 });
+
+export const uploadAvatarSchema = Joi.object({
+  file: Joi.object({
+    fieldname: Joi.string(),
+    originalname: Joi.string(),
+    encoding: Joi.string(),
+    mimetype: Joi.string().valid('image/jpeg', 'image/png', 'image/webp').messages({
+      'any.only': 'File type must be one of: image/jpeg, image/png, image/webp',
+    }),
+    size: Joi.number()
+      .max(5242880) // 5MB in bytes
+      .messages({
+        'number.max': 'File size must not exceed 5MB',
+      }),
+    buffer: Joi.binary(),
+  })
+    .required()
+    .unknown(true)
+    .messages({
+      'any.required': 'File is required',
+      'object.base': 'File is required',
+    }),
+}).unknown(true);

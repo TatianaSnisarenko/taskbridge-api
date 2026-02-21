@@ -196,6 +196,8 @@ model DeveloperProfile {
   portfolioUrl            String?          @map("portfolio_url")
   githubUrl               String?          @map("github_url")
   linkedinUrl             String?          @map("linkedin_url")
+  avatarUrl               String?          @map("avatar_url")
+  avatarPublicId          String?          @map("avatar_public_id")
   avgRating               Decimal          @default(0) @map("avg_rating") @db.Decimal(2, 1)
   reviewsCount            Int              @default(0) @map("reviews_count")
   createdAt               DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)

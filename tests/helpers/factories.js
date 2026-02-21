@@ -31,12 +31,21 @@ export async function createUser({
   companyProfile,
 } = {}) {
   const passwordHash = await hashPassword(password);
-  return prisma.user.create({
+
+  // Clean up developerProfile to only include valid Prisma fields
+  let cleanDeveloperProfile = developerProfile;
+  if (developerProfile) {
+    // eslint-disable-next-line no-unused-vars
+    const { avatarUrl, avatarPublicId, ...rest } = developerProfile;
+    cleanDeveloperProfile = rest;
+  }
+
+  const user = await prisma.user.create({
     data: {
       email,
       passwordHash,
       emailVerified,
-      developerProfile: developerProfile ? { create: developerProfile } : undefined,
+      developerProfile: cleanDeveloperProfile ? { create: cleanDeveloperProfile } : undefined,
       companyProfile: companyProfile ? { create: companyProfile } : undefined,
     },
     include: {
@@ -44,6 +53,28 @@ export async function createUser({
       companyProfile: true,
     },
   });
+
+  // Update avatar fields if provided
+  if (developerProfile?.avatarUrl || developerProfile?.avatarPublicId) {
+    await prisma.developerProfile.update({
+      where: { userId: user.id },
+      data: {
+        avatarUrl: developerProfile.avatarUrl,
+        avatarPublicId: developerProfile.avatarPublicId,
+      },
+    });
+
+    // Reload user with updated profile
+    return prisma.user.findUnique({
+      where: { id: user.id },
+      include: {
+        developerProfile: true,
+        companyProfile: true,
+      },
+    });
+  }
+
+  return user;
 }
 
 export async function createVerificationToken({
