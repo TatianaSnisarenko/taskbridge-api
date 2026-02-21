@@ -73,6 +73,15 @@ tasksRouter.post(
   tasksController.applyToTask
 );
 
+tasksRouter.get(
+  '/:taskId/applications',
+  requireAuth,
+  requirePersona('company'),
+  validate(taskIdParamSchema, 'params'),
+  validate(getTasksCatalogSchema, 'query'),
+  tasksController.getTaskApplications
+);
+
 tasksRouter.post(
   '/:taskId/close',
   requireAuth,

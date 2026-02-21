@@ -575,3 +575,84 @@ export async function getTasksCatalog(query) {
     total,
   };
 }
+
+export async function getTaskApplications({ userId, taskId, page = 1, size = 20 }) {
+  // Verify task exists and user is the owner
+  const task = await prisma.task.findUnique({
+    where: { id: taskId },
+    select: { id: true, ownerUserId: true, deletedAt: true },
+  });
+
+  if (!task || task.deletedAt) {
+    throw new ApiError(404, 'NOT_FOUND', 'Task not found');
+  }
+
+  if (task.ownerUserId !== userId) {
+    throw new ApiError(403, 'NOT_OWNER', 'Task does not belong to user');
+  }
+
+  const skip = (page - 1) * size;
+
+  // Fetch applications with developer info
+  const [items, total] = await Promise.all([
+    prisma.application.findMany({
+      where: {
+        taskId,
+      },
+      select: {
+        id: true,
+        status: true,
+        message: true,
+        proposedPlan: true,
+        availabilityNote: true,
+        createdAt: true,
+        developer: {
+          select: {
+            id: true,
+            developerProfile: {
+              select: {
+                displayName: true,
+                jobTitle: true,
+                avgRating: true,
+                reviewsCount: true,
+              },
+            },
+          },
+        },
+      },
+      skip,
+      take: size,
+      orderBy: {
+        createdAt: 'desc',
+      },
+    }),
+    prisma.application.count({
+      where: {
+        taskId,
+      },
+    }),
+  ]);
+
+  return {
+    items: items.map((app) => ({
+      application_id: app.id,
+      status: app.status,
+      message: app.message,
+      proposed_plan: app.proposedPlan,
+      availability_note: app.availabilityNote,
+      created_at: app.createdAt.toISOString(),
+      developer: {
+        user_id: app.developer.id,
+        display_name: app.developer.developerProfile?.displayName,
+        primary_role: app.developer.developerProfile?.jobTitle,
+        avg_rating: app.developer.developerProfile?.avgRating
+          ? Number(app.developer.developerProfile.avgRating)
+          : null,
+        reviews_count: app.developer.developerProfile?.reviewsCount,
+      },
+    })),
+    page,
+    size,
+    total,
+  };
+}

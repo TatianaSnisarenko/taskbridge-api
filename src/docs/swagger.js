@@ -625,6 +625,37 @@ export const swaggerSpec = {
           deleted_at: { type: 'string', format: 'date-time' },
         },
       },
+      TaskDeveloper: {
+        type: 'object',
+        properties: {
+          user_id: { type: 'string', format: 'uuid' },
+          display_name: { type: 'string' },
+          primary_role: { type: 'string' },
+          avg_rating: { type: 'number', format: 'float', nullable: true },
+          reviews_count: { type: 'integer' },
+        },
+      },
+      TaskApplicationItem: {
+        type: 'object',
+        properties: {
+          application_id: { type: 'string', format: 'uuid' },
+          status: { type: 'string', enum: ['APPLIED', 'ACCEPTED', 'REJECTED'] },
+          message: { type: 'string', nullable: true },
+          proposed_plan: { type: 'string', nullable: true },
+          availability_note: { type: 'string', nullable: true },
+          created_at: { type: 'string', format: 'date-time' },
+          developer: { $ref: '#/components/schemas/TaskDeveloper' },
+        },
+      },
+      GetTaskApplicationsResponse: {
+        type: 'object',
+        properties: {
+          items: { type: 'array', items: { $ref: '#/components/schemas/TaskApplicationItem' } },
+          page: { type: 'integer', example: 1 },
+          size: { type: 'integer', example: 20 },
+          total: { type: 'integer', example: 5 },
+        },
+      },
       TaskCompany: {
         type: 'object',
         properties: {
@@ -1775,6 +1806,52 @@ export const swaggerSpec = {
       },
     },
     '/api/v1/tasks/{taskId}/applications': {
+      get: {
+        tags: ['Tasks'],
+        summary: 'Get applications for a task (company owner view)',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'taskId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+          {
+            name: 'X-Persona',
+            in: 'header',
+            required: true,
+            schema: { type: 'string', enum: ['company'] },
+            description: 'Must be company persona',
+          },
+          {
+            name: 'page',
+            in: 'query',
+            schema: { type: 'integer', minimum: 1, default: 1 },
+            description: 'Page number (starting from 1)',
+          },
+          {
+            name: 'size',
+            in: 'query',
+            schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
+            description: 'Number of items per page',
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Paginated list of applications for the task',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/GetTaskApplicationsResponse' },
+              },
+            },
+          },
+          400: { description: 'Validation error' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Not task owner or company persona required' },
+          404: { description: 'Task not found' },
+        },
+      },
       post: {
         tags: ['Tasks'],
         summary: 'Apply to a published task',

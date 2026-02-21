@@ -119,3 +119,19 @@ export const getTasksCatalog = asyncHandler(async (req, res) => {
     total: result.total,
   });
 });
+
+export const getTaskApplications = asyncHandler(async (req, res) => {
+  const result = await tasksService.getTaskApplications({
+    userId: req.user.id,
+    taskId: req.params.taskId,
+    page: parseInt(req.query.page) || 1,
+    size: parseInt(req.query.size) || 20,
+  });
+
+  return res.status(200).json({
+    items: result.items,
+    page: result.page,
+    size: result.size,
+    total: result.total,
+  });
+});

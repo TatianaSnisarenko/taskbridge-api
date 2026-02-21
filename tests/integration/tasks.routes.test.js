@@ -2757,6 +2757,449 @@ describe('tasks routes', () => {
           niceToHave: 'Nice',
         },
       });
+    });
+  });
+
+  describe('GET /tasks/{taskId}/applications', () => {
+    test('rejects unauthorized', async () => {
+      const res = await request(app).get(
+        '/api/v1/tasks/3fa85f64-5717-4562-b3fc-2c963f66afa6/applications'
+      );
+
+      expect(res.status).toBe(401);
+      expect(res.body.error.code).toBe('AUTH_REQUIRED');
+    });
+
+    test('rejects non-company persona', async () => {
+      const user = await createUser({ developerProfile: { displayName: 'Dev' } });
+      const token = buildAccessToken({ userId: user.id, email: user.email });
+
+      const res = await request(app)
+        .get('/api/v1/tasks/3fa85f64-5717-4562-b3fc-2c963f66afa6/applications')
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'developer');
+
+      expect(res.status).toBe(403);
+      expect(res.body.error.code).toBe('PERSONA_NOT_AVAILABLE');
+    });
+
+    test('returns 404 for non-existent task', async () => {
+      const company = await createUser({ companyProfile: { companyName: 'Company' } });
+      const token = buildAccessToken({ userId: company.id, email: company.email });
+
+      const res = await request(app)
+        .get('/api/v1/tasks/3fa85f64-5717-4562-b3fc-2c963f66afa6/applications')
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'company');
+
+      expect(res.status).toBe(404);
+      expect(res.body.error.code).toBe('NOT_FOUND');
+    });
+
+    test('returns 403 when user is not task owner', async () => {
+      const company1 = await createUser({ companyProfile: { companyName: 'Company1' } });
+      const company2 = await createUser({ companyProfile: { companyName: 'Company2' } });
+      const company2Token = buildAccessToken({ userId: company2.id, email: company2.email });
+
+      const task = await prisma.task.create({
+        data: {
+          ownerUserId: company1.id,
+          status: 'PUBLISHED',
+          publishedAt: new Date('2026-02-14T10:00:00Z'),
+          title: 'Task',
+          description: 'Task description',
+          category: 'BACKEND',
+          type: 'PAID',
+          difficulty: 'JUNIOR',
+          requiredSkills: ['Node.js'],
+          estimatedEffortHours: 5,
+          expectedDuration: 'DAYS_1_7',
+          communicationLanguage: 'EN',
+          timezonePreference: 'UTC',
+          applicationDeadline: new Date('2026-03-01'),
+          visibility: 'PUBLIC',
+          deliverables: 'Code',
+          requirements: 'Tests',
+          niceToHave: 'Docs',
+        },
+      });
+
+      const res = await request(app)
+        .get(`/api/v1/tasks/${task.id}/applications`)
+        .set('Authorization', `Bearer ${company2Token}`)
+        .set('X-Persona', 'company');
+
+      expect(res.status).toBe(403);
+      expect(res.body.error.code).toBe('NOT_OWNER');
+    });
+
+    test('rejects invalid page parameter', async () => {
+      const company = await createUser({ companyProfile: { companyName: 'Company' } });
+      const token = buildAccessToken({ userId: company.id, email: company.email });
+
+      const task = await prisma.task.create({
+        data: {
+          ownerUserId: company.id,
+          status: 'PUBLISHED',
+          publishedAt: new Date('2026-02-14T10:00:00Z'),
+          title: 'Task',
+          description: 'Task description',
+          category: 'BACKEND',
+          type: 'PAID',
+          difficulty: 'JUNIOR',
+          requiredSkills: ['Node.js'],
+          estimatedEffortHours: 5,
+          expectedDuration: 'DAYS_1_7',
+          communicationLanguage: 'EN',
+          timezonePreference: 'UTC',
+          applicationDeadline: new Date('2026-03-01'),
+          visibility: 'PUBLIC',
+          deliverables: 'Code',
+          requirements: 'Tests',
+          niceToHave: 'Docs',
+        },
+      });
+
+      const res = await request(app)
+        .get(`/api/v1/tasks/${task.id}/applications?page=0`)
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'company');
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    });
+
+    test('returns empty list when task has no applications', async () => {
+      const company = await createUser({ companyProfile: { companyName: 'Company' } });
+      const token = buildAccessToken({ userId: company.id, email: company.email });
+
+      const task = await prisma.task.create({
+        data: {
+          ownerUserId: company.id,
+          status: 'PUBLISHED',
+          publishedAt: new Date('2026-02-14T10:00:00Z'),
+          title: 'Task',
+          description: 'Task description',
+          category: 'BACKEND',
+          type: 'PAID',
+          difficulty: 'JUNIOR',
+          requiredSkills: ['Node.js'],
+          estimatedEffortHours: 5,
+          expectedDuration: 'DAYS_1_7',
+          communicationLanguage: 'EN',
+          timezonePreference: 'UTC',
+          applicationDeadline: new Date('2026-03-01'),
+          visibility: 'PUBLIC',
+          deliverables: 'Code',
+          requirements: 'Tests',
+          niceToHave: 'Docs',
+        },
+      });
+
+      const res = await request(app)
+        .get(`/api/v1/tasks/${task.id}/applications`)
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'company');
+
+      expect(res.status).toBe(200);
+      expect(res.body).toMatchObject({
+        items: [],
+        page: 1,
+        size: 20,
+        total: 0,
+      });
+    });
+
+    test('returns paginated applications with developer info', async () => {
+      const company = await createUser({ companyProfile: { companyName: 'TeamUp' } });
+      const developer = await createUser({
+        developerProfile: {
+          displayName: 'Tetiana',
+          jobTitle: 'Java Backend Engineer',
+          avgRating: 4.7,
+          reviewsCount: 12,
+        },
+      });
+      const companyToken = buildAccessToken({ userId: company.id, email: company.email });
+      const devToken = buildAccessToken({ userId: developer.id, email: developer.email });
+
+      const task = await prisma.task.create({
+        data: {
+          ownerUserId: company.id,
+          status: 'PUBLISHED',
+          publishedAt: new Date('2026-02-14T10:00:00Z'),
+          title: 'Task',
+          description: 'Task description',
+          category: 'BACKEND',
+          type: 'PAID',
+          difficulty: 'JUNIOR',
+          requiredSkills: ['Node.js'],
+          estimatedEffortHours: 5,
+          expectedDuration: 'DAYS_1_7',
+          communicationLanguage: 'EN',
+          timezonePreference: 'UTC',
+          applicationDeadline: new Date('2026-03-01'),
+          visibility: 'PUBLIC',
+          deliverables: 'Code',
+          requirements: 'Tests',
+          niceToHave: 'Docs',
+        },
+      });
+
+      const application = await prisma.application.create({
+        data: {
+          taskId: task.id,
+          developerUserId: developer.id,
+          status: 'APPLIED',
+          message: 'I can do it this week.',
+          proposedPlan: 'Day1 filters, Day2 tests.',
+          availabilityNote: 'Evenings',
+        },
+      });
+
+      const res = await request(app)
+        .get(`/api/v1/tasks/${task.id}/applications`)
+        .set('Authorization', `Bearer ${companyToken}`)
+        .set('X-Persona', 'company');
+
+      expect(res.status).toBe(200);
+      expect(res.body.items).toHaveLength(1);
+      expect(res.body.items[0]).toMatchObject({
+        application_id: application.id,
+        status: 'APPLIED',
+        message: 'I can do it this week.',
+        proposed_plan: 'Day1 filters, Day2 tests.',
+        availability_note: 'Evenings',
+        developer: {
+          user_id: developer.id,
+          display_name: 'Tetiana',
+          primary_role: 'Java Backend Engineer',
+          avg_rating: 4.7,
+          reviews_count: 12,
+        },
+      });
+      expect(res.body).toMatchObject({
+        page: 1,
+        size: 20,
+        total: 1,
+      });
+      expect(res.body.items[0].created_at).toBeDefined();
+    });
+
+    test('returns applications ordered by creation date (newest first)', async () => {
+      const company = await createUser({ companyProfile: { companyName: 'Company' } });
+      const dev1 = await createUser({ developerProfile: { displayName: 'Dev1' } });
+      const dev2 = await createUser({ developerProfile: { displayName: 'Dev2' } });
+      const companyToken = buildAccessToken({ userId: company.id, email: company.email });
+
+      const task = await prisma.task.create({
+        data: {
+          ownerUserId: company.id,
+          status: 'PUBLISHED',
+          publishedAt: new Date('2026-02-14T10:00:00Z'),
+          title: 'Task',
+          description: 'Task description',
+          category: 'BACKEND',
+          type: 'PAID',
+          difficulty: 'JUNIOR',
+          requiredSkills: ['Node.js'],
+          estimatedEffortHours: 5,
+          expectedDuration: 'DAYS_1_7',
+          communicationLanguage: 'EN',
+          timezonePreference: 'UTC',
+          applicationDeadline: new Date('2026-03-01'),
+          visibility: 'PUBLIC',
+          deliverables: 'Code',
+          requirements: 'Tests',
+          niceToHave: 'Docs',
+        },
+      });
+
+      const app1 = await prisma.application.create({
+        data: {
+          taskId: task.id,
+          developerUserId: dev1.id,
+          status: 'APPLIED',
+          createdAt: new Date('2026-02-14T12:00:00Z'),
+        },
+      });
+
+      const app2 = await prisma.application.create({
+        data: {
+          taskId: task.id,
+          developerUserId: dev2.id,
+          status: 'APPLIED',
+          createdAt: new Date('2026-02-15T12:00:00Z'),
+        },
+      });
+
+      const res = await request(app)
+        .get(`/api/v1/tasks/${task.id}/applications`)
+        .set('Authorization', `Bearer ${companyToken}`)
+        .set('X-Persona', 'company');
+
+      expect(res.status).toBe(200);
+      expect(res.body.items).toHaveLength(2);
+      expect(res.body.items[0].application_id).toBe(app2.id);
+      expect(res.body.items[1].application_id).toBe(app1.id);
+    });
+
+    test('returns paginated results correctly', async () => {
+      const company = await createUser({ companyProfile: { companyName: 'Company' } });
+      const companyToken = buildAccessToken({ userId: company.id, email: company.email });
+
+      const task = await prisma.task.create({
+        data: {
+          ownerUserId: company.id,
+          status: 'PUBLISHED',
+          publishedAt: new Date('2026-02-14T10:00:00Z'),
+          title: 'Task',
+          description: 'Task description',
+          category: 'BACKEND',
+          type: 'PAID',
+          difficulty: 'JUNIOR',
+          requiredSkills: ['Node.js'],
+          estimatedEffortHours: 5,
+          expectedDuration: 'DAYS_1_7',
+          communicationLanguage: 'EN',
+          timezonePreference: 'UTC',
+          applicationDeadline: new Date('2026-03-01'),
+          visibility: 'PUBLIC',
+          deliverables: 'Code',
+          requirements: 'Tests',
+          niceToHave: 'Docs',
+        },
+      });
+
+      // Create 25 applications
+      for (let i = 0; i < 25; i++) {
+        const dev = await createUser({ developerProfile: { displayName: `Dev${i}` } });
+        await prisma.application.create({
+          data: {
+            taskId: task.id,
+            developerUserId: dev.id,
+            status: 'APPLIED',
+          },
+        });
+      }
+
+      // Get first page (size=10)
+      const res1 = await request(app)
+        .get(`/api/v1/tasks/${task.id}/applications?page=1&size=10`)
+        .set('Authorization', `Bearer ${companyToken}`)
+        .set('X-Persona', 'company');
+
+      expect(res1.status).toBe(200);
+      expect(res1.body.items).toHaveLength(10);
+      expect(res1.body.page).toBe(1);
+      expect(res1.body.size).toBe(10);
+      expect(res1.body.total).toBe(25);
+
+      // Get second page (size=10)
+      const res2 = await request(app)
+        .get(`/api/v1/tasks/${task.id}/applications?page=2&size=10`)
+        .set('Authorization', `Bearer ${companyToken}`)
+        .set('X-Persona', 'company');
+
+      expect(res2.status).toBe(200);
+      expect(res2.body.items).toHaveLength(10);
+      expect(res2.body.page).toBe(2);
+      expect(res2.body.total).toBe(25);
+
+      // Different applications
+      const page1Ids = new Set(res1.body.items.map((a) => a.application_id));
+      const page2Ids = new Set(res2.body.items.map((a) => a.application_id));
+
+      expect([...page1Ids].some((id) => page2Ids.has(id))).toBe(false);
+    });
+
+    test('returns applications with null optional fields', async () => {
+      const company = await createUser({ companyProfile: { companyName: 'Company' } });
+      const developer = await createUser({ developerProfile: { displayName: 'Dev' } });
+      const companyToken = buildAccessToken({ userId: company.id, email: company.email });
+
+      const task = await prisma.task.create({
+        data: {
+          ownerUserId: company.id,
+          status: 'PUBLISHED',
+          publishedAt: new Date('2026-02-14T10:00:00Z'),
+          title: 'Task',
+          description: 'Task description',
+          category: 'BACKEND',
+          type: 'PAID',
+          difficulty: 'JUNIOR',
+          requiredSkills: ['Node.js'],
+          estimatedEffortHours: 5,
+          expectedDuration: 'DAYS_1_7',
+          communicationLanguage: 'EN',
+          timezonePreference: 'UTC',
+          applicationDeadline: new Date('2026-03-01'),
+          visibility: 'PUBLIC',
+          deliverables: 'Code',
+          requirements: 'Tests',
+          niceToHave: 'Docs',
+        },
+      });
+
+      // Application with no message, proposed_plan, or availability_note
+      const application = await prisma.application.create({
+        data: {
+          taskId: task.id,
+          developerUserId: developer.id,
+          status: 'APPLIED',
+        },
+      });
+
+      const res = await request(app)
+        .get(`/api/v1/tasks/${task.id}/applications`)
+        .set('Authorization', `Bearer ${companyToken}`)
+        .set('X-Persona', 'company');
+
+      expect(res.status).toBe(200);
+      expect(res.body.items[0]).toMatchObject({
+        application_id: application.id,
+        message: null,
+        proposed_plan: null,
+        availability_note: null,
+      });
+    });
+  });
+
+  describe('GET /tasks', () => {
+    test('filters by project_id', async () => {
+      const company = await createUser({ companyProfile: { companyName: 'TeamUp' } });
+
+      const project = await prisma.project.create({
+        data: {
+          ownerUserId: company.id,
+          title: 'Project with tasks',
+          status: 'ACTIVE',
+        },
+      });
+
+      const task = await prisma.task.create({
+        data: {
+          ownerUserId: company.id,
+          projectId: project.id,
+          status: 'PUBLISHED',
+          publishedAt: new Date('2026-02-14T10:00:00Z'),
+          title: 'Task in project',
+          description: 'Published task description',
+          category: 'BACKEND',
+          type: 'PAID',
+          difficulty: 'JUNIOR',
+          requiredSkills: ['Node.js'],
+          estimatedEffortHours: 5,
+          expectedDuration: 'DAYS_1_7',
+          communicationLanguage: 'EN',
+          timezonePreference: 'UTC',
+          applicationDeadline: new Date('2026-03-01'),
+          visibility: 'PUBLIC',
+          deliverables: 'Code',
+          requirements: 'Reqs',
+          niceToHave: 'Nice',
+        },
+      });
 
       const res = await request(app).get(`/api/v1/tasks?project_id=${project.id}`);
 
