@@ -5,6 +5,7 @@ import {
   createNotification,
   buildTaskNotificationPayload,
 } from './notifications.service.js';
+import { getOrCreateChatThread } from './chat.service.js';
 
 function mapTaskInput(input) {
   return {
@@ -781,10 +782,22 @@ export async function acceptApplication({ userId, applicationId }) {
       accepted_application_id: applicationId,
       task_status: 'IN_PROGRESS',
       accepted_developer_user_id: application.developerUserId,
+      company_user_id: task.ownerUserId,
     };
   });
 
-  return result;
+  // Create chat thread after transaction (outside transaction scope)
+  // Failure to create thread should not break the accept transaction
+  const thread = await getOrCreateChatThread({
+    taskId: result.task_id,
+    companyUserId: result.company_user_id,
+    developerUserId: result.accepted_developer_user_id,
+  });
+
+  return {
+    ...result,
+    thread_id: thread?.id ?? null,
+  };
 }
 
 export async function rejectApplication({ userId, applicationId }) {

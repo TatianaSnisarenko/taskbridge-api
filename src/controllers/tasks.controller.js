@@ -146,6 +146,7 @@ export const acceptApplication = asyncHandler(async (req, res) => {
     accepted_application_id: result.accepted_application_id,
     task_status: result.task_status,
     accepted_developer_user_id: result.accepted_developer_user_id,
+    thread_id: result.thread_id,
   });
 });
 

@@ -448,6 +448,63 @@ describe('applications routes', () => {
       expect(notif3.payload.application_id).toBe(app3.id);
     });
 
+    test('creates chat thread when application is accepted', async () => {
+      const company = await createUser({ companyProfile: { companyName: 'Company' } });
+      const developer = await createUser({ developerProfile: { displayName: 'Dev' } });
+      const token = buildAccessToken({ userId: company.id, email: company.email });
+
+      const task = await prisma.task.create({
+        data: {
+          ownerUserId: company.id,
+          status: 'PUBLISHED',
+          publishedAt: new Date('2026-02-14T10:00:00Z'),
+          title: 'Task',
+          description: 'Description',
+          category: 'BACKEND',
+          type: 'PAID',
+          difficulty: 'JUNIOR',
+          requiredSkills: ['Node.js'],
+          estimatedEffortHours: 5,
+          expectedDuration: 'DAYS_1_7',
+          communicationLanguage: 'EN',
+          timezonePreference: 'UTC',
+          applicationDeadline: new Date('2026-03-01'),
+          visibility: 'PUBLIC',
+          deliverables: 'Code',
+          requirements: 'Tests',
+          niceToHave: 'Docs',
+        },
+      });
+
+      const application = await prisma.application.create({
+        data: {
+          taskId: task.id,
+          developerUserId: developer.id,
+          status: 'APPLIED',
+        },
+      });
+
+      const res = await request(app)
+        .post(`/api/v1/applications/${application.id}/accept`)
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'company');
+
+      expect(res.status).toBe(200);
+      expect(res.body.thread_id).toBeDefined();
+      expect(typeof res.body.thread_id).toBe('string');
+
+      // Verify thread was created in database
+      const thread = await prisma.chatThread.findUnique({
+        where: { taskId: task.id },
+      });
+
+      expect(thread).toBeDefined();
+      expect(thread.id).toBe(res.body.thread_id);
+      expect(thread.companyUserId).toBe(company.id);
+      expect(thread.developerUserId).toBe(developer.id);
+      expect(thread.lastMessageAt).toBeUndefined();
+    });
+
     test('rejects invalid applicationId parameter', async () => {
       const company = await createUser({ companyProfile: { companyName: 'Company' } });
       const token = buildAccessToken({ userId: company.id, email: company.email });
