@@ -923,6 +923,13 @@ export const swaggerSpec = {
           read_at: { type: 'string', format: 'date-time' },
         },
       },
+      MarkAllNotificationsAsReadResponse: {
+        type: 'object',
+        properties: {
+          updated: { type: 'boolean', example: true },
+          read_at: { type: 'string', format: 'date-time' },
+        },
+      },
     },
   },
   paths: {
@@ -1196,6 +1203,24 @@ export const swaggerSpec = {
           },
           401: { description: 'Unauthorized' },
           404: { description: 'Notification not found' },
+        },
+      },
+    },
+    '/api/v1/me/notifications/read-all': {
+      post: {
+        tags: ['Me'],
+        summary: 'Mark all notifications as read',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: 'All notifications marked as read',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/MarkAllNotificationsAsReadResponse' },
+              },
+            },
+          },
+          401: { description: 'Unauthorized' },
         },
       },
     },

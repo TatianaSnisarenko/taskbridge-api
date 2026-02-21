@@ -27,4 +27,6 @@ meRouter.get(
   meController.getMyNotifications
 );
 
+meRouter.post('/notifications/read-all', requireAuth, meController.markAllNotificationsAsRead);
+
 meRouter.post('/notifications/:id/read', requireAuth, meController.markNotificationAsRead);

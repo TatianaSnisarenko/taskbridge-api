@@ -192,3 +192,26 @@ export async function markNotificationAsRead({ userId, notificationId }) {
     read_at: updated.readAt.toISOString(),
   };
 }
+
+/**
+ * Mark all notifications as read for the current user
+ */
+export async function markAllNotificationsAsRead({ userId }) {
+  const now = new Date();
+
+  // Update all unread notifications for the user
+  await prisma.notification.updateMany({
+    where: {
+      userId,
+      readAt: null,
+    },
+    data: {
+      readAt: now,
+    },
+  });
+
+  return {
+    updated: true,
+    read_at: now.toISOString(),
+  };
+}

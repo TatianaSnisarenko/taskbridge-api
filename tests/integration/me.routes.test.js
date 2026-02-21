@@ -1071,4 +1071,252 @@ describe('me routes', () => {
       expect(item2.read_at).toBeNull(); // Unmarked one is still unread
     });
   });
+
+  describe('POST /me/notifications/read-all', () => {
+    test('rejects unauthorized', async () => {
+      const res = await request(app).post('/api/v1/me/notifications/read-all');
+
+      expect(res.status).toBe(401);
+      expect(res.body.error.code).toBe('AUTH_REQUIRED');
+    });
+
+    test('rejects invalid token', async () => {
+      const res = await request(app)
+        .post('/api/v1/me/notifications/read-all')
+        .set('Authorization', 'Bearer invalid');
+
+      expect(res.status).toBe(401);
+      expect(res.body.error.code).toBe('INVALID_TOKEN');
+    });
+
+    test('marks all notifications as read when user has none', async () => {
+      const user = await createUser({ developerProfile: { displayName: 'Dev' } });
+      const token = buildAccessToken({ userId: user.id, email: user.email });
+
+      const res = await request(app)
+        .post('/api/v1/me/notifications/read-all')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.updated).toBe(true);
+      expect(res.body).toHaveProperty('read_at');
+      expect(typeof res.body.read_at).toBe('string');
+      expect(res.body.read_at).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    });
+
+    test('marks all unread notifications as read', async () => {
+      const user = await createUser({ developerProfile: { displayName: 'Dev' } });
+      const actor = await createUser({ companyProfile: { companyName: 'Company' } });
+      const token = buildAccessToken({ userId: user.id, email: user.email });
+
+      // Create 3 unread notifications
+      await prisma.notification.create({
+        data: {
+          userId: user.id,
+          actorUserId: actor.id,
+          type: 'APPLICATION_ACCEPTED',
+          payload: { application_id: 'test-id-1' },
+          createdAt: new Date('2026-02-14T10:00:00Z'),
+        },
+      });
+
+      await prisma.notification.create({
+        data: {
+          userId: user.id,
+          actorUserId: actor.id,
+          type: 'TASK_COMPLETED',
+          payload: { task_id: 'test-id-2' },
+          createdAt: new Date('2026-02-14T10:00:01Z'),
+        },
+      });
+
+      await prisma.notification.create({
+        data: {
+          userId: user.id,
+          actorUserId: actor.id,
+          type: 'REVIEW_CREATED',
+          payload: { review_id: 'test-id-3' },
+          createdAt: new Date('2026-02-14T10:00:02Z'),
+        },
+      });
+
+      // Verify all are unread
+      let notificationsRes = await request(app)
+        .get('/api/v1/me/notifications')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(notificationsRes.body.unread_total).toBe(3);
+      expect(notificationsRes.body.total).toBe(3);
+
+      // Mark all as read
+      const markRes = await request(app)
+        .post('/api/v1/me/notifications/read-all')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(markRes.status).toBe(200);
+      expect(markRes.body.updated).toBe(true);
+
+      // Verify all are now marked as read
+      notificationsRes = await request(app)
+        .get('/api/v1/me/notifications')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(notificationsRes.body.unread_total).toBe(0);
+      expect(notificationsRes.body.total).toBe(3);
+      notificationsRes.body.items.forEach((item) => {
+        expect(item.read_at).not.toBeNull();
+      });
+    });
+
+    test('marks only unread notifications as read', async () => {
+      const user = await createUser({ developerProfile: { displayName: 'Dev' } });
+      const actor = await createUser({ companyProfile: { companyName: 'Company' } });
+      const token = buildAccessToken({ userId: user.id, email: user.email });
+
+      // Create some read notifications and some unread
+      await prisma.notification.create({
+        data: {
+          userId: user.id,
+          actorUserId: actor.id,
+          type: 'APPLICATION_ACCEPTED',
+          payload: { application_id: 'test-id-1' },
+          readAt: new Date('2026-02-14T09:00:00Z'),
+        },
+      });
+
+      await prisma.notification.create({
+        data: {
+          userId: user.id,
+          actorUserId: actor.id,
+          type: 'TASK_COMPLETED',
+          payload: { task_id: 'test-id-2' },
+        },
+      });
+
+      await prisma.notification.create({
+        data: {
+          userId: user.id,
+          actorUserId: actor.id,
+          type: 'REVIEW_CREATED',
+          payload: { review_id: 'test-id-3' },
+        },
+      });
+
+      // Verify initial state
+      let notificationsRes = await request(app)
+        .get('/api/v1/me/notifications')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(notificationsRes.body.unread_total).toBe(2);
+      expect(notificationsRes.body.total).toBe(3);
+
+      // Mark all as read
+      const markRes = await request(app)
+        .post('/api/v1/me/notifications/read-all')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(markRes.status).toBe(200);
+      expect(markRes.body.updated).toBe(true);
+
+      // Verify all are now marked as read
+      notificationsRes = await request(app)
+        .get('/api/v1/me/notifications')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(notificationsRes.body.unread_total).toBe(0);
+      expect(notificationsRes.body.total).toBe(3);
+
+      // Verify all items have read_at set
+      notificationsRes.body.items.forEach((item) => {
+        expect(item.read_at).not.toBeNull();
+      });
+    });
+
+    test('is idempotent - calling twice does not cause errors', async () => {
+      const user = await createUser({ developerProfile: { displayName: 'Dev' } });
+      const actor = await createUser({ companyProfile: { companyName: 'Company' } });
+      const token = buildAccessToken({ userId: user.id, email: user.email });
+
+      // Create an unread notification
+      await prisma.notification.create({
+        data: {
+          userId: user.id,
+          actorUserId: actor.id,
+          type: 'APPLICATION_ACCEPTED',
+          payload: { application_id: 'test-id' },
+        },
+      });
+
+      // First call
+      let markRes = await request(app)
+        .post('/api/v1/me/notifications/read-all')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(markRes.status).toBe(200);
+      expect(markRes.body.updated).toBe(true);
+
+      // Second call - should still succeed
+      markRes = await request(app)
+        .post('/api/v1/me/notifications/read-all')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(markRes.status).toBe(200);
+      expect(markRes.body.updated).toBe(true);
+
+      // Verify all are still read
+      const notificationsRes = await request(app)
+        .get('/api/v1/me/notifications')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(notificationsRes.body.unread_total).toBe(0);
+    });
+
+    test('only marks notifications for current user', async () => {
+      const user1 = await createUser({ developerProfile: { displayName: 'Dev1' } });
+      const user2 = await createUser({ developerProfile: { displayName: 'Dev2' } });
+      const actor = await createUser({ companyProfile: { companyName: 'Company' } });
+      const token1 = buildAccessToken({ userId: user1.id, email: user1.email });
+      const token2 = buildAccessToken({ userId: user2.id, email: user2.email });
+
+      // Create unread notifications for both users
+      await prisma.notification.create({
+        data: {
+          userId: user1.id,
+          actorUserId: actor.id,
+          type: 'APPLICATION_ACCEPTED',
+          payload: { application_id: 'test-id-1' },
+        },
+      });
+
+      await prisma.notification.create({
+        data: {
+          userId: user2.id,
+          actorUserId: actor.id,
+          type: 'APPLICATION_REJECTED',
+          payload: { application_id: 'test-id-2' },
+        },
+      });
+
+      // Mark all as read for user1
+      const markRes = await request(app)
+        .post('/api/v1/me/notifications/read-all')
+        .set('Authorization', `Bearer ${token1}`);
+
+      expect(markRes.status).toBe(200);
+
+      // Verify user1 has no unread
+      let notificationsRes = await request(app)
+        .get('/api/v1/me/notifications')
+        .set('Authorization', `Bearer ${token1}`);
+
+      expect(notificationsRes.body.unread_total).toBe(0);
+
+      // Verify user2 still has unread
+      notificationsRes = await request(app)
+        .get('/api/v1/me/notifications')
+        .set('Authorization', `Bearer ${token2}`);
+
+      expect(notificationsRes.body.unread_total).toBe(1);
+    });
+  });
 });

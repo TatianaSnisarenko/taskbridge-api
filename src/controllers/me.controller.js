@@ -60,3 +60,14 @@ export const markNotificationAsRead = asyncHandler(async (req, res) => {
     read_at: result.read_at,
   });
 });
+
+export const markAllNotificationsAsRead = asyncHandler(async (req, res) => {
+  const result = await meService.markAllNotificationsAsRead({
+    userId: req.user.id,
+  });
+
+  return res.status(200).json({
+    updated: result.updated,
+    read_at: result.read_at,
+  });
+});
