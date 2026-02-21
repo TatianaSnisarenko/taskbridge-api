@@ -312,3 +312,17 @@ export const getTasksCatalogSchema = Joi.object({
   owner: Joi.any().optional(),
   include_deleted: Joi.any().optional(),
 });
+
+export const createReviewSchema = Joi.object({
+  rating: Joi.number().integer().min(1).max(5).required().messages({
+    'number.base': 'Rating must be a number',
+    'number.integer': 'Rating must be an integer',
+    'number.min': 'Rating must be between 1 and 5',
+    'number.max': 'Rating must be between 1 and 5',
+    'any.required': 'Rating is required',
+  }),
+  text: Joi.string().trim().min(5).max(1000).optional().messages({
+    'string.min': 'Review text must be at least 5 characters',
+    'string.max': 'Review text must not exceed 1000 characters',
+  }),
+});

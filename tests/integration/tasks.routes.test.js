@@ -1618,6 +1618,370 @@ describe('tasks routes', () => {
     });
   });
 
+  test('POST /tasks/:taskId/reviews rejects unauthorized', async () => {
+    const res = await request(app)
+      .post('/api/v1/tasks/3fa85f64-5717-4562-b3fc-2c963f66afa6/reviews')
+      .send({ rating: 5, text: 'Great work' });
+
+    expect(res.status).toBe(401);
+    expect(res.body.error.code).toBe('AUTH_REQUIRED');
+  });
+
+  test('POST /tasks/:taskId/reviews rejects invalid task ID', async () => {
+    const user = await createUser({ developerProfile: { displayName: 'Dev' } });
+    const token = buildAccessToken({ userId: user.id, email: user.email });
+
+    const res = await request(app)
+      .post('/api/v1/tasks/not-a-uuid/reviews')
+      .set('Authorization', `Bearer ${token}`)
+      .set('X-Persona', 'developer')
+      .send({ rating: 5, text: 'Great work' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+  });
+
+  test('POST /tasks/:taskId/reviews rejects task not found', async () => {
+    const user = await createUser({ developerProfile: { displayName: 'Dev' } });
+    const token = buildAccessToken({ userId: user.id, email: user.email });
+
+    const res = await request(app)
+      .post('/api/v1/tasks/3fa85f64-5717-4562-b3fc-2c963f66afa6/reviews')
+      .set('Authorization', `Bearer ${token}`)
+      .set('X-Persona', 'developer')
+      .send({ rating: 5, text: 'Great work' });
+
+    expect(res.status).toBe(404);
+    expect(res.body.error.code).toBe('NOT_FOUND');
+  });
+
+  test('POST /tasks/:taskId/reviews rejects task not completed', async () => {
+    const company = await createUser({ companyProfile: { companyName: 'TeamUp' } });
+    const developer = await createUser({ developerProfile: { displayName: 'Dev' } });
+    const devToken = buildAccessToken({ userId: developer.id, email: developer.email });
+
+    const task = await prisma.task.create({
+      data: {
+        ownerUserId: company.id,
+        status: 'IN_PROGRESS',
+        publishedAt: new Date('2026-02-14T10:00:00Z'),
+        title: 'In progress task',
+        description: 'In progress task description',
+        category: 'BACKEND',
+        type: 'PAID',
+        difficulty: 'JUNIOR',
+        requiredSkills: ['Node.js'],
+        estimatedEffortHours: 5,
+        expectedDuration: 'DAYS_1_7',
+        communicationLanguage: 'EN',
+        timezonePreference: 'UTC',
+        applicationDeadline: new Date('2026-03-01'),
+        visibility: 'PUBLIC',
+        deliverables: 'Code',
+        requirements: 'Reqs',
+        niceToHave: 'Nice',
+      },
+    });
+
+    const application = await prisma.application.create({
+      data: {
+        taskId: task.id,
+        developerUserId: developer.id,
+        status: 'ACCEPTED',
+      },
+    });
+
+    await prisma.task.update({
+      where: { id: task.id },
+      data: { acceptedApplicationId: application.id },
+    });
+
+    const res = await request(app)
+      .post(`/api/v1/tasks/${task.id}/reviews`)
+      .set('Authorization', `Bearer ${devToken}`)
+      .set('X-Persona', 'developer')
+      .send({ rating: 5, text: 'Great work' });
+
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe('INVALID_STATE');
+  });
+
+  test('POST /tasks/:taskId/reviews rejects non-participant', async () => {
+    const company = await createUser({ companyProfile: { companyName: 'TeamUp' } });
+    const developer = await createUser({ developerProfile: { displayName: 'Dev' } });
+    const otherUser = await createUser({ developerProfile: { displayName: 'Other' } });
+    const otherToken = buildAccessToken({ userId: otherUser.id, email: otherUser.email });
+
+    const task = await prisma.task.create({
+      data: {
+        ownerUserId: company.id,
+        status: 'COMPLETED',
+        completedAt: new Date('2026-02-14T15:00:00Z'),
+        publishedAt: new Date('2026-02-14T10:00:00Z'),
+        title: 'Completed task',
+        description: 'Completed task description',
+        category: 'BACKEND',
+        type: 'PAID',
+        difficulty: 'JUNIOR',
+        requiredSkills: ['Node.js'],
+        estimatedEffortHours: 5,
+        expectedDuration: 'DAYS_1_7',
+        communicationLanguage: 'EN',
+        timezonePreference: 'UTC',
+        applicationDeadline: new Date('2026-03-01'),
+        visibility: 'PUBLIC',
+        deliverables: 'Code',
+        requirements: 'Reqs',
+        niceToHave: 'Nice',
+      },
+    });
+
+    const application = await prisma.application.create({
+      data: {
+        taskId: task.id,
+        developerUserId: developer.id,
+        status: 'ACCEPTED',
+      },
+    });
+
+    await prisma.task.update({
+      where: { id: task.id },
+      data: { acceptedApplicationId: application.id },
+    });
+
+    const res = await request(app)
+      .post(`/api/v1/tasks/${task.id}/reviews`)
+      .set('Authorization', `Bearer ${otherToken}`)
+      .set('X-Persona', 'developer')
+      .send({ rating: 5, text: 'Great work' });
+
+    expect(res.status).toBe(403);
+    expect(res.body.error.code).toBe('FORBIDDEN');
+  });
+
+  test('POST /tasks/:taskId/reviews rejects duplicate review', async () => {
+    const company = await createUser({ companyProfile: { companyName: 'TeamUp' } });
+    const developer = await createUser({ developerProfile: { displayName: 'Dev' } });
+    const devToken = buildAccessToken({ userId: developer.id, email: developer.email });
+
+    const task = await prisma.task.create({
+      data: {
+        ownerUserId: company.id,
+        status: 'COMPLETED',
+        completedAt: new Date('2026-02-14T15:00:00Z'),
+        publishedAt: new Date('2026-02-14T10:00:00Z'),
+        title: 'Completed task',
+        description: 'Completed task description',
+        category: 'BACKEND',
+        type: 'PAID',
+        difficulty: 'JUNIOR',
+        requiredSkills: ['Node.js'],
+        estimatedEffortHours: 5,
+        expectedDuration: 'DAYS_1_7',
+        communicationLanguage: 'EN',
+        timezonePreference: 'UTC',
+        applicationDeadline: new Date('2026-03-01'),
+        visibility: 'PUBLIC',
+        deliverables: 'Code',
+        requirements: 'Reqs',
+        niceToHave: 'Nice',
+      },
+    });
+
+    const application = await prisma.application.create({
+      data: {
+        taskId: task.id,
+        developerUserId: developer.id,
+        status: 'ACCEPTED',
+      },
+    });
+
+    await prisma.task.update({
+      where: { id: task.id },
+      data: { acceptedApplicationId: application.id },
+    });
+
+    // Create first review
+    await request(app)
+      .post(`/api/v1/tasks/${task.id}/reviews`)
+      .set('Authorization', `Bearer ${devToken}`)
+      .set('X-Persona', 'developer')
+      .send({ rating: 5, text: 'Great work' });
+
+    // Try to create duplicate review
+    const res = await request(app)
+      .post(`/api/v1/tasks/${task.id}/reviews`)
+      .set('Authorization', `Bearer ${devToken}`)
+      .set('X-Persona', 'developer')
+      .send({ rating: 4, text: 'Second review' });
+
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe('ALREADY_REVIEWED');
+  });
+
+  test('POST /tasks/:taskId/reviews creates review from developer', async () => {
+    const company = await createUser({ companyProfile: { companyName: 'TeamUp' } });
+    const developer = await createUser({ developerProfile: { displayName: 'Dev' } });
+    const devToken = buildAccessToken({ userId: developer.id, email: developer.email });
+
+    const task = await prisma.task.create({
+      data: {
+        ownerUserId: company.id,
+        status: 'COMPLETED',
+        completedAt: new Date('2026-02-14T15:00:00Z'),
+        publishedAt: new Date('2026-02-14T10:00:00Z'),
+        title: 'Completed task',
+        description: 'Completed task description',
+        category: 'BACKEND',
+        type: 'PAID',
+        difficulty: 'JUNIOR',
+        requiredSkills: ['Node.js'],
+        estimatedEffortHours: 5,
+        expectedDuration: 'DAYS_1_7',
+        communicationLanguage: 'EN',
+        timezonePreference: 'UTC',
+        applicationDeadline: new Date('2026-03-01'),
+        visibility: 'PUBLIC',
+        deliverables: 'Code',
+        requirements: 'Reqs',
+        niceToHave: 'Nice',
+      },
+    });
+
+    const application = await prisma.application.create({
+      data: {
+        taskId: task.id,
+        developerUserId: developer.id,
+        status: 'ACCEPTED',
+      },
+    });
+
+    await prisma.task.update({
+      where: { id: task.id },
+      data: { acceptedApplicationId: application.id },
+    });
+
+    const res = await request(app)
+      .post(`/api/v1/tasks/${task.id}/reviews`)
+      .set('Authorization', `Bearer ${devToken}`)
+      .set('X-Persona', 'developer')
+      .send({ rating: 5, text: 'Great collaboration' });
+
+    expect(res.status).toBe(201);
+    expect(res.body).toEqual({
+      review_id: expect.any(String),
+      task_id: task.id,
+      author_user_id: developer.id,
+      target_user_id: company.id,
+      rating: 5,
+      text: 'Great collaboration',
+      created_at: expect.any(String),
+    });
+    expect(Number.isNaN(Date.parse(res.body.created_at))).toBe(false);
+
+    const notification = await prisma.notification.findFirst({
+      where: {
+        userId: company.id,
+        taskId: task.id,
+        type: 'REVIEW_CREATED',
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    expect(notification).toMatchObject({
+      userId: company.id,
+      actorUserId: developer.id,
+      taskId: task.id,
+      type: 'REVIEW_CREATED',
+      payload: {
+        review_id: res.body.review_id,
+        task_id: task.id,
+        rating: 5,
+      },
+    });
+  });
+
+  test('POST /tasks/:taskId/reviews creates review from company owner', async () => {
+    const company = await createUser({ companyProfile: { companyName: 'TeamUp' } });
+    const developer = await createUser({ developerProfile: { displayName: 'Dev' } });
+    const companyToken = buildAccessToken({ userId: company.id, email: company.email });
+
+    const task = await prisma.task.create({
+      data: {
+        ownerUserId: company.id,
+        status: 'COMPLETED',
+        completedAt: new Date('2026-02-14T15:00:00Z'),
+        publishedAt: new Date('2026-02-14T10:00:00Z'),
+        title: 'Completed task',
+        description: 'Completed task description',
+        category: 'BACKEND',
+        type: 'PAID',
+        difficulty: 'JUNIOR',
+        requiredSkills: ['Node.js'],
+        estimatedEffortHours: 5,
+        expectedDuration: 'DAYS_1_7',
+        communicationLanguage: 'EN',
+        timezonePreference: 'UTC',
+        applicationDeadline: new Date('2026-03-01'),
+        visibility: 'PUBLIC',
+        deliverables: 'Code',
+        requirements: 'Reqs',
+        niceToHave: 'Nice',
+      },
+    });
+
+    const application = await prisma.application.create({
+      data: {
+        taskId: task.id,
+        developerUserId: developer.id,
+        status: 'ACCEPTED',
+      },
+    });
+
+    await prisma.task.update({
+      where: { id: task.id },
+      data: { acceptedApplicationId: application.id },
+    });
+
+    const res = await request(app)
+      .post(`/api/v1/tasks/${task.id}/reviews`)
+      .set('Authorization', `Bearer ${companyToken}`)
+      .set('X-Persona', 'company')
+      .send({ rating: 4, text: 'Good work, professional' });
+
+    expect(res.status).toBe(201);
+    expect(res.body).toEqual({
+      review_id: expect.any(String),
+      task_id: task.id,
+      author_user_id: company.id,
+      target_user_id: developer.id,
+      rating: 4,
+      text: 'Good work, professional',
+      created_at: expect.any(String),
+    });
+
+    const notification = await prisma.notification.findFirst({
+      where: {
+        userId: developer.id,
+        taskId: task.id,
+        type: 'REVIEW_CREATED',
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    expect(notification).toMatchObject({
+      userId: developer.id,
+      actorUserId: company.id,
+      taskId: task.id,
+      type: 'REVIEW_CREATED',
+      payload: {
+        review_id: res.body.review_id,
+        task_id: task.id,
+        rating: 4,
+      },
+    });
+  });
+
   test('DELETE /tasks/:taskId rejects unauthorized', async () => {
     const res = await request(app).delete('/api/v1/tasks/3fa85f64-5717-4562-b3fc-2c963f66afa6');
 

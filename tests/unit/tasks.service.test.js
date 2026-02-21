@@ -1599,4 +1599,250 @@ describe('tasks.service', () => {
       });
     });
   });
+
+  describe('createReview', () => {
+    test('createReview rejects missing task', async () => {
+      prismaMock.$transaction.mockImplementation((callback) => callback(prismaMock));
+      prismaMock.task.findUnique.mockResolvedValue(null);
+
+      await expect(
+        tasksService.createReview({
+          userId: 'u1',
+          taskId: 't1',
+          review: { rating: 5, text: 'Great work' },
+        })
+      ).rejects.toMatchObject({
+        status: 404,
+        code: 'NOT_FOUND',
+      });
+    });
+
+    test('createReview rejects deleted task', async () => {
+      prismaMock.$transaction.mockImplementation((callback) => callback(prismaMock));
+      prismaMock.task.findUnique.mockResolvedValue({
+        id: 't1',
+        ownerUserId: 'u1',
+        status: 'COMPLETED',
+        deletedAt: new Date(),
+        acceptedApplicationId: 'a1',
+        acceptedApplication: { developerUserId: 'u2' },
+      });
+
+      await expect(
+        tasksService.createReview({
+          userId: 'u1',
+          taskId: 't1',
+          review: { rating: 5, text: 'Great work' },
+        })
+      ).rejects.toMatchObject({
+        status: 404,
+        code: 'NOT_FOUND',
+      });
+    });
+
+    test('createReview rejects non-completed task', async () => {
+      prismaMock.$transaction.mockImplementation((callback) => callback(prismaMock));
+      prismaMock.task.findUnique.mockResolvedValue({
+        id: 't1',
+        ownerUserId: 'u1',
+        status: 'IN_PROGRESS',
+        deletedAt: null,
+        acceptedApplicationId: 'a1',
+        acceptedApplication: { developerUserId: 'u2' },
+      });
+
+      await expect(
+        tasksService.createReview({
+          userId: 'u1',
+          taskId: 't1',
+          review: { rating: 5, text: 'Great work' },
+        })
+      ).rejects.toMatchObject({
+        status: 409,
+        code: 'INVALID_STATE',
+      });
+    });
+
+    test('createReview rejects non-participant', async () => {
+      prismaMock.$transaction.mockImplementation((callback) => callback(prismaMock));
+      prismaMock.task.findUnique.mockResolvedValue({
+        id: 't1',
+        ownerUserId: 'u1',
+        status: 'COMPLETED',
+        deletedAt: null,
+        acceptedApplicationId: 'a1',
+        acceptedApplication: { developerUserId: 'u2' },
+      });
+
+      await expect(
+        tasksService.createReview({
+          userId: 'u3',
+          taskId: 't1',
+          review: { rating: 5, text: 'Great work' },
+        })
+      ).rejects.toMatchObject({
+        status: 403,
+        code: 'FORBIDDEN',
+      });
+    });
+
+    test('createReview rejects missing developer', async () => {
+      prismaMock.$transaction.mockImplementation((callback) => callback(prismaMock));
+      prismaMock.task.findUnique.mockResolvedValue({
+        id: 't1',
+        ownerUserId: 'u1',
+        status: 'COMPLETED',
+        deletedAt: null,
+        acceptedApplicationId: null,
+        acceptedApplication: null,
+      });
+
+      await expect(
+        tasksService.createReview({
+          userId: 'u1',
+          taskId: 't1',
+          review: { rating: 5, text: 'Great work' },
+        })
+      ).rejects.toMatchObject({
+        status: 409,
+        code: 'INVALID_STATE',
+      });
+    });
+
+    test('createReview rejects duplicate review', async () => {
+      prismaMock.$transaction.mockImplementation((callback) => callback(prismaMock));
+      prismaMock.task.findUnique.mockResolvedValue({
+        id: 't1',
+        ownerUserId: 'u1',
+        status: 'COMPLETED',
+        deletedAt: null,
+        acceptedApplicationId: 'a1',
+        acceptedApplication: { developerUserId: 'u2' },
+      });
+      prismaMock.review = {
+        findUnique: jest.fn().mockResolvedValue({ id: 'r1' }),
+      };
+
+      await expect(
+        tasksService.createReview({
+          userId: 'u1',
+          taskId: 't1',
+          review: { rating: 5, text: 'Great work' },
+        })
+      ).rejects.toMatchObject({
+        status: 409,
+        code: 'ALREADY_REVIEWED',
+      });
+    });
+
+    test('createReview creates review from owner', async () => {
+      const createdAt = new Date('2026-02-14T10:00:00Z');
+      prismaMock.$transaction.mockImplementation((callback) => callback(prismaMock));
+      prismaMock.task.findUnique.mockResolvedValue({
+        id: 't1',
+        ownerUserId: 'u1',
+        status: 'COMPLETED',
+        deletedAt: null,
+        acceptedApplicationId: 'a1',
+        acceptedApplication: { developerUserId: 'u2' },
+      });
+      prismaMock.review = {
+        findUnique: jest.fn().mockResolvedValue(null),
+        create: jest.fn().mockResolvedValue({
+          id: 'r1',
+          taskId: 't1',
+          authorUserId: 'u1',
+          targetUserId: 'u2',
+          rating: 5,
+          text: 'Great work',
+          createdAt,
+        }),
+      };
+      notificationsServiceMock.createNotification.mockResolvedValue(null);
+
+      const result = await tasksService.createReview({
+        userId: 'u1',
+        taskId: 't1',
+        review: { rating: 5, text: 'Great work' },
+      });
+
+      expect(result).toEqual({
+        reviewId: 'r1',
+        taskId: 't1',
+        authorUserId: 'u1',
+        targetUserId: 'u2',
+        rating: 5,
+        text: 'Great work',
+        createdAt,
+      });
+
+      expect(notificationsServiceMock.createNotification).toHaveBeenCalledWith({
+        client: prismaMock,
+        userId: 'u2',
+        actorUserId: 'u1',
+        taskId: 't1',
+        type: 'REVIEW_CREATED',
+        payload: {
+          review_id: 'r1',
+          task_id: 't1',
+          rating: 5,
+        },
+      });
+    });
+
+    test('createReview creates review from developer', async () => {
+      const createdAt = new Date('2026-02-14T10:00:00Z');
+      prismaMock.$transaction.mockImplementation((callback) => callback(prismaMock));
+      prismaMock.task.findUnique.mockResolvedValue({
+        id: 't1',
+        ownerUserId: 'u1',
+        status: 'COMPLETED',
+        deletedAt: null,
+        acceptedApplicationId: 'a1',
+        acceptedApplication: { developerUserId: 'u2' },
+      });
+      prismaMock.review = {
+        findUnique: jest.fn().mockResolvedValue(null),
+        create: jest.fn().mockResolvedValue({
+          id: 'r2',
+          taskId: 't1',
+          authorUserId: 'u2',
+          targetUserId: 'u1',
+          rating: 4,
+          text: 'Professional company',
+          createdAt,
+        }),
+      };
+      notificationsServiceMock.createNotification.mockResolvedValue(null);
+
+      const result = await tasksService.createReview({
+        userId: 'u2',
+        taskId: 't1',
+        review: { rating: 4, text: 'Professional company' },
+      });
+
+      expect(result).toEqual({
+        reviewId: 'r2',
+        taskId: 't1',
+        authorUserId: 'u2',
+        targetUserId: 'u1',
+        rating: 4,
+        text: 'Professional company',
+        createdAt,
+      });
+
+      expect(notificationsServiceMock.createNotification).toHaveBeenCalledWith({
+        client: prismaMock,
+        userId: 'u1',
+        actorUserId: 'u2',
+        taskId: 't1',
+        type: 'REVIEW_CREATED',
+        payload: {
+          review_id: 'r2',
+          task_id: 't1',
+          rating: 4,
+        },
+      });
+    });
+  });
 });

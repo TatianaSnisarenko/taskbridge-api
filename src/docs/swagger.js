@@ -624,6 +624,18 @@ export const swaggerSpec = {
           completed_at: { type: 'string', format: 'date-time' },
         },
       },
+      CreateReviewResponse: {
+        type: 'object',
+        properties: {
+          review_id: { type: 'string', format: 'uuid' },
+          task_id: { type: 'string', format: 'uuid' },
+          author_user_id: { type: 'string', format: 'uuid' },
+          target_user_id: { type: 'string', format: 'uuid' },
+          rating: { type: 'integer', minimum: 1, maximum: 5 },
+          text: { type: 'string', nullable: true },
+          created_at: { type: 'string', format: 'date-time' },
+        },
+      },
       CloseTaskResponse: {
         type: 'object',
         properties: {
@@ -1938,6 +1950,66 @@ export const swaggerSpec = {
             recipient: 'accepted developer',
             actor: 'company',
             payload: { task_id: 'uuid', completed_at: '2026-02-14T15:00:00Z' },
+          },
+        ],
+      },
+    },
+    '/api/v1/tasks/{taskId}/reviews': {
+      post: {
+        tags: ['Tasks'],
+        summary: 'Create a review for a completed task',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'taskId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+          {
+            name: 'X-Persona',
+            in: 'header',
+            required: true,
+            schema: { type: 'string', enum: ['developer', 'company'] },
+            description: 'Author must be a task participant (developer or company owner)',
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  rating: { type: 'integer', minimum: 1, maximum: 5, description: 'Rating from 1 to 5' },
+                  text: { type: 'string', minLength: 5, maxLength: 1000, nullable: true, description: 'Optional review text' },
+                },
+                required: ['rating'],
+              },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: 'Review created',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/CreateReviewResponse' },
+              },
+            },
+          },
+          400: { description: 'Validation error' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'User is not a task participant' },
+          404: { description: 'Task not found' },
+          409: { description: 'Task not completed, or user already reviewed this task' },
+        },
+        'x-side-effects': [
+          {
+            type: 'REVIEW_CREATED',
+            recipient: 'target user (the other participant)',
+            actor: 'author (developer or company owner)',
+            payload: { review_id: 'uuid', task_id: 'uuid', rating: 5 },
           },
         ],
       },

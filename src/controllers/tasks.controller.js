@@ -186,3 +186,21 @@ export const confirmTaskCompletion = asyncHandler(async (req, res) => {
     completed_at: result.completedAt.toISOString(),
   });
 });
+
+export const createReview = asyncHandler(async (req, res) => {
+  const result = await tasksService.createReview({
+    userId: req.user.id,
+    taskId: req.params.taskId,
+    review: req.body,
+  });
+
+  return res.status(201).json({
+    review_id: result.reviewId,
+    task_id: result.taskId,
+    author_user_id: result.authorUserId,
+    target_user_id: result.targetUserId,
+    rating: result.rating,
+    text: result.text,
+    created_at: result.createdAt.toISOString(),
+  });
+});

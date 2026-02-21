@@ -9,6 +9,7 @@ import {
   updateTaskDraftSchema,
   taskIdParamSchema,
   getTasksCatalogSchema,
+  createReviewSchema,
 } from '../schemas/tasks.schemas.js';
 
 export const tasksRouter = Router();
@@ -96,6 +97,14 @@ tasksRouter.post(
   requirePersona('company'),
   validate(taskIdParamSchema, 'params'),
   tasksController.confirmTaskCompletion
+);
+
+tasksRouter.post(
+  '/:taskId/reviews',
+  requireAuth,
+  validate(taskIdParamSchema, 'params'),
+  validate(createReviewSchema),
+  tasksController.createReview
 );
 
 tasksRouter.post(
