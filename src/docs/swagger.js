@@ -1480,7 +1480,7 @@ export const swaggerSpec = {
               },
             },
           },
-            401: { description: 'Unauthorized' },
+          401: { description: 'Unauthorized' },
           403: { description: 'Developer profile does not exist' },
           404: { description: 'Profile not found' },
           500: {
