@@ -173,3 +173,16 @@ export const requestTaskCompletion = asyncHandler(async (req, res) => {
     status: result.status,
   });
 });
+
+export const confirmTaskCompletion = asyncHandler(async (req, res) => {
+  const result = await tasksService.confirmTaskCompletion({
+    userId: req.user.id,
+    taskId: req.params.taskId,
+  });
+
+  return res.status(200).json({
+    task_id: result.taskId,
+    status: result.status,
+    completed_at: result.completedAt.toISOString(),
+  });
+});

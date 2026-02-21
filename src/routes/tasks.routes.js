@@ -91,6 +91,14 @@ tasksRouter.post(
 );
 
 tasksRouter.post(
+  '/:taskId/completion/confirm',
+  requireAuth,
+  requirePersona('company'),
+  validate(taskIdParamSchema, 'params'),
+  tasksController.confirmTaskCompletion
+);
+
+tasksRouter.post(
   '/:taskId/close',
   requireAuth,
   requirePersona('company'),

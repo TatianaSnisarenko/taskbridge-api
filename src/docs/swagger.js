@@ -616,6 +616,14 @@ export const swaggerSpec = {
           status: { type: 'string', enum: ['COMPLETION_REQUESTED'] },
         },
       },
+      ConfirmTaskCompletionResponse: {
+        type: 'object',
+        properties: {
+          task_id: { type: 'string', format: 'uuid' },
+          status: { type: 'string', enum: ['COMPLETED'] },
+          completed_at: { type: 'string', format: 'date-time' },
+        },
+      },
       CloseTaskResponse: {
         type: 'object',
         properties: {
@@ -1886,6 +1894,50 @@ export const swaggerSpec = {
             recipient: 'task.owner_user_id',
             actor: 'developer',
             payload: { task_id: 'uuid' },
+          },
+        ],
+      },
+    },
+    '/api/v1/tasks/{taskId}/completion/confirm': {
+      post: {
+        tags: ['Tasks'],
+        summary: 'Confirm task completion (COMPLETION_REQUESTED -> COMPLETED)',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'taskId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+          {
+            name: 'X-Persona',
+            in: 'header',
+            required: true,
+            schema: { type: 'string', enum: ['company'] },
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Task completed',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ConfirmTaskCompletionResponse' },
+              },
+            },
+          },
+          400: { description: 'Validation error' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Not task owner' },
+          404: { description: 'Task not found' },
+          409: { description: 'Task in invalid state (must be COMPLETION_REQUESTED)' },
+        },
+        'x-side-effects': [
+          {
+            type: 'TASK_COMPLETED',
+            recipient: 'accepted developer',
+            actor: 'company',
+            payload: { task_id: 'uuid', completed_at: '2026-02-14T15:00:00Z' },
           },
         ],
       },

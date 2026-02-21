@@ -896,3 +896,70 @@ export async function requestTaskCompletion({ userId, taskId }) {
 
   return result;
 }
+
+export async function confirmTaskCompletion({ userId, taskId }) {
+  const result = await prisma.$transaction(async (tx) => {
+    const task = await tx.task.findUnique({
+      where: { id: taskId },
+      select: {
+        id: true,
+        ownerUserId: true,
+        status: true,
+        deletedAt: true,
+        acceptedApplicationId: true,
+        acceptedApplication: {
+          select: {
+            developerUserId: true,
+          },
+        },
+      },
+    });
+
+    if (!task || task.deletedAt) {
+      throw new ApiError(404, 'NOT_FOUND', 'Task not found');
+    }
+
+    if (task.ownerUserId !== userId) {
+      throw new ApiError(403, 'NOT_OWNER', 'Task does not belong to user');
+    }
+
+    if (task.status !== 'COMPLETION_REQUESTED') {
+      throw new ApiError(409, 'INVALID_STATE', 'Task is not awaiting completion confirmation');
+    }
+
+    if (!task.acceptedApplicationId || !task.acceptedApplication?.developerUserId) {
+      throw new ApiError(409, 'INVALID_STATE', 'Accepted developer not found');
+    }
+
+    const completedAt = new Date();
+
+    const updated = await tx.task.update({
+      where: { id: taskId },
+      data: {
+        status: 'COMPLETED',
+        completedAt,
+      },
+      select: { id: true, status: true, completedAt: true },
+    });
+
+    await createNotification({
+      client: tx,
+      userId: task.acceptedApplication.developerUserId,
+      actorUserId: userId,
+      taskId: task.id,
+      type: 'TASK_COMPLETED',
+      payload: {
+        task_id: task.id,
+        completed_at: updated.completedAt.toISOString(),
+      },
+    });
+
+    return {
+      taskId: updated.id,
+      status: updated.status,
+      completedAt: updated.completedAt,
+    };
+  });
+
+  return result;
+}
