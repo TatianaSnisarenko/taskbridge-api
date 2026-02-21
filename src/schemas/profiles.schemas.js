@@ -166,3 +166,13 @@ const companyProfileFields = {
 export const createCompanyProfileSchema = Joi.object(companyProfileFields);
 
 export const updateCompanyProfileSchema = Joi.object(companyProfileFields);
+
+export const getUserReviewsSchema = Joi.object({
+  page: Joi.number().min(1).default(1).messages({
+    'number.min': 'Page must be at least 1',
+  }),
+  size: Joi.number().min(1).max(100).default(20).messages({
+    'number.min': 'Size must be at least 1',
+    'number.max': 'Size must not exceed 100',
+  }),
+});

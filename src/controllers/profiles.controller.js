@@ -66,3 +66,13 @@ export const getCompanyProfile = asyncHandler(async (req, res) => {
 
   return res.status(200).json(result);
 });
+
+export const getUserReviews = asyncHandler(async (req, res) => {
+  const result = await profilesService.getUserReviews({
+    userId: req.params.userId,
+    page: req.query.page,
+    size: req.query.size,
+  });
+
+  return res.status(200).json(result);
+});

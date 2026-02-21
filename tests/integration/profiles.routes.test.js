@@ -575,4 +575,230 @@ describe('profiles routes', () => {
       reviews_count: 8,
     });
   });
+
+  describe('GET /users/{userId}/reviews', () => {
+    test('GET /users/:userId/reviews rejects invalid user ID', async () => {
+      const res = await request(app).get('/api/v1/users/not-a-uuid/reviews');
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    });
+
+    test('GET /users/:userId/reviews rejects user not found', async () => {
+      const res = await request(app).get(
+        '/api/v1/users/3fa85f64-5717-4562-b3fc-2c963f66afa6/reviews'
+      );
+
+      expect(res.status).toBe(404);
+      expect(res.body.error.code).toBe('USER_NOT_FOUND');
+    });
+
+    test('GET /users/:userId/reviews returns empty list for user with no reviews', async () => {
+      const user = await createUser({ developerProfile: { displayName: 'Dev' } });
+
+      const res = await request(app).get(`/api/v1/users/${user.id}/reviews`);
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({
+        items: [],
+        page: 1,
+        size: 20,
+        total: 0,
+      });
+    });
+
+    test('GET /users/:userId/reviews returns reviews with pagination', async () => {
+      const targetUser = await createUser({ developerProfile: { displayName: 'Target Dev' } });
+      const reviewer1 = await createUser({ companyProfile: { companyName: 'Company 1' } });
+      const reviewer2 = await createUser({ developerProfile: { displayName: 'Reviewer Dev' } });
+
+      const task1 = await prisma.task.create({
+        data: {
+          ownerUserId: reviewer1.id,
+          status: 'COMPLETED',
+          completedAt: new Date(),
+          publishedAt: new Date(),
+          title: 'Task 1',
+          description: 'Task 1 description',
+          category: 'BACKEND',
+          type: 'PAID',
+          difficulty: 'JUNIOR',
+          requiredSkills: ['Node.js'],
+          estimatedEffortHours: 5,
+          expectedDuration: 'DAYS_1_7',
+          communicationLanguage: 'EN',
+          timezonePreference: 'UTC',
+          applicationDeadline: new Date(),
+          visibility: 'PUBLIC',
+          deliverables: 'Code',
+          requirements: 'Reqs',
+          niceToHave: 'Nice',
+        },
+      });
+
+      const task2 = await prisma.task.create({
+        data: {
+          ownerUserId: reviewer2.id,
+          status: 'COMPLETED',
+          completedAt: new Date(),
+          publishedAt: new Date(),
+          title: 'Task 2',
+          description: 'Task 2 description',
+          category: 'BACKEND',
+          type: 'PAID',
+          difficulty: 'JUNIOR',
+          requiredSkills: ['Node.js'],
+          estimatedEffortHours: 5,
+          expectedDuration: 'DAYS_1_7',
+          communicationLanguage: 'EN',
+          timezonePreference: 'UTC',
+          applicationDeadline: new Date(),
+          visibility: 'PUBLIC',
+          deliverables: 'Code',
+          requirements: 'Reqs',
+          niceToHave: 'Nice',
+        },
+      });
+
+      // Create reviews
+      const review1 = await prisma.review.create({
+        data: {
+          taskId: task1.id,
+          authorUserId: reviewer1.id,
+          targetUserId: targetUser.id,
+          rating: 5,
+          text: 'Excellent work',
+          createdAt: new Date('2026-02-14T10:00:00Z'),
+        },
+      });
+
+      const review2 = await prisma.review.create({
+        data: {
+          taskId: task2.id,
+          authorUserId: reviewer2.id,
+          targetUserId: targetUser.id,
+          rating: 4,
+          text: 'Good collaboration',
+          createdAt: new Date('2026-02-14T15:00:00Z'),
+        },
+      });
+
+      const res = await request(app).get(`/api/v1/users/${targetUser.id}/reviews?page=1&size=20`);
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({
+        items: expect.arrayContaining([
+          {
+            review_id: review1.id,
+            task_id: task1.id,
+            rating: 5,
+            text: 'Excellent work',
+            created_at: '2026-02-14T10:00:00.000Z',
+            author: {
+              user_id: reviewer1.id,
+              display_name: 'Company 1',
+              company_name: 'Company 1',
+            },
+          },
+          {
+            review_id: review2.id,
+            task_id: task2.id,
+            rating: 4,
+            text: 'Good collaboration',
+            created_at: '2026-02-14T15:00:00.000Z',
+            author: {
+              user_id: reviewer2.id,
+              display_name: 'Reviewer Dev',
+              company_name: null,
+            },
+          },
+        ]),
+        page: 1,
+        size: 20,
+        total: 2,
+      });
+    });
+
+    test('GET /users/:userId/reviews orders results by created_at descending', async () => {
+      const targetUser = await createUser({ developerProfile: { displayName: 'Target Dev' } });
+      const reviewer = await createUser({ developerProfile: { displayName: 'Reviewer Dev' } });
+
+      const task1 = await prisma.task.create({
+        data: {
+          ownerUserId: reviewer.id,
+          status: 'COMPLETED',
+          completedAt: new Date(),
+          publishedAt: new Date(),
+          title: 'Task 1',
+          description: 'Task 1 description',
+          category: 'BACKEND',
+          type: 'PAID',
+          difficulty: 'JUNIOR',
+          requiredSkills: ['Node.js'],
+          estimatedEffortHours: 5,
+          expectedDuration: 'DAYS_1_7',
+          communicationLanguage: 'EN',
+          timezonePreference: 'UTC',
+          applicationDeadline: new Date(),
+          visibility: 'PUBLIC',
+          deliverables: 'Code',
+          requirements: 'Reqs',
+          niceToHave: 'Nice',
+        },
+      });
+
+      const task2 = await prisma.task.create({
+        data: {
+          ownerUserId: reviewer.id,
+          status: 'COMPLETED',
+          completedAt: new Date(),
+          publishedAt: new Date(),
+          title: 'Task 2',
+          description: 'Task 2 description',
+          category: 'BACKEND',
+          type: 'PAID',
+          difficulty: 'JUNIOR',
+          requiredSkills: ['Node.js'],
+          estimatedEffortHours: 5,
+          expectedDuration: 'DAYS_1_7',
+          communicationLanguage: 'EN',
+          timezonePreference: 'UTC',
+          applicationDeadline: new Date(),
+          visibility: 'PUBLIC',
+          deliverables: 'Code',
+          requirements: 'Reqs',
+          niceToHave: 'Nice',
+        },
+      });
+
+      // Create reviews with different dates
+      await prisma.review.create({
+        data: {
+          taskId: task1.id,
+          authorUserId: reviewer.id,
+          targetUserId: targetUser.id,
+          rating: 5,
+          text: 'First review',
+          createdAt: new Date('2026-02-14T10:00:00Z'),
+        },
+      });
+
+      const review2 = await prisma.review.create({
+        data: {
+          taskId: task2.id,
+          authorUserId: reviewer.id,
+          targetUserId: targetUser.id,
+          rating: 4,
+          text: 'Second review',
+          createdAt: new Date('2026-02-14T15:00:00Z'),
+        },
+      });
+
+      const res = await request(app).get(`/api/v1/users/${targetUser.id}/reviews`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.items[0].review_id).toBe(review2.id);
+      expect(res.body.items[0].text).toBe('Second review');
+    });
+  });
 });

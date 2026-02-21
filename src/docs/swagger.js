@@ -636,6 +636,35 @@ export const swaggerSpec = {
           created_at: { type: 'string', format: 'date-time' },
         },
       },
+      UserReviewsResponse: {
+        type: 'object',
+        properties: {
+          items: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                review_id: { type: 'string', format: 'uuid' },
+                task_id: { type: 'string', format: 'uuid' },
+                rating: { type: 'integer', minimum: 1, maximum: 5 },
+                text: { type: 'string', nullable: true },
+                created_at: { type: 'string', format: 'date-time' },
+                author: {
+                  type: 'object',
+                  properties: {
+                    user_id: { type: 'string', format: 'uuid' },
+                    display_name: { type: 'string' },
+                    company_name: { type: 'string', nullable: true },
+                  },
+                },
+              },
+            },
+          },
+          page: { type: 'integer', minimum: 1 },
+          size: { type: 'integer', minimum: 1, maximum: 100 },
+          total: { type: 'integer', minimum: 0 },
+        },
+      },
       CloseTaskResponse: {
         type: 'object',
         properties: {
@@ -2247,6 +2276,45 @@ export const swaggerSpec = {
           403: { description: 'Not task owner or company persona required' },
           404: { description: 'Application not found' },
           409: { description: 'Invalid state - application already accepted or rejected' },
+        },
+      },
+    },
+    '/api/v1/users/{userId}/reviews': {
+      get: {
+        tags: ['Users'],
+        summary: 'Get reviews for a user',
+        parameters: [
+          {
+            name: 'userId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+            description: 'User UUID',
+          },
+          {
+            name: 'page',
+            in: 'query',
+            schema: { type: 'integer', minimum: 1, default: 1 },
+            description: 'Page number (starting from 1)',
+          },
+          {
+            name: 'size',
+            in: 'query',
+            schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
+            description: 'Page size (max 100)',
+          },
+        ],
+        responses: {
+          200: {
+            description: 'User reviews retrieved',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/UserReviewsResponse' },
+              },
+            },
+          },
+          400: { description: 'Validation error' },
+          404: { description: 'User not found' },
         },
       },
     },
