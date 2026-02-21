@@ -656,6 +656,15 @@ export const swaggerSpec = {
           total: { type: 'integer', example: 5 },
         },
       },
+      AcceptApplicationResponse: {
+        type: 'object',
+        properties: {
+          task_id: { type: 'string', format: 'uuid' },
+          accepted_application_id: { type: 'string', format: 'uuid' },
+          task_status: { type: 'string', enum: ['IN_PROGRESS'] },
+          accepted_developer_user_id: { type: 'string', format: 'uuid' },
+        },
+      },
       TaskCompany: {
         type: 'object',
         properties: {
@@ -837,6 +846,16 @@ export const swaggerSpec = {
           content: {
             'application/json': {
               schema: { $ref: '#/components/schemas/SignupRequest' },
+              example: {
+                email: 'user@example.com',
+                password: 'password',
+                developerProfile: {
+                  displayName: 'Developer',
+                },
+                companyProfile: {
+                  companyName: 'Example Company',
+                },
+              },
             },
           },
         },
@@ -861,6 +880,10 @@ export const swaggerSpec = {
           content: {
             'application/json': {
               schema: { $ref: '#/components/schemas/AuthCredentials' },
+              example: {
+                email: 'user@example.com',
+                password: 'password',
+              },
             },
           },
         },
@@ -925,6 +948,9 @@ export const swaggerSpec = {
           content: {
             'application/json': {
               schema: { $ref: '#/components/schemas/ResendVerificationRequest' },
+              example: {
+                email: 'user@example.com',
+              },
             },
           },
         },
@@ -1012,14 +1038,14 @@ export const swaggerSpec = {
             'application/json': {
               schema: { $ref: '#/components/schemas/CreateDeveloperProfileRequest' },
               example: {
-                display_name: 'Tetiana',
-                primary_role: 'Java Backend Engineer',
+                display_name: 'Developer',
+                primary_role: 'Backend Engineer',
                 bio: 'Short bio',
-                experience_level: 'SENIOR',
-                location: 'Ukraine',
-                timezone: 'Europe/Zaporozhye',
-                skills: ['Java', 'Spring'],
-                tech_stack: ['Spring Boot', 'JPA'],
+                experience_level: 'MIDDLE',
+                location: 'EU',
+                timezone: 'Europe/UTC',
+                skills: ['Node.js', 'PostgreSQL'],
+                tech_stack: ['Express', 'Prisma'],
                 availability: 'FEW_HOURS_WEEK',
                 preferred_task_categories: ['BACKEND'],
                 portfolio_url: 'https://example.com/portfolio',
@@ -1053,14 +1079,14 @@ export const swaggerSpec = {
             'application/json': {
               schema: { $ref: '#/components/schemas/UpdateDeveloperProfileRequest' },
               example: {
-                display_name: 'Tetiana',
-                primary_role: 'Java Backend Engineer',
+                display_name: 'Developer',
+                primary_role: 'Backend Engineer',
                 bio: 'Updated bio',
-                experience_level: 'SENIOR',
-                location: 'Ukraine',
-                timezone: 'Europe/Zaporozhye',
-                skills: ['Java', 'Spring'],
-                tech_stack: ['Spring Boot', 'JPA'],
+                experience_level: 'MIDDLE',
+                location: 'EU',
+                timezone: 'Europe/UTC',
+                skills: ['Node.js', 'PostgreSQL'],
+                tech_stack: ['Express', 'Prisma'],
                 availability: 'PART_TIME',
                 preferred_task_categories: ['BACKEND', 'DEVOPS'],
                 portfolio_url: 'https://example.com/portfolio',
@@ -1122,15 +1148,15 @@ export const swaggerSpec = {
             'application/json': {
               schema: { $ref: '#/components/schemas/CreateCompanyProfileRequest' },
               example: {
-                company_name: 'TeamUp Studio',
-                company_type: 'STARTUP',
-                description: 'We build...',
-                team_size: 4,
-                country: 'UA',
-                timezone: 'Europe/Zaporozhye',
-                contact_email: 'contact@teamup.dev',
-                website_url: 'https://teamup.dev',
-                links: { linkedin: 'https://linkedin.com/company/teamup' },
+                company_name: 'Example Company',
+                company_type: 'SMB',
+                description: 'We build software products.',
+                team_size: 10,
+                country: 'US',
+                timezone: 'America/New_York',
+                contact_email: 'contact@example.com',
+                website_url: 'https://example.com',
+                links: { linkedin: 'https://linkedin.com/company/example' },
               },
             },
           },
@@ -1159,15 +1185,15 @@ export const swaggerSpec = {
             'application/json': {
               schema: { $ref: '#/components/schemas/UpdateCompanyProfileRequest' },
               example: {
-                company_name: 'TeamUp Studio',
-                company_type: 'STARTUP',
+                company_name: 'Example Company',
+                company_type: 'SMB',
                 description: 'Updated description',
-                team_size: 5,
-                country: 'UA',
-                timezone: 'Europe/Zaporozhye',
-                contact_email: 'contact@teamup.dev',
-                website_url: 'https://teamup.dev',
-                links: { linkedin: 'https://linkedin.com/company/teamup' },
+                team_size: 12,
+                country: 'US',
+                timezone: 'America/New_York',
+                contact_email: 'contact@example.com',
+                website_url: 'https://example.com',
+                links: { linkedin: 'https://linkedin.com/company/example' },
               },
             },
           },
@@ -1232,9 +1258,9 @@ export const swaggerSpec = {
             'application/json': {
               schema: { $ref: '#/components/schemas/CreateProjectRequest' },
               example: {
-                title: 'TeamUp MVP',
-                short_description: 'Build MVP for marketplace',
-                description: 'Longer description for the marketplace project',
+                title: 'Example Project',
+                short_description: 'Build MVP for product',
+                description: 'Longer description for the project',
                 technologies: ['Node.js', 'PostgreSQL', 'Prisma'],
                 visibility: 'PUBLIC',
                 status: 'ACTIVE',
@@ -1384,7 +1410,7 @@ export const swaggerSpec = {
             'application/json': {
               schema: { $ref: '#/components/schemas/UpdateProjectRequest' },
               example: {
-                title: 'TeamUp MVP',
+                title: 'Example Project',
                 short_description: 'Updated short',
                 description: 'Updated long',
                 technologies: ['Node.js', 'PostgreSQL', 'Prisma'],
@@ -1944,6 +1970,46 @@ export const swaggerSpec = {
           404: { description: 'Task not found' },
           409: {
             description: 'Task in invalid state (cannot close IN_PROGRESS/COMPLETED/CLOSED tasks)',
+          },
+        },
+      },
+    },
+    '/api/v1/applications/{applicationId}/accept': {
+      post: {
+        tags: ['Applications'],
+        summary: 'Accept an application for a task',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'applicationId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+            description: 'Application UUID',
+          },
+          {
+            name: 'X-Persona',
+            in: 'header',
+            required: true,
+            schema: { type: 'string', enum: ['company'] },
+            description: 'Must be company persona',
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Application accepted, task status updated to IN_PROGRESS',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/AcceptApplicationResponse' },
+              },
+            },
+          },
+          400: { description: 'Validation error' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Not task owner or company persona required' },
+          404: { description: 'Application not found' },
+          409: {
+            description: 'Invalid state - task must be PUBLISHED and application must be APPLIED',
           },
         },
       },

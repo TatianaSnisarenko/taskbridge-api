@@ -1,6 +1,10 @@
 import { prisma } from '../db/prisma.js';
 import { ApiError } from '../utils/ApiError.js';
-import { createApplicationCreatedNotification } from './notifications.service.js';
+import {
+  createApplicationCreatedNotification,
+  createNotification,
+  buildTaskNotificationPayload,
+} from './notifications.service.js';
 
 function mapTaskInput(input) {
   return {
@@ -655,4 +659,130 @@ export async function getTaskApplications({ userId, taskId, page = 1, size = 20 
     size,
     total,
   };
+}
+
+export async function acceptApplication({ userId, applicationId }) {
+  // Use transaction for atomicity
+  const result = await prisma.$transaction(async (tx) => {
+    // Fetch application with task info
+    const application = await tx.application.findUnique({
+      where: { id: applicationId },
+      include: {
+        task: {
+          select: {
+            id: true,
+            status: true,
+            ownerUserId: true,
+            acceptedApplicationId: true,
+          },
+        },
+      },
+    });
+
+    if (!application) {
+      throw new ApiError(404, 'NOT_FOUND', 'Application not found');
+    }
+
+    const task = application.task;
+
+    // Verify user is task owner (company)
+    if (task.ownerUserId !== userId) {
+      throw new ApiError(403, 'NOT_OWNER', 'User is not the task owner');
+    }
+
+    // Verify task is in PUBLISHED status and doesn't have an accepted application
+    if (task.status !== 'PUBLISHED') {
+      throw new ApiError(409, 'INVALID_STATE', 'Task is not in PUBLISHED status');
+    }
+
+    if (task.acceptedApplicationId) {
+      throw new ApiError(409, 'INVALID_STATE', 'Task already has an accepted application');
+    }
+
+    // Verify application is in APPLIED status
+    if (application.status !== 'APPLIED') {
+      throw new ApiError(409, 'INVALID_STATE', 'Application is not in APPLIED status');
+    }
+
+    // Update the accepted application
+    await tx.application.update({
+      where: { id: applicationId },
+      data: {
+        status: 'ACCEPTED',
+      },
+    });
+
+    // Update task: set accepted application and status to IN_PROGRESS
+    await tx.task.update({
+      where: { id: task.id },
+      data: {
+        acceptedApplicationId: applicationId,
+        status: 'IN_PROGRESS',
+      },
+    });
+
+    // Get all other applications for this task that are in APPLIED status
+    const otherApplications = await tx.application.findMany({
+      where: {
+        taskId: task.id,
+        id: { not: applicationId },
+        status: 'APPLIED',
+      },
+      select: {
+        id: true,
+        developerUserId: true,
+      },
+    });
+
+    // Update other applications to REJECTED
+    if (otherApplications.length > 0) {
+      await tx.application.updateMany({
+        where: {
+          taskId: task.id,
+          id: { not: applicationId },
+          status: 'APPLIED',
+        },
+        data: {
+          status: 'REJECTED',
+        },
+      });
+    }
+
+    // Create APPLICATION_ACCEPTED notification for accepted developer
+    await createNotification({
+      client: tx,
+      userId: application.developerUserId,
+      actorUserId: userId,
+      taskId: task.id,
+      type: 'APPLICATION_ACCEPTED',
+      payload: buildTaskNotificationPayload({
+        taskId: task.id,
+        applicationId: applicationId,
+      }),
+    });
+
+    // Create APPLICATION_REJECTED notifications for other developers
+    for (const otherApp of otherApplications) {
+      await createNotification({
+        client: tx,
+        userId: otherApp.developerUserId,
+        actorUserId: userId,
+        taskId: task.id,
+        type: 'APPLICATION_REJECTED',
+        payload: buildTaskNotificationPayload({
+          taskId: task.id,
+          applicationId: otherApp.id,
+        }),
+      });
+    }
+
+    return {
+      task_id: task.id,
+      accepted_application_id: applicationId,
+      task_status: 'IN_PROGRESS',
+      accepted_developer_user_id: application.developerUserId,
+    };
+  });
+
+  return result;
 }

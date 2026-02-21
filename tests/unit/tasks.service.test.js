@@ -19,6 +19,8 @@ const prismaMock = {
 
 const notificationsServiceMock = {
   createApplicationCreatedNotification: jest.fn(),
+  buildTaskNotificationPayload: jest.fn(),
+  createNotification: jest.fn(),
 };
 
 jest.unstable_mockModule('../../src/db/prisma.js', () => ({ prisma: prismaMock }));

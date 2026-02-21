@@ -2921,7 +2921,6 @@ describe('tasks routes', () => {
         },
       });
       const companyToken = buildAccessToken({ userId: company.id, email: company.email });
-      const devToken = buildAccessToken({ userId: developer.id, email: developer.email });
 
       const task = await prisma.task.create({
         data: {
@@ -3177,7 +3176,7 @@ describe('tasks routes', () => {
         },
       });
 
-      const task = await prisma.task.create({
+      await prisma.task.create({
         data: {
           ownerUserId: company.id,
           projectId: project.id,

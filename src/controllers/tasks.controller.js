@@ -135,3 +135,16 @@ export const getTaskApplications = asyncHandler(async (req, res) => {
     total: result.total,
   });
 });
+export const acceptApplication = asyncHandler(async (req, res) => {
+  const result = await tasksService.acceptApplication({
+    userId: req.user.id,
+    applicationId: req.params.applicationId,
+  });
+
+  return res.status(200).json({
+    task_id: result.task_id,
+    accepted_application_id: result.accepted_application_id,
+    task_status: result.task_status,
+    accepted_developer_user_id: result.accepted_developer_user_id,
+  });
+});
