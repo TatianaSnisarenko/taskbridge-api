@@ -1981,10 +1981,25 @@ export const swaggerSpec = {
               schema: {
                 type: 'object',
                 properties: {
-                  rating: { type: 'integer', minimum: 1, maximum: 5, description: 'Rating from 1 to 5' },
-                  text: { type: 'string', minLength: 5, maxLength: 1000, nullable: true, description: 'Optional review text' },
+                  rating: {
+                    type: 'integer',
+                    minimum: 1,
+                    maximum: 5,
+                    description: 'Rating from 1 to 5',
+                  },
+                  text: {
+                    type: 'string',
+                    minLength: 5,
+                    maxLength: 1000,
+                    nullable: true,
+                    description: 'Optional review text',
+                  },
                 },
                 required: ['rating'],
+              },
+              example: {
+                rating: 5,
+                text: 'Great collaboration and professional approach to the task',
               },
             },
           },
