@@ -841,3 +841,58 @@ export async function rejectApplication({ userId, applicationId }) {
 
   return result;
 }
+
+export async function requestTaskCompletion({ userId, taskId }) {
+  const result = await prisma.$transaction(async (tx) => {
+    const task = await tx.task.findUnique({
+      where: { id: taskId },
+      select: {
+        id: true,
+        ownerUserId: true,
+        status: true,
+        deletedAt: true,
+        acceptedApplicationId: true,
+        acceptedApplication: {
+          select: {
+            developerUserId: true,
+          },
+        },
+      },
+    });
+
+    if (!task || task.deletedAt) {
+      throw new ApiError(404, 'NOT_FOUND', 'Task not found');
+    }
+
+    if (task.status !== 'IN_PROGRESS') {
+      throw new ApiError(409, 'INVALID_STATE', 'Task is not in IN_PROGRESS status');
+    }
+
+    if (!task.acceptedApplicationId || task.acceptedApplication?.developerUserId !== userId) {
+      throw new ApiError(403, 'FORBIDDEN', 'Only accepted developer can request completion');
+    }
+
+    const updated = await tx.task.update({
+      where: { id: taskId },
+      data: {
+        status: 'COMPLETION_REQUESTED',
+      },
+      select: { id: true, status: true },
+    });
+
+    await createNotification({
+      client: tx,
+      userId: task.ownerUserId,
+      actorUserId: userId,
+      taskId: task.id,
+      type: 'COMPLETION_REQUESTED',
+      payload: {
+        task_id: task.id,
+      },
+    });
+
+    return { taskId: updated.id, status: updated.status };
+  });
+
+  return result;
+}

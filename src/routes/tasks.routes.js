@@ -83,6 +83,14 @@ tasksRouter.get(
 );
 
 tasksRouter.post(
+  '/:taskId/completion/request',
+  requireAuth,
+  requirePersona('developer'),
+  validate(taskIdParamSchema, 'params'),
+  tasksController.requestTaskCompletion
+);
+
+tasksRouter.post(
   '/:taskId/close',
   requireAuth,
   requirePersona('company'),

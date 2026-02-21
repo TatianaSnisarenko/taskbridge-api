@@ -1106,6 +1106,131 @@ describe('tasks.service', () => {
     });
   });
 
+  describe('requestTaskCompletion', () => {
+    test('rejects missing task', async () => {
+      prismaMock.$transaction.mockImplementation(async (cb) => cb(prismaMock));
+      prismaMock.task.findUnique.mockResolvedValue(null);
+
+      await expect(
+        tasksService.requestTaskCompletion({
+          userId: 'dev1',
+          taskId: 't1',
+        })
+      ).rejects.toMatchObject({
+        status: 404,
+        code: 'NOT_FOUND',
+      });
+    });
+
+    test('rejects deleted task', async () => {
+      prismaMock.$transaction.mockImplementation(async (cb) => cb(prismaMock));
+      prismaMock.task.findUnique.mockResolvedValue({
+        id: 't1',
+        deletedAt: new Date(),
+        status: 'IN_PROGRESS',
+      });
+
+      await expect(
+        tasksService.requestTaskCompletion({
+          userId: 'dev1',
+          taskId: 't1',
+        })
+      ).rejects.toMatchObject({
+        status: 404,
+        code: 'NOT_FOUND',
+      });
+    });
+
+    test('rejects invalid state', async () => {
+      prismaMock.$transaction.mockImplementation(async (cb) => cb(prismaMock));
+      prismaMock.task.findUnique.mockResolvedValue({
+        id: 't1',
+        ownerUserId: 'owner1',
+        status: 'PUBLISHED',
+        deletedAt: null,
+        acceptedApplicationId: 'a1',
+        acceptedApplication: { developerUserId: 'dev1' },
+      });
+
+      await expect(
+        tasksService.requestTaskCompletion({
+          userId: 'dev1',
+          taskId: 't1',
+        })
+      ).rejects.toMatchObject({
+        status: 409,
+        code: 'INVALID_STATE',
+      });
+    });
+
+    test('rejects non-accepted developer', async () => {
+      prismaMock.$transaction.mockImplementation(async (cb) => cb(prismaMock));
+      prismaMock.task.findUnique.mockResolvedValue({
+        id: 't1',
+        ownerUserId: 'owner1',
+        status: 'IN_PROGRESS',
+        deletedAt: null,
+        acceptedApplicationId: 'a1',
+        acceptedApplication: { developerUserId: 'dev2' },
+      });
+
+      await expect(
+        tasksService.requestTaskCompletion({
+          userId: 'dev1',
+          taskId: 't1',
+        })
+      ).rejects.toMatchObject({
+        status: 403,
+        code: 'FORBIDDEN',
+      });
+    });
+
+    test('updates task status and creates notification', async () => {
+      prismaMock.$transaction.mockImplementation(async (cb) => cb(prismaMock));
+      prismaMock.task.findUnique.mockResolvedValue({
+        id: 't1',
+        ownerUserId: 'owner1',
+        status: 'IN_PROGRESS',
+        deletedAt: null,
+        acceptedApplicationId: 'a1',
+        acceptedApplication: { developerUserId: 'dev1' },
+      });
+      prismaMock.task.update.mockResolvedValue({
+        id: 't1',
+        status: 'COMPLETION_REQUESTED',
+      });
+
+      const result = await tasksService.requestTaskCompletion({
+        userId: 'dev1',
+        taskId: 't1',
+      });
+
+      expect(prismaMock.task.update).toHaveBeenCalledWith({
+        where: { id: 't1' },
+        data: {
+          status: 'COMPLETION_REQUESTED',
+        },
+        select: { id: true, status: true },
+      });
+
+      expect(notificationsServiceMock.createNotification).toHaveBeenCalledWith({
+        client: prismaMock,
+        userId: 'owner1',
+        actorUserId: 'dev1',
+        taskId: 't1',
+        type: 'COMPLETION_REQUESTED',
+        payload: {
+          task_id: 't1',
+        },
+      });
+
+      expect(result).toEqual({
+        taskId: 't1',
+        status: 'COMPLETION_REQUESTED',
+      });
+    });
+  });
+
   describe('publishTask with max_talents check', () => {
     test('rejects if project reached max_talents', async () => {
       prismaMock.task.findUnique.mockResolvedValue({

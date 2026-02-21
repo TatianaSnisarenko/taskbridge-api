@@ -161,3 +161,15 @@ export const rejectApplication = asyncHandler(async (req, res) => {
     updated_at: result.updated_at,
   });
 });
+
+export const requestTaskCompletion = asyncHandler(async (req, res) => {
+  const result = await tasksService.requestTaskCompletion({
+    userId: req.user.id,
+    taskId: req.params.taskId,
+  });
+
+  return res.status(200).json({
+    task_id: result.taskId,
+    status: result.status,
+  });
+});

@@ -1165,6 +1165,238 @@ describe('tasks routes', () => {
     expect(closed.closedAt).toBeInstanceOf(Date);
   });
 
+  test('POST /tasks/:taskId/completion/request rejects unauthorized', async () => {
+    const res = await request(app).post(
+      '/api/v1/tasks/3fa85f64-5717-4562-b3fc-2c963f66afa6/completion/request'
+    );
+
+    expect(res.status).toBe(401);
+    expect(res.body.error.code).toBe('AUTH_REQUIRED');
+  });
+
+  test('POST /tasks/:taskId/completion/request rejects missing persona header', async () => {
+    const user = await createUser({ developerProfile: { displayName: 'Dev' } });
+    const token = buildAccessToken({ userId: user.id, email: user.email });
+
+    const res = await request(app)
+      .post('/api/v1/tasks/3fa85f64-5717-4562-b3fc-2c963f66afa6/completion/request')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('PERSONA_REQUIRED');
+  });
+
+  test('POST /tasks/:taskId/completion/request rejects non-developer persona', async () => {
+    const user = await createUser({ companyProfile: { companyName: 'TeamUp' } });
+    const token = buildAccessToken({ userId: user.id, email: user.email });
+
+    const res = await request(app)
+      .post('/api/v1/tasks/3fa85f64-5717-4562-b3fc-2c963f66afa6/completion/request')
+      .set('Authorization', `Bearer ${token}`)
+      .set('X-Persona', 'company');
+
+    expect(res.status).toBe(403);
+    expect(res.body.error.code).toBe('PERSONA_NOT_AVAILABLE');
+  });
+
+  test('POST /tasks/:taskId/completion/request rejects invalid task ID', async () => {
+    const user = await createUser({ developerProfile: { displayName: 'Dev' } });
+    const token = buildAccessToken({ userId: user.id, email: user.email });
+
+    const res = await request(app)
+      .post('/api/v1/tasks/not-a-uuid/completion/request')
+      .set('Authorization', `Bearer ${token}`)
+      .set('X-Persona', 'developer');
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    expect(res.body.error.details).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          field: 'taskId',
+          issue: 'Task id must be a valid UUID',
+        }),
+      ])
+    );
+  });
+
+  test('POST /tasks/:taskId/completion/request rejects task not found', async () => {
+    const user = await createUser({ developerProfile: { displayName: 'Dev' } });
+    const token = buildAccessToken({ userId: user.id, email: user.email });
+
+    const res = await request(app)
+      .post('/api/v1/tasks/3fa85f64-5717-4562-b3fc-2c963f66afa6/completion/request')
+      .set('Authorization', `Bearer ${token}`)
+      .set('X-Persona', 'developer');
+
+    expect(res.status).toBe(404);
+    expect(res.body.error.code).toBe('NOT_FOUND');
+  });
+
+  test('POST /tasks/:taskId/completion/request rejects invalid state (PUBLISHED)', async () => {
+    const company = await createUser({ companyProfile: { companyName: 'TeamUp' } });
+    const developer = await createUser({ developerProfile: { displayName: 'Dev' } });
+    const token = buildAccessToken({ userId: developer.id, email: developer.email });
+
+    const task = await prisma.task.create({
+      data: {
+        ownerUserId: company.id,
+        status: 'PUBLISHED',
+        publishedAt: new Date('2026-02-14T10:00:00Z'),
+        title: 'Published task',
+        description: 'Published task description',
+        category: 'BACKEND',
+        type: 'PAID',
+        difficulty: 'JUNIOR',
+        requiredSkills: ['Node.js'],
+        estimatedEffortHours: 5,
+        expectedDuration: 'DAYS_1_7',
+        communicationLanguage: 'EN',
+        timezonePreference: 'UTC',
+        applicationDeadline: new Date('2026-03-01'),
+        visibility: 'PUBLIC',
+        deliverables: 'Code',
+        requirements: 'Reqs',
+        niceToHave: 'Nice',
+      },
+    });
+
+    const res = await request(app)
+      .post(`/api/v1/tasks/${task.id}/completion/request`)
+      .set('Authorization', `Bearer ${token}`)
+      .set('X-Persona', 'developer');
+
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe('INVALID_STATE');
+  });
+
+  test('POST /tasks/:taskId/completion/request rejects non-accepted developer', async () => {
+    const company = await createUser({ companyProfile: { companyName: 'TeamUp' } });
+    const acceptedDev = await createUser({ developerProfile: { displayName: 'Accepted' } });
+    const otherDev = await createUser({ developerProfile: { displayName: 'Other' } });
+    const token = buildAccessToken({ userId: otherDev.id, email: otherDev.email });
+
+    const task = await prisma.task.create({
+      data: {
+        ownerUserId: company.id,
+        status: 'IN_PROGRESS',
+        publishedAt: new Date('2026-02-14T10:00:00Z'),
+        title: 'In progress task',
+        description: 'In progress task description',
+        category: 'BACKEND',
+        type: 'PAID',
+        difficulty: 'JUNIOR',
+        requiredSkills: ['Node.js'],
+        estimatedEffortHours: 5,
+        expectedDuration: 'DAYS_1_7',
+        communicationLanguage: 'EN',
+        timezonePreference: 'UTC',
+        applicationDeadline: new Date('2026-03-01'),
+        visibility: 'PUBLIC',
+        deliverables: 'Code',
+        requirements: 'Reqs',
+        niceToHave: 'Nice',
+      },
+    });
+
+    const application = await prisma.application.create({
+      data: {
+        taskId: task.id,
+        developerUserId: acceptedDev.id,
+        status: 'ACCEPTED',
+      },
+    });
+
+    await prisma.task.update({
+      where: { id: task.id },
+      data: { acceptedApplicationId: application.id },
+    });
+
+    const res = await request(app)
+      .post(`/api/v1/tasks/${task.id}/completion/request`)
+      .set('Authorization', `Bearer ${token}`)
+      .set('X-Persona', 'developer');
+
+    expect(res.status).toBe(403);
+    expect(res.body.error.code).toBe('FORBIDDEN');
+  });
+
+  test('POST /tasks/:taskId/completion/request marks task as completion requested', async () => {
+    const company = await createUser({ companyProfile: { companyName: 'TeamUp' } });
+    const developer = await createUser({ developerProfile: { displayName: 'Dev' } });
+    const token = buildAccessToken({ userId: developer.id, email: developer.email });
+
+    const task = await prisma.task.create({
+      data: {
+        ownerUserId: company.id,
+        status: 'IN_PROGRESS',
+        publishedAt: new Date('2026-02-14T10:00:00Z'),
+        title: 'In progress task',
+        description: 'In progress task description',
+        category: 'BACKEND',
+        type: 'PAID',
+        difficulty: 'JUNIOR',
+        requiredSkills: ['Node.js'],
+        estimatedEffortHours: 5,
+        expectedDuration: 'DAYS_1_7',
+        communicationLanguage: 'EN',
+        timezonePreference: 'UTC',
+        applicationDeadline: new Date('2026-03-01'),
+        visibility: 'PUBLIC',
+        deliverables: 'Code',
+        requirements: 'Reqs',
+        niceToHave: 'Nice',
+      },
+    });
+
+    const application = await prisma.application.create({
+      data: {
+        taskId: task.id,
+        developerUserId: developer.id,
+        status: 'ACCEPTED',
+      },
+    });
+
+    await prisma.task.update({
+      where: { id: task.id },
+      data: { acceptedApplicationId: application.id },
+    });
+
+    const res = await request(app)
+      .post(`/api/v1/tasks/${task.id}/completion/request`)
+      .set('Authorization', `Bearer ${token}`)
+      .set('X-Persona', 'developer');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      task_id: task.id,
+      status: 'COMPLETION_REQUESTED',
+    });
+
+    const updatedTask = await prisma.task.findUnique({ where: { id: task.id } });
+
+    expect(updatedTask.status).toBe('COMPLETION_REQUESTED');
+
+    const notification = await prisma.notification.findFirst({
+      where: {
+        userId: company.id,
+        taskId: task.id,
+        type: 'COMPLETION_REQUESTED',
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    expect(notification).toMatchObject({
+      userId: company.id,
+      actorUserId: developer.id,
+      taskId: task.id,
+      type: 'COMPLETION_REQUESTED',
+      payload: {
+        task_id: task.id,
+      },
+    });
+  });
+
   test('DELETE /tasks/:taskId rejects unauthorized', async () => {
     const res = await request(app).delete('/api/v1/tasks/3fa85f64-5717-4562-b3fc-2c963f66afa6');
 

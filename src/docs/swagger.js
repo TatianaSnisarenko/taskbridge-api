@@ -609,6 +609,13 @@ export const swaggerSpec = {
           published_at: { type: 'string', format: 'date-time' },
         },
       },
+      RequestTaskCompletionResponse: {
+        type: 'object',
+        properties: {
+          task_id: { type: 'string', format: 'uuid' },
+          status: { type: 'string', enum: ['COMPLETION_REQUESTED'] },
+        },
+      },
       CloseTaskResponse: {
         type: 'object',
         properties: {
@@ -1837,6 +1844,50 @@ export const swaggerSpec = {
           404: { description: 'Task not found' },
           409: { description: 'Task in invalid state (only DRAFT tasks can be published)' },
         },
+      },
+    },
+    '/api/v1/tasks/{taskId}/completion/request': {
+      post: {
+        tags: ['Tasks'],
+        summary: 'Request task completion (IN_PROGRESS -> COMPLETION_REQUESTED)',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'taskId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+          {
+            name: 'X-Persona',
+            in: 'header',
+            required: true,
+            schema: { type: 'string', enum: ['developer'] },
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Completion requested',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/RequestTaskCompletionResponse' },
+              },
+            },
+          },
+          400: { description: 'Validation error' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Only accepted developer can request completion' },
+          404: { description: 'Task not found' },
+          409: { description: 'Task in invalid state (must be IN_PROGRESS)' },
+        },
+        'x-side-effects': [
+          {
+            type: 'COMPLETION_REQUESTED',
+            recipient: 'task.owner_user_id',
+            actor: 'developer',
+            payload: { task_id: 'uuid' },
+          },
+        ],
       },
     },
     '/api/v1/tasks/{taskId}/applications': {
