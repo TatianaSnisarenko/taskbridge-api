@@ -90,3 +90,69 @@ export async function getMyApplications({ userId, page = 1, size = 20 }) {
     total,
   };
 }
+
+/**
+ * Get notifications for the current user with pagination
+ */
+export async function getMyNotifications({ userId, page = 1, size = 20, unreadOnly = false }) {
+  const skip = (page - 1) * size;
+
+  // Build filter for notifications
+  const whereFilter = { userId };
+
+  // Apply unread_only filter if requested
+  if (unreadOnly) {
+    whereFilter.readAt = null;
+  }
+
+  // Fetch notifications and total count in parallel
+  const [items, total, unreadTotal] = await Promise.all([
+    prisma.notification.findMany({
+      where: whereFilter,
+      select: {
+        id: true,
+        type: true,
+        actorUserId: true,
+        projectId: true,
+        taskId: true,
+        threadId: true,
+        payload: true,
+        createdAt: true,
+        readAt: true,
+      },
+      skip,
+      take: size,
+      orderBy: {
+        createdAt: 'desc',
+      },
+    }),
+    prisma.notification.count({
+      where: whereFilter,
+    }),
+    // Count unread notifications (always for current user, regardless of filter)
+    prisma.notification.count({
+      where: {
+        userId,
+        readAt: null,
+      },
+    }),
+  ]);
+
+  return {
+    items: items.map((notif) => ({
+      id: notif.id,
+      type: notif.type,
+      actor_user_id: notif.actorUserId,
+      project_id: notif.projectId,
+      task_id: notif.taskId,
+      thread_id: notif.threadId,
+      payload: notif.payload,
+      created_at: notif.createdAt.toISOString(),
+      read_at: notif.readAt?.toISOString() || null,
+    })),
+    page,
+    size,
+    total,
+    unread_total: unreadTotal,
+  };
+}

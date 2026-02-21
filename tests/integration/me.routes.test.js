@@ -492,4 +492,397 @@ describe('me routes', () => {
       });
     });
   });
+
+  describe('GET /me/notifications', () => {
+    test('rejects unauthorized', async () => {
+      const res = await request(app).get('/api/v1/me/notifications');
+
+      expect(res.status).toBe(401);
+      expect(res.body.error.code).toBe('AUTH_REQUIRED');
+    });
+
+    test('rejects invalid token', async () => {
+      const res = await request(app)
+        .get('/api/v1/me/notifications')
+        .set('Authorization', 'Bearer invalid');
+
+      expect(res.status).toBe(401);
+      expect(res.body.error.code).toBe('INVALID_TOKEN');
+    });
+
+    test('rejects invalid page parameter', async () => {
+      const user = await createUser({ developerProfile: { displayName: 'Dev' } });
+      const token = buildAccessToken({ userId: user.id, email: user.email });
+
+      const res = await request(app)
+        .get('/api/v1/me/notifications?page=0')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('VALIDATION_ERROR');
+      expect(res.body.error.details).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            field: 'page',
+          }),
+        ])
+      );
+    });
+
+    test('rejects invalid size parameter', async () => {
+      const user = await createUser({ developerProfile: { displayName: 'Dev' } });
+      const token = buildAccessToken({ userId: user.id, email: user.email });
+
+      const res = await request(app)
+        .get('/api/v1/me/notifications?size=150')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('VALIDATION_ERROR');
+      expect(res.body.error.details).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            field: 'size',
+          }),
+        ])
+      );
+    });
+
+    test('rejects invalid unread_only parameter', async () => {
+      const user = await createUser({ developerProfile: { displayName: 'Dev' } });
+      const token = buildAccessToken({ userId: user.id, email: user.email });
+
+      const res = await request(app)
+        .get('/api/v1/me/notifications?unread_only=maybe')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('VALIDATION_ERROR');
+      expect(res.body.error.details).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            field: 'unread_only',
+          }),
+        ])
+      );
+    });
+
+    test('returns empty list when user has no notifications', async () => {
+      const user = await createUser({ developerProfile: { displayName: 'Dev' } });
+      const token = buildAccessToken({ userId: user.id, email: user.email });
+
+      const res = await request(app)
+        .get('/api/v1/me/notifications')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body).toMatchObject({
+        items: [],
+        page: 1,
+        size: 20,
+        total: 0,
+        unread_total: 0,
+      });
+    });
+
+    test('returns paginated notifications', async () => {
+      const user = await createUser({ developerProfile: { displayName: 'Dev' } });
+      const actor = await createUser({ companyProfile: { companyName: 'Company' } });
+      const token = buildAccessToken({ userId: user.id, email: user.email });
+
+      // Create multiple notifications
+      const notif1 = await prisma.notification.create({
+        data: {
+          userId: user.id,
+          actorUserId: actor.id,
+          type: 'APPLICATION_ACCEPTED',
+          payload: { application_id: 'test-id-1' },
+          createdAt: new Date('2026-02-14T10:00:00Z'),
+        },
+      });
+
+      const notif2 = await prisma.notification.create({
+        data: {
+          userId: user.id,
+          actorUserId: actor.id,
+          type: 'TASK_COMPLETED',
+          payload: { task_id: 'test-id-2' },
+          createdAt: new Date('2026-02-14T11:00:00Z'),
+        },
+      });
+
+      const res = await request(app)
+        .get('/api/v1/me/notifications')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.items).toHaveLength(2);
+      expect(res.body.page).toBe(1);
+      expect(res.body.size).toBe(20);
+      expect(res.body.total).toBe(2);
+      expect(res.body.unread_total).toBe(2);
+
+      // Verify notifications are in reverse chronological order (most recent first)
+      expect(res.body.items[0].id).toBe(notif2.id);
+      expect(res.body.items[1].id).toBe(notif1.id);
+
+      // Verify notification structure
+      expect(res.body.items[0]).toMatchObject({
+        id: notif2.id,
+        type: 'TASK_COMPLETED',
+        actor_user_id: actor.id,
+        project_id: null,
+        task_id: null,
+        thread_id: null,
+        payload: { task_id: 'test-id-2' },
+        read_at: null,
+      });
+    });
+
+    test('filters unread notifications when unread_only=true', async () => {
+      const user = await createUser({ developerProfile: { displayName: 'Dev' } });
+      const actor = await createUser({ companyProfile: { companyName: 'Company' } });
+      const token = buildAccessToken({ userId: user.id, email: user.email });
+
+      // Create one unread and one read notification
+      const unreadNotif = await prisma.notification.create({
+        data: {
+          userId: user.id,
+          actorUserId: actor.id,
+          type: 'APPLICATION_ACCEPTED',
+          payload: { application_id: 'test-id-1' },
+        },
+      });
+
+      await prisma.notification.create({
+        data: {
+          userId: user.id,
+          actorUserId: actor.id,
+          type: 'TASK_COMPLETED',
+          payload: { task_id: 'test-id-2' },
+          readAt: new Date(),
+        },
+      });
+
+      const res = await request(app)
+        .get('/api/v1/me/notifications?unread_only=true')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.items).toHaveLength(1);
+      expect(res.body.items[0].id).toBe(unreadNotif.id);
+      expect(res.body.total).toBe(1);
+      // unread_total should still count all unread notifications (1)
+      expect(res.body.unread_total).toBe(1);
+    });
+
+    test('unread_total is correct regardless of filtering', async () => {
+      const user = await createUser({ developerProfile: { displayName: 'Dev' } });
+      const actor = await createUser({ companyProfile: { companyName: 'Company' } });
+      const token = buildAccessToken({ userId: user.id, email: user.email });
+
+      // Create 3 unread and 2 read notifications
+      await prisma.notification.create({
+        data: {
+          userId: user.id,
+          actorUserId: actor.id,
+          type: 'APPLICATION_ACCEPTED',
+          payload: { application_id: 'test-id-1' },
+        },
+      });
+
+      await prisma.notification.create({
+        data: {
+          userId: user.id,
+          actorUserId: actor.id,
+          type: 'TASK_COMPLETED',
+          payload: { task_id: 'test-id-2' },
+        },
+      });
+
+      await prisma.notification.create({
+        data: {
+          userId: user.id,
+          actorUserId: actor.id,
+          type: 'REVIEW_CREATED',
+          payload: { review_id: 'test-id-3' },
+        },
+      });
+
+      await prisma.notification.create({
+        data: {
+          userId: user.id,
+          actorUserId: actor.id,
+          type: 'APPLICATION_REJECTED',
+          payload: { application_id: 'test-id-4' },
+          readAt: new Date(),
+        },
+      });
+
+      await prisma.notification.create({
+        data: {
+          userId: user.id,
+          actorUserId: actor.id,
+          type: 'COMPLETION_REQUESTED',
+          payload: { task_id: 'test-id-5' },
+          readAt: new Date(),
+        },
+      });
+
+      // Get all notifications
+      const resAll = await request(app)
+        .get('/api/v1/me/notifications')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(resAll.status).toBe(200);
+      expect(resAll.body.total).toBe(5);
+      expect(resAll.body.unread_total).toBe(3);
+
+      // Get only unread notifications
+      const resUnread = await request(app)
+        .get('/api/v1/me/notifications?unread_only=true')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(resUnread.status).toBe(200);
+      expect(resUnread.body.total).toBe(3);
+      expect(resUnread.body.unread_total).toBe(3);
+    });
+
+    test('respects pagination parameters', async () => {
+      const user = await createUser({ developerProfile: { displayName: 'Dev' } });
+      const actor = await createUser({ companyProfile: { companyName: 'Company' } });
+      const token = buildAccessToken({ userId: user.id, email: user.email });
+
+      // Create 5 notifications
+      for (let i = 0; i < 5; i++) {
+        await prisma.notification.create({
+          data: {
+            userId: user.id,
+            actorUserId: actor.id,
+            type: 'APPLICATION_ACCEPTED',
+            payload: { application_id: `test-id-${i}` },
+          },
+        });
+      }
+
+      // Get first page with size 2
+      const res1 = await request(app)
+        .get('/api/v1/me/notifications?page=1&size=2')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res1.status).toBe(200);
+      expect(res1.body.items).toHaveLength(2);
+      expect(res1.body.page).toBe(1);
+      expect(res1.body.size).toBe(2);
+      expect(res1.body.total).toBe(5);
+
+      // Get second page with size 2
+      const res2 = await request(app)
+        .get('/api/v1/me/notifications?page=2&size=2')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res2.status).toBe(200);
+      expect(res2.body.items).toHaveLength(2);
+      expect(res2.body.page).toBe(2);
+      expect(res2.body.total).toBe(5);
+
+      // Ensure different notifications are returned
+      const ids1 = res1.body.items.map((n) => n.id);
+      const ids2 = res2.body.items.map((n) => n.id);
+      expect(ids1).not.toEqual(ids2);
+    });
+
+    test('returns only notifications for current user', async () => {
+      const user1 = await createUser({ developerProfile: { displayName: 'Dev1' } });
+      const user2 = await createUser({ developerProfile: { displayName: 'Dev2' } });
+      const actor = await createUser({ companyProfile: { companyName: 'Company' } });
+      const token1 = buildAccessToken({ userId: user1.id, email: user1.email });
+
+      // Create notifications for both users
+      await prisma.notification.create({
+        data: {
+          userId: user1.id,
+          actorUserId: actor.id,
+          type: 'APPLICATION_ACCEPTED',
+          payload: { application_id: 'test-id-1' },
+        },
+      });
+
+      await prisma.notification.create({
+        data: {
+          userId: user2.id,
+          actorUserId: actor.id,
+          type: 'APPLICATION_REJECTED',
+          payload: { application_id: 'test-id-2' },
+        },
+      });
+
+      // User1 should only see their notification
+      const res = await request(app)
+        .get('/api/v1/me/notifications')
+        .set('Authorization', `Bearer ${token1}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.items).toHaveLength(1);
+      expect(res.body.total).toBe(1);
+      expect(res.body.items[0]).toMatchObject({
+        type: 'APPLICATION_ACCEPTED',
+        actor_user_id: actor.id,
+      });
+    });
+
+    test('notification fields match response contract', async () => {
+      const user = await createUser({ developerProfile: { displayName: 'Dev' } });
+      const actor = await createUser({ companyProfile: { companyName: 'Company' } });
+      const token = buildAccessToken({ userId: user.id, email: user.email });
+
+      const project = await prisma.project.create({
+        data: {
+          ownerUserId: actor.id,
+          title: 'Test Project',
+        },
+      });
+
+      const task = await prisma.task.create({
+        data: {
+          ownerUserId: actor.id,
+          projectId: project.id,
+          title: 'Test Task',
+          description: 'Test',
+          status: 'PUBLISHED',
+        },
+      });
+
+      const notif = await prisma.notification.create({
+        data: {
+          userId: user.id,
+          actorUserId: actor.id,
+          projectId: project.id,
+          taskId: task.id,
+          type: 'TASK_COMPLETED',
+          payload: { task_id: task.id },
+        },
+      });
+
+      const res = await request(app)
+        .get('/api/v1/me/notifications')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.items[0]).toMatchObject({
+        id: notif.id,
+        type: 'TASK_COMPLETED',
+        actor_user_id: actor.id,
+        project_id: project.id,
+        task_id: task.id,
+        thread_id: null,
+        payload: { task_id: task.id },
+        read_at: null,
+      });
+
+      // Verify created_at is ISO string
+      expect(typeof res.body.items[0].created_at).toBe('string');
+      expect(res.body.items[0].created_at).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    });
+  });
 });

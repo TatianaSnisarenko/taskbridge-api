@@ -31,3 +31,20 @@ export const getMyApplications = asyncHandler(async (req, res) => {
     total: result.total,
   });
 });
+
+export const getMyNotifications = asyncHandler(async (req, res) => {
+  const result = await meService.getMyNotifications({
+    userId: req.user.id,
+    page: parseInt(req.query.page) || 1,
+    size: parseInt(req.query.size) || 20,
+    unreadOnly: req.query.unread_only === 'true' || req.query.unread_only === true,
+  });
+
+  return res.status(200).json({
+    items: result.items,
+    page: result.page,
+    size: result.size,
+    total: result.total,
+    unread_total: result.unread_total,
+  });
+});

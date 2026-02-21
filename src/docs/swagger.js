@@ -882,6 +882,40 @@ export const swaggerSpec = {
           total: { type: 'integer', example: 5 },
         },
       },
+      NotificationItem: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          type: {
+            type: 'string',
+            enum: [
+              'APPLICATION_CREATED',
+              'APPLICATION_ACCEPTED',
+              'APPLICATION_REJECTED',
+              'COMPLETION_REQUESTED',
+              'TASK_COMPLETED',
+              'REVIEW_CREATED',
+            ],
+          },
+          actor_user_id: { type: 'string', format: 'uuid', nullable: true },
+          project_id: { type: 'string', format: 'uuid', nullable: true },
+          task_id: { type: 'string', format: 'uuid', nullable: true },
+          thread_id: { type: 'string', format: 'uuid', nullable: true },
+          payload: { type: 'object', additionalProperties: true },
+          created_at: { type: 'string', format: 'date-time' },
+          read_at: { type: 'string', format: 'date-time', nullable: true },
+        },
+      },
+      GetMyNotificationsResponse: {
+        type: 'object',
+        properties: {
+          items: { type: 'array', items: { $ref: '#/components/schemas/NotificationItem' } },
+          page: { type: 'integer', example: 1 },
+          size: { type: 'integer', example: 20 },
+          total: { type: 'integer', example: 10 },
+          unread_total: { type: 'integer', example: 3 },
+        },
+      },
     },
   },
   paths: {
@@ -1088,6 +1122,45 @@ export const swaggerSpec = {
           400: { description: 'Validation error' },
           401: { description: 'Unauthorized' },
           403: { description: 'Developer profile does not exist' },
+        },
+      },
+    },
+    '/api/v1/me/notifications': {
+      get: {
+        tags: ['Me'],
+        summary: 'Get my notifications',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'page',
+            in: 'query',
+            schema: { type: 'integer', minimum: 1, default: 1 },
+            description: 'Page number (starting from 1)',
+          },
+          {
+            name: 'size',
+            in: 'query',
+            schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
+            description: 'Number of items per page',
+          },
+          {
+            name: 'unread_only',
+            in: 'query',
+            schema: { type: 'boolean', default: false },
+            description: 'If true, return only unread notifications',
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Paginated list of notifications for the current user',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/GetMyNotificationsResponse' },
+              },
+            },
+          },
+          400: { description: 'Validation error' },
+          401: { description: 'Unauthorized' },
         },
       },
     },
