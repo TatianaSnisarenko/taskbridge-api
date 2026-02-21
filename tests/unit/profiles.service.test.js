@@ -832,4 +832,89 @@ describe('profiles.service', () => {
       expect(cloudinaryMock.deleteImage).toHaveBeenCalledWith('teamup/company-logos/old-logo');
     });
   });
+
+  describe('deleteCompanyLogo', () => {
+    test('rejects missing profile', async () => {
+      prismaMock.companyProfile.findUnique.mockResolvedValue(null);
+
+      await expect(
+        profilesService.deleteCompanyLogo({
+          userId: 'u1',
+        })
+      ).rejects.toMatchObject({
+        status: 404,
+        code: 'PROFILE_NOT_FOUND',
+      });
+    });
+
+    test('rejects when logo does not exist', async () => {
+      prismaMock.companyProfile.findUnique.mockResolvedValue({
+        userId: 'u1',
+        logoUrl: null,
+      });
+
+      await expect(
+        profilesService.deleteCompanyLogo({
+          userId: 'u1',
+        })
+      ).rejects.toMatchObject({
+        status: 404,
+        code: 'LOGO_NOT_FOUND',
+      });
+    });
+
+    test('deletes logo successfully', async () => {
+      prismaMock.companyProfile.findUnique.mockResolvedValue({
+        userId: 'u1',
+        logoUrl: 'https://res.cloudinary.com/example/image/upload/logo.webp',
+        logoPublicId: 'teamup/company-logos/logo',
+      });
+      prismaMock.companyProfile.update.mockResolvedValue({
+        userId: 'u1',
+        logoUrl: null,
+        updatedAt: new Date('2026-02-21T12:00:00Z'),
+      });
+
+      const result = await profilesService.deleteCompanyLogo({
+        userId: 'u1',
+      });
+
+      expect(cloudinaryMock.deleteImage).toHaveBeenCalledWith('teamup/company-logos/logo');
+      expect(prismaMock.companyProfile.update).toHaveBeenCalledWith({
+        where: { userId: 'u1' },
+        data: {
+          logoUrl: null,
+          logoPublicId: null,
+        },
+        select: { userId: true, logoUrl: true, updatedAt: true },
+      });
+
+      expect(result).toEqual({
+        userId: 'u1',
+        logoUrl: null,
+        updatedAt: new Date('2026-02-21T12:00:00Z'),
+      });
+    });
+
+    test('handles deletion when logoPublicId is null', async () => {
+      prismaMock.companyProfile.findUnique.mockResolvedValue({
+        userId: 'u1',
+        logoUrl: 'https://example.com/logo.jpg',
+        logoPublicId: null,
+      });
+      prismaMock.companyProfile.update.mockResolvedValue({
+        userId: 'u1',
+        logoUrl: null,
+        updatedAt: new Date('2026-02-21T12:00:00Z'),
+      });
+
+      const result = await profilesService.deleteCompanyLogo({
+        userId: 'u1',
+      });
+
+      expect(cloudinaryMock.deleteImage).not.toHaveBeenCalled();
+      expect(prismaMock.companyProfile.update).toHaveBeenCalled();
+      expect(result.logoUrl).toBeNull();
+    });
+  });
 });

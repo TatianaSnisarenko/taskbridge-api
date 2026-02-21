@@ -79,3 +79,10 @@ profilesRouter.post(
   upload.single('file'),
   profilesController.uploadCompanyLogo
 );
+
+profilesRouter.delete(
+  '/company/logo',
+  requireAuth,
+  requirePersona('company'),
+  profilesController.deleteCompanyLogo
+);

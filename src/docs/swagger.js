@@ -988,6 +988,15 @@ export const swaggerSpec = {
           updated_at: { type: 'string', format: 'date-time' },
         },
       },
+      DeleteLogoResponse: {
+        type: 'object',
+        required: ['user_id', 'logo_url', 'updated_at'],
+        properties: {
+          user_id: { type: 'string', format: 'uuid' },
+          logo_url: { type: 'null', description: 'Logo URL is null after deletion' },
+          updated_at: { type: 'string', format: 'date-time' },
+        },
+      },
       ErrorResponse: {
         type: 'object',
         required: ['error'],
@@ -1718,6 +1727,54 @@ export const swaggerSpec = {
           404: { description: 'Profile not found' },
           500: {
             description: 'Upload failed',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+              },
+            },
+          },
+        },
+      },
+      delete: {
+        tags: ['Profiles'],
+        summary: 'Delete company logo',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'X-Persona',
+            in: 'header',
+            required: true,
+            schema: { type: 'string', enum: ['company'] },
+            description: 'User persona (must be company)',
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Logo deleted successfully',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/DeleteLogoResponse' },
+              },
+            },
+          },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Company profile does not exist' },
+          404: {
+            description: 'Logo not found',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+                example: {
+                  error: {
+                    code: 'LOGO_NOT_FOUND',
+                    message: 'Logo not found',
+                  },
+                },
+              },
+            },
+          },
+          500: {
+            description: 'Delete failed',
             content: {
               'application/json': {
                 schema: { $ref: '#/components/schemas/ErrorResponse' },

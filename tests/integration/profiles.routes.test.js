@@ -1194,4 +1194,81 @@ describe('profiles routes', () => {
       expect(profile.logoPublicId).toBe('teamup/company-logos/old');
     });
   });
+
+  describe('DELETE /profiles/company/logo', () => {
+    test('deletes logo rejects unauthorized', async () => {
+      const res = await request(app).delete('/api/v1/profiles/company/logo');
+
+      expect(res.status).toBe(401);
+    });
+
+    test('deletes logo rejects missing X-Persona header', async () => {
+      const user = await createUser({ companyProfile: { companyName: 'Test Corp' } });
+      const token = buildAccessToken({ userId: user.id, email: user.email });
+
+      const res = await request(app)
+        .delete('/api/v1/profiles/company/logo')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('PERSONA_REQUIRED');
+    });
+
+    test('deletes logo rejects missing company profile', async () => {
+      const user = await createUser(); // No company profile
+      const token = buildAccessToken({ userId: user.id, email: user.email });
+
+      const res = await request(app)
+        .delete('/api/v1/profiles/company/logo')
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'company');
+
+      expect(res.status).toBe(403);
+      expect(res.body.error.code).toBe('PERSONA_NOT_AVAILABLE');
+    });
+
+    test('deletes logo rejects when logo does not exist', async () => {
+      const user = await createUser({ companyProfile: { companyName: 'Test Corp' } });
+      const token = buildAccessToken({ userId: user.id, email: user.email });
+
+      const res = await request(app)
+        .delete('/api/v1/profiles/company/logo')
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'company');
+
+      expect(res.status).toBe(404);
+      expect(res.body.error.code).toBe('LOGO_NOT_FOUND');
+    });
+
+    test('deletes logo successfully', async () => {
+      const user = await createUser({
+        companyProfile: {
+          companyName: 'Test Corp',
+          logoUrl:
+            'https://res.cloudinary.com/example/image/upload/v123/teamup/company-logos/logo.webp',
+          logoPublicId: 'teamup/company-logos/logo',
+        },
+      });
+      const token = buildAccessToken({ userId: user.id, email: user.email });
+
+      const res = await request(app)
+        .delete('/api/v1/profiles/company/logo')
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'company');
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({
+        user_id: user.id,
+        logo_url: null,
+        updated_at: expect.any(String),
+      });
+
+      const profile = await prisma.companyProfile.findUnique({
+        where: { userId: user.id },
+        select: { logoUrl: true, logoPublicId: true },
+      });
+      expect(profile.logoUrl).toBeNull();
+      expect(profile.logoPublicId).toBeNull();
+    });
+  });
 });

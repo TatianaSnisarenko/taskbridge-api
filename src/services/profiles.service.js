@@ -372,3 +372,37 @@ export async function uploadCompanyLogo({ userId, file }) {
     updatedAt: updated.updatedAt,
   };
 }
+
+export async function deleteCompanyLogo({ userId }) {
+  // Check profile exists
+  const profile = await prisma.companyProfile.findUnique({ where: { userId } });
+  if (!profile) {
+    throw new ApiError(404, 'PROFILE_NOT_FOUND', 'Company profile not found');
+  }
+
+  // Check logo exists
+  if (!profile.logoUrl) {
+    throw new ApiError(404, 'LOGO_NOT_FOUND', 'Logo not found');
+  }
+
+  // Delete from Cloudinary if exists
+  if (profile.logoPublicId) {
+    await deleteImage(profile.logoPublicId);
+  }
+
+  // Update database - set logo fields to null
+  const updated = await prisma.companyProfile.update({
+    where: { userId },
+    data: {
+      logoUrl: null,
+      logoPublicId: null,
+    },
+    select: { userId: true, logoUrl: true, updatedAt: true },
+  });
+
+  return {
+    userId: updated.userId,
+    logoUrl: updated.logoUrl,
+    updatedAt: updated.updatedAt,
+  };
+}

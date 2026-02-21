@@ -165,3 +165,15 @@ export const uploadCompanyLogo = asyncHandler(async (req, res) => {
     updated_at: result.updatedAt.toISOString(),
   });
 });
+
+export const deleteCompanyLogo = asyncHandler(async (req, res) => {
+  const result = await profilesService.deleteCompanyLogo({
+    userId: req.user.id,
+  });
+
+  return res.status(200).json({
+    user_id: result.userId,
+    logo_url: result.logoUrl,
+    updated_at: result.updatedAt.toISOString(),
+  });
+});
