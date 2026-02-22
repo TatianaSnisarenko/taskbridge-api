@@ -951,6 +951,55 @@ export const swaggerSpec = {
           read_at: { type: 'string', format: 'date-time' },
         },
       },
+      ChatThreadItem: {
+        type: 'object',
+        properties: {
+          thread_id: { type: 'string', format: 'uuid' },
+          task: {
+            type: 'object',
+            properties: {
+              task_id: { type: 'string', format: 'uuid' },
+              title: { type: 'string', example: 'React Dashboard Component' },
+              status: {
+                type: 'string',
+                enum: ['IN_PROGRESS', 'COMPLETED'],
+                example: 'IN_PROGRESS',
+              },
+            },
+          },
+          other_participant: {
+            type: 'object',
+            properties: {
+              user_id: { type: 'string', format: 'uuid' },
+              display_name: { type: 'string', example: 'Tetiana' },
+              company_name: { type: 'string', nullable: true, example: null },
+              avatar_url: { type: 'string', format: 'uri', nullable: true },
+            },
+          },
+          last_message: {
+            type: 'object',
+            nullable: true,
+            properties: {
+              id: { type: 'string', format: 'uuid' },
+              text: { type: 'string', example: "Great! Looking forward to your implementation." },
+              sender_user_id: { type: 'string', format: 'uuid' },
+              sender_persona: { type: 'string', enum: ['developer', 'company'] },
+              sent_at: { type: 'string', format: 'date-time' },
+            },
+          },
+          unread_count: { type: 'integer', example: 2 },
+          created_at: { type: 'string', format: 'date-time' },
+        },
+      },
+      GetMyThreadsResponse: {
+        type: 'object',
+        properties: {
+          items: { type: 'array', items: { $ref: '#/components/schemas/ChatThreadItem' } },
+          page: { type: 'integer', example: 1 },
+          size: { type: 'integer', example: 20 },
+          total: { type: 'integer', example: 1 },
+        },
+      },
       UploadAvatarResponse: {
         type: 'object',
         required: ['user_id', 'avatar_url', 'updated_at'],
@@ -1311,6 +1360,46 @@ export const swaggerSpec = {
               },
             },
           },
+          401: { description: 'Unauthorized' },
+        },
+      },
+    },
+    '/api/v1/me/chat/threads': {
+      get: {
+        tags: ['Me'],
+        summary: 'Get my chat threads',
+        description: 'Get chat threads for the current user. Threads are returned only for tasks with status IN_PROGRESS or COMPLETED.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'page',
+            in: 'query',
+            schema: { type: 'integer', minimum: 1, default: 1 },
+            description: 'Page number (starting from 1)',
+          },
+          {
+            name: 'size',
+            in: 'query',
+            schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
+            description: 'Number of items per page',
+          },
+          {
+            name: 'search',
+            in: 'query',
+            schema: { type: 'string' },
+            description: 'Search for threads by task title (optional, case-insensitive)',
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Paginated list of chat threads sorted by last message date (newest first)',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/GetMyThreadsResponse' },
+              },
+            },
+          },
+          400: { description: 'Validation error' },
           401: { description: 'Unauthorized' },
         },
       },

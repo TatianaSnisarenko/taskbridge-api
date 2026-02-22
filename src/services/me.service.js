@@ -215,3 +215,146 @@ export async function markAllNotificationsAsRead({ userId }) {
     read_at: now.toISOString(),
   };
 }
+
+/**
+ * Get chat threads for the current user with pagination
+ * Thread exists only for tasks with status IN_PROGRESS or COMPLETED
+ * Caller must be either the company owner or accepted developer
+ */
+export async function getMyThreads({ userId, page = 1, size = 20, search = '' }) {
+  const skip = (page - 1) * size;
+
+  // Build search filter for task title if provided
+  const taskTitleFilter = search.trim()
+    ? {
+        contains: search.trim(),
+        mode: 'insensitive',
+      }
+    : undefined;
+
+  // Fetch threads where user is a participant, sorted by last_message_at DESC
+  const [items, total] = await Promise.all([
+    prisma.chatThread.findMany({
+      where: {
+        OR: [{ companyUserId: userId }, { developerUserId: userId }],
+        task: {
+          status: {
+            in: ['IN_PROGRESS', 'COMPLETED'],
+          },
+          deletedAt: null,
+          ...(taskTitleFilter && { title: taskTitleFilter }),
+        },
+      },
+      select: {
+        id: true,
+        taskId: true,
+        companyUserId: true,
+        developerUserId: true,
+        createdAt: true,
+        lastMessageAt: true,
+        task: {
+          select: {
+            id: true,
+            title: true,
+            status: true,
+          },
+        },
+        messages: {
+          select: {
+            id: true,
+            text: true,
+            senderUserId: true,
+            senderPersona: true,
+            sentAt: true,
+          },
+          orderBy: { sentAt: 'desc' },
+        },
+        reads: {
+          select: {
+            userId: true,
+            lastReadAt: true,
+          },
+        },
+      },
+      skip,
+      take: size,
+      orderBy: {
+        lastMessageAt: 'desc',
+      },
+    }),
+    prisma.chatThread.count({
+      where: {
+        OR: [{ companyUserId: userId }, { developerUserId: userId }],
+        task: {
+          status: {
+            in: ['IN_PROGRESS', 'COMPLETED'],
+          },
+          deletedAt: null,
+          ...(taskTitleFilter && { title: taskTitleFilter }),
+        },
+      },
+    }),
+  ]);
+
+  // Fetch other participant profiles (company or developer info)
+  const threadWithParticipants = await Promise.all(
+    items.map(async (thread) => {
+      // Determine the other participant ID
+      const otherUserId =
+        thread.companyUserId === userId ? thread.developerUserId : thread.companyUserId;
+
+      // Fetch other participant profile
+      const [devProfile, compProfile] = await Promise.all([
+        prisma.developerProfile.findUnique({
+          where: { userId: otherUserId },
+          select: { userId: true, displayName: true, avatarUrl: true },
+        }),
+        prisma.companyProfile.findUnique({
+          where: { userId: otherUserId },
+          select: { userId: true, companyName: true, logoUrl: true },
+        }),
+      ]);
+
+      // Calculate unread count for current user
+      const userRead = thread.reads.find((r) => r.userId === userId);
+      const lastReadAt = userRead?.lastReadAt || thread.createdAt;
+      const unreadCount = thread.messages.filter((msg) => new Date(msg.sentAt) > lastReadAt).length;
+
+      // Get the most recent message (first in sorted desc order)
+      const mostRecentMessage = thread.messages.length > 0 ? thread.messages[0] : null;
+
+      return {
+        thread_id: thread.id,
+        task: {
+          task_id: thread.task.id,
+          title: thread.task.title,
+          status: thread.task.status,
+        },
+        other_participant: {
+          user_id: otherUserId,
+          display_name: devProfile?.displayName || compProfile?.companyName,
+          company_name: compProfile?.companyName || null,
+          avatar_url: devProfile?.avatarUrl || compProfile?.logoUrl || null,
+        },
+        last_message: mostRecentMessage
+          ? {
+              id: mostRecentMessage.id,
+              text: mostRecentMessage.text,
+              sender_user_id: mostRecentMessage.senderUserId,
+              sender_persona: mostRecentMessage.senderPersona,
+              sent_at: mostRecentMessage.sentAt.toISOString(),
+            }
+          : null,
+        unread_count: unreadCount,
+        created_at: thread.createdAt.toISOString(),
+      };
+    })
+  );
+
+  return {
+    items: threadWithParticipants,
+    page,
+    size,
+    total,
+  };
+}

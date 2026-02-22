@@ -6,6 +6,7 @@ import * as meController from '../controllers/me.controller.js';
 import {
   getMyApplicationsQuerySchema,
   getMyNotificationsQuerySchema,
+  getMyThreadsQuerySchema,
 } from '../schemas/me.schemas.js';
 
 export const meRouter = Router();
@@ -30,3 +31,10 @@ meRouter.get(
 meRouter.post('/notifications/read-all', requireAuth, meController.markAllNotificationsAsRead);
 
 meRouter.post('/notifications/:id/read', requireAuth, meController.markNotificationAsRead);
+
+meRouter.get(
+  '/chat/threads',
+  requireAuth,
+  validate(getMyThreadsQuerySchema, 'query'),
+  meController.getMyThreads
+);

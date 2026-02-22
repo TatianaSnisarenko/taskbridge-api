@@ -71,3 +71,18 @@ export const markAllNotificationsAsRead = asyncHandler(async (req, res) => {
     read_at: result.read_at,
   });
 });
+export const getMyThreads = asyncHandler(async (req, res) => {
+  const result = await meService.getMyThreads({
+    userId: req.user.id,
+    page: parseInt(req.query.page) || 1,
+    size: parseInt(req.query.size) || 20,
+    search: req.query.search || '',
+  });
+
+  return res.status(200).json({
+    items: result.items,
+    page: result.page,
+    size: result.size,
+    total: result.total,
+  });
+});
