@@ -1024,7 +1024,12 @@ export const swaggerSpec = {
         type: 'object',
         required: ['text'],
         properties: {
-          text: { type: 'string', minLength: 1, maxLength: 2000, example: 'Hello! I have a question about this task.' },
+          text: {
+            type: 'string',
+            minLength: 1,
+            maxLength: 2000,
+            example: 'Hello! I have a question about this task.',
+          },
         },
       },
       CreateMessageResponse: {
