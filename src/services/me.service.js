@@ -221,7 +221,7 @@ export async function markAllNotificationsAsRead({ userId }) {
  * Thread exists only for tasks with status IN_PROGRESS or COMPLETED
  * Caller must be either the company owner or accepted developer
  */
-export async function getMyThreads({ userId, page = 1, size = 20, search = '' }) {
+export async function getMyThreads({ userId, persona, page = 1, size = 20, search = '' }) {
   const skip = (page - 1) * size;
 
   // Build search filter for task title if provided
@@ -232,11 +232,15 @@ export async function getMyThreads({ userId, page = 1, size = 20, search = '' })
       }
     : undefined;
 
-  // Fetch threads where user is a participant, sorted by last_message_at DESC
+  // Build persona filter based on which role user is querying as
+  const personaFilter =
+    persona === 'developer' ? { developerUserId: userId } : { companyUserId: userId };
+
+  // Fetch threads where user is a participant in the specified role, sorted by last_message_at DESC
   const [items, total] = await Promise.all([
     prisma.chatThread.findMany({
       where: {
-        OR: [{ companyUserId: userId }, { developerUserId: userId }],
+        ...personaFilter,
         task: {
           status: {
             in: ['IN_PROGRESS', 'COMPLETED'],
@@ -284,7 +288,7 @@ export async function getMyThreads({ userId, page = 1, size = 20, search = '' })
     }),
     prisma.chatThread.count({
       where: {
-        OR: [{ companyUserId: userId }, { developerUserId: userId }],
+        ...personaFilter,
         task: {
           status: {
             in: ['IN_PROGRESS', 'COMPLETED'],
@@ -362,7 +366,7 @@ export async function getMyThreads({ userId, page = 1, size = 20, search = '' })
  * Get a single chat thread by ID. User must be a participant in the thread
  * and the associated task must be IN_PROGRESS or COMPLETED.
  */
-export async function getThreadById({ userId, threadId }) {
+export async function getThreadById({ userId, persona, threadId }) {
   const thread = await prisma.chatThread.findUnique({
     where: { id: threadId },
     select: {
@@ -407,9 +411,15 @@ export async function getThreadById({ userId, threadId }) {
     throw new ApiError(404, 'NOT_FOUND', 'Chat thread not found');
   }
 
-  // Verify user is a participant in this thread
-  if (thread.companyUserId !== userId && thread.developerUserId !== userId) {
-    throw new ApiError(403, 'FORBIDDEN', 'You are not a participant in this thread');
+  // Verify user matches the persona role in this thread
+  if (persona === 'developer') {
+    if (thread.developerUserId !== userId) {
+      throw new ApiError(403, 'FORBIDDEN', 'You are not the developer in this thread');
+    }
+  } else if (persona === 'company') {
+    if (thread.companyUserId !== userId) {
+      throw new ApiError(403, 'FORBIDDEN', 'You are not the company representative in this thread');
+    }
   }
 
   // Verify task status is IN_PROGRESS or COMPLETED
@@ -472,7 +482,7 @@ export async function getThreadById({ userId, threadId }) {
  * Messages are returned in chronological order (oldest first).
  * User must be a participant in the thread and task must be IN_PROGRESS or COMPLETED.
  */
-export async function getThreadMessages({ userId, threadId, page = 1, size = 50 }) {
+export async function getThreadMessages({ userId, persona, threadId, page = 1, size = 50 }) {
   const skip = (page - 1) * size;
 
   const thread = await prisma.chatThread.findUnique({
@@ -507,9 +517,15 @@ export async function getThreadMessages({ userId, threadId, page = 1, size = 50 
     throw new ApiError(404, 'NOT_FOUND', 'Chat thread not found');
   }
 
-  // Verify user is a participant in this thread
-  if (thread.companyUserId !== userId && thread.developerUserId !== userId) {
-    throw new ApiError(403, 'FORBIDDEN', 'You are not a participant in this thread');
+  // Verify user matches the persona role in this thread
+  if (persona === 'developer') {
+    if (thread.developerUserId !== userId) {
+      throw new ApiError(403, 'FORBIDDEN', 'You are not the developer in this thread');
+    }
+  } else if (persona === 'company') {
+    if (thread.companyUserId !== userId) {
+      throw new ApiError(403, 'FORBIDDEN', 'You are not the company representative in this thread');
+    }
   }
 
   // Verify task status is IN_PROGRESS or COMPLETED

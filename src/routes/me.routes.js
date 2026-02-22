@@ -37,6 +37,7 @@ meRouter.post('/notifications/:id/read', requireAuth, meController.markNotificat
 meRouter.get(
   '/chat/threads',
   requireAuth,
+  requirePersona('developer', 'company'),
   validate(getMyThreadsQuerySchema, 'query'),
   meController.getMyThreads
 );
@@ -44,12 +45,15 @@ meRouter.get(
 meRouter.get(
   '/chat/threads/:threadId',
   requireAuth,
+  requirePersona('developer', 'company'),
   validate(threadIdParamSchema, 'params'),
   meController.getThreadById
 );
+
 meRouter.get(
   '/chat/threads/:threadId/messages',
   requireAuth,
+  requirePersona('developer', 'company'),
   validate(threadIdParamSchema, 'params'),
   validate(threadMessagesQuerySchema, 'query'),
   meController.getThreadMessages

@@ -7,7 +7,7 @@ function getPersonaErrorMessage(persona) {
     : 'Developer profile does not exist';
 }
 
-export function requirePersona(requiredPersona) {
+export function requirePersona(...requiredPersonas) {
   return async (req, res, next) => {
     const persona = req.headers['x-persona'];
     if (!persona)
@@ -17,9 +17,9 @@ export function requirePersona(requiredPersona) {
       return next(new ApiError(400, 'PERSONA_INVALID', 'X-Persona must be developer or company'));
     }
 
-    if (requiredPersona && persona !== requiredPersona) {
+    if (requiredPersonas.length > 0 && !requiredPersonas.includes(persona)) {
       return next(
-        new ApiError(403, 'PERSONA_NOT_AVAILABLE', getPersonaErrorMessage(requiredPersona))
+        new ApiError(403, 'PERSONA_NOT_AVAILABLE', getPersonaErrorMessage(requiredPersonas[0]))
       );
     }
 

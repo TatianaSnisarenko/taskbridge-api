@@ -1343,7 +1343,8 @@ describe('me routes', () => {
 
       const res = await request(app)
         .get('/api/v1/me/chat/threads?page=0')
-        .set('Authorization', `Bearer ${token}`);
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'developer');
 
       expect(res.status).toBe(400);
       expect(res.body.error.code).toBe('VALIDATION_ERROR');
@@ -1355,7 +1356,8 @@ describe('me routes', () => {
 
       const res = await request(app)
         .get('/api/v1/me/chat/threads?size=101')
-        .set('Authorization', `Bearer ${token}`);
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'developer');
 
       expect(res.status).toBe(400);
       expect(res.body.error.code).toBe('VALIDATION_ERROR');
@@ -1367,7 +1369,8 @@ describe('me routes', () => {
 
       const res = await request(app)
         .get('/api/v1/me/chat/threads')
-        .set('Authorization', `Bearer ${token}`);
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'developer');
 
       expect(res.status).toBe(200);
       expect(res.body).toMatchObject({
@@ -1441,7 +1444,8 @@ describe('me routes', () => {
 
       const res = await request(app)
         .get('/api/v1/me/chat/threads')
-        .set('Authorization', `Bearer ${devToken}`);
+        .set('Authorization', `Bearer ${devToken}`)
+        .set('X-Persona', 'developer');
 
       expect(res.status).toBe(200);
       expect(res.body.items).toHaveLength(2);
@@ -1495,7 +1499,8 @@ describe('me routes', () => {
 
       const res = await request(app)
         .get('/api/v1/me/chat/threads')
-        .set('Authorization', `Bearer ${dev1Token}`);
+        .set('Authorization', `Bearer ${dev1Token}`)
+        .set('X-Persona', 'developer');
 
       expect(res.status).toBe(200);
       expect(res.body.items).toHaveLength(1);
@@ -1536,7 +1541,8 @@ describe('me routes', () => {
 
       const res = await request(app)
         .get('/api/v1/me/chat/threads')
-        .set('Authorization', `Bearer ${companyToken}`);
+        .set('Authorization', `Bearer ${companyToken}`)
+        .set('X-Persona', 'company');
 
       expect(res.status).toBe(200);
       expect(res.body.items[0].other_participant).toMatchObject({
@@ -1582,7 +1588,8 @@ describe('me routes', () => {
 
       const res = await request(app)
         .get('/api/v1/me/chat/threads')
-        .set('Authorization', `Bearer ${devToken}`);
+        .set('Authorization', `Bearer ${devToken}`)
+        .set('X-Persona', 'developer');
 
       expect(res.status).toBe(200);
       expect(res.body.items[0].last_message).toMatchObject({
@@ -1618,7 +1625,8 @@ describe('me routes', () => {
 
       const res = await request(app)
         .get('/api/v1/me/chat/threads')
-        .set('Authorization', `Bearer ${devToken}`);
+        .set('Authorization', `Bearer ${devToken}`)
+        .set('X-Persona', 'developer');
 
       expect(res.status).toBe(200);
       expect(res.body.items[0].last_message).toBeNull();
@@ -1690,7 +1698,8 @@ describe('me routes', () => {
 
       const res = await request(app)
         .get('/api/v1/me/chat/threads')
-        .set('Authorization', `Bearer ${devToken}`);
+        .set('Authorization', `Bearer ${devToken}`)
+        .set('X-Persona', 'developer');
 
       expect(res.status).toBe(200);
       // 2 messages are after the read time
@@ -1740,7 +1749,8 @@ describe('me routes', () => {
       // Search for "react" (case-insensitive)
       const res = await request(app)
         .get('/api/v1/me/chat/threads?search=react')
-        .set('Authorization', `Bearer ${devToken}`);
+        .set('Authorization', `Bearer ${devToken}`)
+        .set('X-Persona', 'developer');
 
       expect(res.status).toBe(200);
       expect(res.body.items).toHaveLength(1);
@@ -1780,7 +1790,8 @@ describe('me routes', () => {
       // Get first page with size 10
       const res1 = await request(app)
         .get('/api/v1/me/chat/threads?page=1&size=10')
-        .set('Authorization', `Bearer ${devToken}`);
+        .set('Authorization', `Bearer ${devToken}`)
+        .set('X-Persona', 'developer');
 
       expect(res1.status).toBe(200);
       expect(res1.body.items).toHaveLength(10);
@@ -1791,7 +1802,8 @@ describe('me routes', () => {
       // Get second page
       const res2 = await request(app)
         .get('/api/v1/me/chat/threads?page=2&size=10')
-        .set('Authorization', `Bearer ${devToken}`);
+        .set('Authorization', `Bearer ${devToken}`)
+        .set('X-Persona', 'developer');
 
       expect(res2.status).toBe(200);
       expect(res2.body.items).toHaveLength(10);
@@ -1800,7 +1812,8 @@ describe('me routes', () => {
       // Get third page with remaining items
       const res3 = await request(app)
         .get('/api/v1/me/chat/threads?page=3&size=10')
-        .set('Authorization', `Bearer ${devToken}`);
+        .set('Authorization', `Bearer ${devToken}`)
+        .set('X-Persona', 'developer');
 
       expect(res3.status).toBe(200);
       expect(res3.body.items).toHaveLength(5);
@@ -1864,7 +1877,8 @@ describe('me routes', () => {
 
       const res = await request(app)
         .get('/api/v1/me/chat/threads')
-        .set('Authorization', `Bearer ${devToken}`);
+        .set('Authorization', `Bearer ${devToken}`)
+        .set('X-Persona', 'developer');
 
       expect(res.status).toBe(200);
       expect(res.body.items).toHaveLength(2);
@@ -1899,7 +1913,8 @@ describe('me routes', () => {
 
       const res = await request(app)
         .get('/api/v1/me/chat/threads/invalid-id')
-        .set('Authorization', `Bearer ${token}`);
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'developer');
 
       expect(res.status).toBe(400);
       expect(res.body.error.code).toBe('VALIDATION_ERROR');
@@ -1911,7 +1926,8 @@ describe('me routes', () => {
 
       const res = await request(app)
         .get('/api/v1/me/chat/threads/3fa85f64-5717-4562-b3fc-2c963f66afa6')
-        .set('Authorization', `Bearer ${token}`);
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'developer');
 
       expect(res.status).toBe(404);
       expect(res.body.error.code).toBe('NOT_FOUND');
@@ -1942,7 +1958,8 @@ describe('me routes', () => {
 
       const res = await request(app)
         .get(`/api/v1/me/chat/threads/${thread.id}`)
-        .set('Authorization', `Bearer ${user2Token}`);
+        .set('Authorization', `Bearer ${user2Token}`)
+        .set('X-Persona', 'developer');
 
       expect(res.status).toBe(403);
       expect(res.body.error.code).toBe('FORBIDDEN');
@@ -1972,7 +1989,8 @@ describe('me routes', () => {
 
       const res = await request(app)
         .get(`/api/v1/me/chat/threads/${thread.id}`)
-        .set('Authorization', `Bearer ${devToken}`);
+        .set('Authorization', `Bearer ${devToken}`)
+        .set('X-Persona', 'developer');
 
       expect(res.status).toBe(403);
       expect(res.body.error.code).toBe('FORBIDDEN');
@@ -2008,7 +2026,8 @@ describe('me routes', () => {
 
       const res = await request(app)
         .get(`/api/v1/me/chat/threads/${thread.id}`)
-        .set('Authorization', `Bearer ${devToken}`);
+        .set('Authorization', `Bearer ${devToken}`)
+        .set('X-Persona', 'developer');
 
       expect(res.status).toBe(404);
       expect(res.body.error.code).toBe('NOT_FOUND');
@@ -2048,7 +2067,8 @@ describe('me routes', () => {
 
       const res = await request(app)
         .get(`/api/v1/me/chat/threads/${thread.id}`)
-        .set('Authorization', `Bearer ${devToken}`);
+        .set('Authorization', `Bearer ${devToken}`)
+        .set('X-Persona', 'developer');
 
       expect(res.status).toBe(200);
       expect(res.body).toMatchObject({
@@ -2103,7 +2123,8 @@ describe('me routes', () => {
 
       const res = await request(app)
         .get(`/api/v1/me/chat/threads/${thread.id}`)
-        .set('Authorization', `Bearer ${companyToken}`);
+        .set('Authorization', `Bearer ${companyToken}`)
+        .set('X-Persona', 'company');
 
       expect(res.status).toBe(200);
       expect(res.body).toMatchObject({
@@ -2159,7 +2180,8 @@ describe('me routes', () => {
 
       const res = await request(app)
         .get(`/api/v1/me/chat/threads/${thread.id}`)
-        .set('Authorization', `Bearer ${devToken}`);
+        .set('Authorization', `Bearer ${devToken}`)
+        .set('X-Persona', 'developer');
 
       expect(res.status).toBe(200);
       expect(res.body.last_message).toMatchObject({
@@ -2195,7 +2217,8 @@ describe('me routes', () => {
 
       const res = await request(app)
         .get(`/api/v1/me/chat/threads/${thread.id}`)
-        .set('Authorization', `Bearer ${devToken}`);
+        .set('Authorization', `Bearer ${devToken}`)
+        .set('X-Persona', 'developer');
 
       expect(res.status).toBe(200);
       expect(res.body.last_message).toBeNull();
@@ -2267,7 +2290,8 @@ describe('me routes', () => {
 
       const res = await request(app)
         .get(`/api/v1/me/chat/threads/${thread.id}`)
-        .set('Authorization', `Bearer ${devToken}`);
+        .set('Authorization', `Bearer ${devToken}`)
+        .set('X-Persona', 'developer');
 
       expect(res.status).toBe(200);
       // 2 messages are after the read time
@@ -2299,7 +2323,8 @@ describe('me routes', () => {
 
       const res = await request(app)
         .get(`/api/v1/me/chat/threads/${thread.id}`)
-        .set('Authorization', `Bearer ${devToken}`);
+        .set('Authorization', `Bearer ${devToken}`)
+        .set('X-Persona', 'developer');
 
       expect(res.status).toBe(200);
       expect(res.body.task.status).toBe('COMPLETED');
@@ -2331,7 +2356,8 @@ describe('me routes', () => {
 
       const res = await request(app)
         .get('/api/v1/me/chat/threads/invalid-id/messages')
-        .set('Authorization', `Bearer ${token}`);
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'developer');
 
       expect(res.status).toBe(400);
       expect(res.body.error.code).toBe('VALIDATION_ERROR');
@@ -2343,7 +2369,8 @@ describe('me routes', () => {
 
       const res = await request(app)
         .get('/api/v1/me/chat/threads/3fa85f64-5717-4562-b3fc-2c963f66afa6/messages?page=0')
-        .set('Authorization', `Bearer ${token}`);
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'developer');
 
       expect(res.status).toBe(400);
       expect(res.body.error.code).toBe('VALIDATION_ERROR');
@@ -2355,7 +2382,8 @@ describe('me routes', () => {
 
       const res = await request(app)
         .get('/api/v1/me/chat/threads/3fa85f64-5717-4562-b3fc-2c963f66afa6/messages?size=51')
-        .set('Authorization', `Bearer ${token}`);
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'developer');
 
       expect(res.status).toBe(400);
       expect(res.body.error.code).toBe('VALIDATION_ERROR');
@@ -2367,7 +2395,8 @@ describe('me routes', () => {
 
       const res = await request(app)
         .get('/api/v1/me/chat/threads/3fa85f64-5717-4562-b3fc-2c963f66afa6/messages')
-        .set('Authorization', `Bearer ${token}`);
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'developer');
 
       expect(res.status).toBe(404);
       expect(res.body.error.code).toBe('NOT_FOUND');
@@ -2398,7 +2427,8 @@ describe('me routes', () => {
 
       const res = await request(app)
         .get(`/api/v1/me/chat/threads/${thread.id}/messages`)
-        .set('Authorization', `Bearer ${dev2Token}`);
+        .set('Authorization', `Bearer ${dev2Token}`)
+        .set('X-Persona', 'developer');
 
       expect(res.status).toBe(403);
       expect(res.body.error.code).toBe('FORBIDDEN');
@@ -2428,7 +2458,8 @@ describe('me routes', () => {
 
       const res = await request(app)
         .get(`/api/v1/me/chat/threads/${thread.id}/messages`)
-        .set('Authorization', `Bearer ${devToken}`);
+        .set('Authorization', `Bearer ${devToken}`)
+        .set('X-Persona', 'developer');
 
       expect(res.status).toBe(403);
       expect(res.body.error.code).toBe('FORBIDDEN');
@@ -2464,7 +2495,8 @@ describe('me routes', () => {
 
       const res = await request(app)
         .get(`/api/v1/me/chat/threads/${thread.id}/messages`)
-        .set('Authorization', `Bearer ${devToken}`);
+        .set('Authorization', `Bearer ${devToken}`)
+        .set('X-Persona', 'developer');
 
       expect(res.status).toBe(404);
       expect(res.body.error.code).toBe('NOT_FOUND');
@@ -2494,7 +2526,8 @@ describe('me routes', () => {
 
       const res = await request(app)
         .get(`/api/v1/me/chat/threads/${thread.id}/messages`)
-        .set('Authorization', `Bearer ${devToken}`);
+        .set('Authorization', `Bearer ${devToken}`)
+        .set('X-Persona', 'developer');
 
       expect(res.status).toBe(200);
       expect(res.body).toMatchObject({
@@ -2564,7 +2597,8 @@ describe('me routes', () => {
 
       const res = await request(app)
         .get(`/api/v1/me/chat/threads/${thread.id}/messages`)
-        .set('Authorization', `Bearer ${devToken}`);
+        .set('Authorization', `Bearer ${devToken}`)
+        .set('X-Persona', 'developer');
 
       expect(res.status).toBe(200);
       expect(res.body.items).toHaveLength(3);
@@ -2609,7 +2643,8 @@ describe('me routes', () => {
 
       const res = await request(app)
         .get(`/api/v1/me/chat/threads/${thread.id}/messages`)
-        .set('Authorization', `Bearer ${devToken}`);
+        .set('Authorization', `Bearer ${devToken}`)
+        .set('X-Persona', 'developer');
 
       expect(res.status).toBe(200);
       expect(res.body.items).toHaveLength(1);
@@ -2679,7 +2714,8 @@ describe('me routes', () => {
 
       const res = await request(app)
         .get(`/api/v1/me/chat/threads/${thread.id}/messages`)
-        .set('Authorization', `Bearer ${devToken}`);
+        .set('Authorization', `Bearer ${devToken}`)
+        .set('X-Persona', 'developer');
 
       expect(res.status).toBe(200);
       expect(res.body.items).toHaveLength(2);
@@ -2729,7 +2765,8 @@ describe('me routes', () => {
       // Get first page with size 10
       const res1 = await request(app)
         .get(`/api/v1/me/chat/threads/${thread.id}/messages?page=1&size=10`)
-        .set('Authorization', `Bearer ${devToken}`);
+        .set('Authorization', `Bearer ${devToken}`)
+        .set('X-Persona', 'developer');
 
       expect(res1.status).toBe(200);
       expect(res1.body.items).toHaveLength(10);
@@ -2740,7 +2777,8 @@ describe('me routes', () => {
       // Get second page
       const res2 = await request(app)
         .get(`/api/v1/me/chat/threads/${thread.id}/messages?page=2&size=10`)
-        .set('Authorization', `Bearer ${devToken}`);
+        .set('Authorization', `Bearer ${devToken}`)
+        .set('X-Persona', 'developer');
 
       expect(res2.status).toBe(200);
       expect(res2.body.items).toHaveLength(10);
@@ -2749,7 +2787,8 @@ describe('me routes', () => {
       // Get third page with remaining items
       const res3 = await request(app)
         .get(`/api/v1/me/chat/threads/${thread.id}/messages?page=3&size=10`)
-        .set('Authorization', `Bearer ${devToken}`);
+        .set('Authorization', `Bearer ${devToken}`)
+        .set('X-Persona', 'developer');
 
       expect(res3.status).toBe(200);
       expect(res3.body.items).toHaveLength(10);
@@ -2799,7 +2838,8 @@ describe('me routes', () => {
 
       const res = await request(app)
         .get(`/api/v1/me/chat/threads/${thread.id}/messages`)
-        .set('Authorization', `Bearer ${devToken}`);
+        .set('Authorization', `Bearer ${devToken}`)
+        .set('X-Persona', 'developer');
 
       expect(res.status).toBe(200);
       expect(res.body.items).toHaveLength(1);
@@ -2840,7 +2880,8 @@ describe('me routes', () => {
 
       const res = await request(app)
         .get(`/api/v1/me/chat/threads/${thread.id}/messages`)
-        .set('Authorization', `Bearer ${companyToken}`);
+        .set('Authorization', `Bearer ${companyToken}`)
+        .set('X-Persona', 'company');
 
       expect(res.status).toBe(200);
       expect(res.body.items).toHaveLength(1);
@@ -2884,7 +2925,8 @@ describe('me routes', () => {
       // Call without pagination parameters
       const res = await request(app)
         .get(`/api/v1/me/chat/threads/${thread.id}/messages`)
-        .set('Authorization', `Bearer ${devToken}`);
+        .set('Authorization', `Bearer ${devToken}`)
+        .set('X-Persona', 'developer');
 
       expect(res.status).toBe(200);
       expect(res.body.page).toBe(1);

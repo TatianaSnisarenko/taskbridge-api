@@ -74,6 +74,7 @@ export const markAllNotificationsAsRead = asyncHandler(async (req, res) => {
 export const getMyThreads = asyncHandler(async (req, res) => {
   const result = await meService.getMyThreads({
     userId: req.user.id,
+    persona: req.headers['x-persona'],
     page: parseInt(req.query.page) || 1,
     size: parseInt(req.query.size) || 20,
     search: req.query.search || '',
@@ -89,6 +90,7 @@ export const getMyThreads = asyncHandler(async (req, res) => {
 export const getThreadById = asyncHandler(async (req, res) => {
   const result = await meService.getThreadById({
     userId: req.user.id,
+    persona: req.headers['x-persona'],
     threadId: req.params.threadId,
   });
 
@@ -97,6 +99,7 @@ export const getThreadById = asyncHandler(async (req, res) => {
 export const getThreadMessages = asyncHandler(async (req, res) => {
   const result = await meService.getThreadMessages({
     userId: req.user.id,
+    persona: req.headers['x-persona'],
     threadId: req.params.threadId,
     page: parseInt(req.query.page) || 1,
     size: parseInt(req.query.size) || 50,

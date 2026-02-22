@@ -1393,6 +1393,13 @@ export const swaggerSpec = {
         security: [{ bearerAuth: [] }],
         parameters: [
           {
+            name: 'X-Persona',
+            in: 'header',
+            required: true,
+            schema: { type: 'string', enum: ['developer', 'company'] },
+            description: 'User persona - threads filtered by this role',
+          },
+          {
             name: 'page',
             in: 'query',
             schema: { type: 'integer', minimum: 1, default: 1 },
@@ -1435,6 +1442,13 @@ export const swaggerSpec = {
         security: [{ bearerAuth: [] }],
         parameters: [
           {
+            name: 'X-Persona',
+            in: 'header',
+            required: true,
+            schema: { type: 'string', enum: ['developer', 'company'] },
+            description: 'User persona - must match user role in thread',
+          },
+          {
             name: 'threadId',
             in: 'path',
             required: true,
@@ -1466,6 +1480,13 @@ export const swaggerSpec = {
           'Get messages from a specific chat thread with pagination. Messages are sorted by sent_at in ascending order (chronological). User must be a participant in the thread and the associated task must have status IN_PROGRESS or COMPLETED.',
         security: [{ bearerAuth: [] }],
         parameters: [
+          {
+            name: 'X-Persona',
+            in: 'header',
+            required: true,
+            schema: { type: 'string', enum: ['developer', 'company'] },
+            description: 'User persona - must match user role in thread',
+          },
           {
             name: 'threadId',
             in: 'path',
