@@ -981,7 +981,7 @@ export const swaggerSpec = {
             nullable: true,
             properties: {
               id: { type: 'string', format: 'uuid' },
-              text: { type: 'string', example: "Great! Looking forward to your implementation." },
+              text: { type: 'string', example: 'Great! Looking forward to your implementation.' },
               sender_user_id: { type: 'string', format: 'uuid' },
               sender_persona: { type: 'string', enum: ['developer', 'company'] },
               sent_at: { type: 'string', format: 'date-time' },
@@ -1368,7 +1368,8 @@ export const swaggerSpec = {
       get: {
         tags: ['Me'],
         summary: 'Get my chat threads',
-        description: 'Get chat threads for the current user. Threads are returned only for tasks with status IN_PROGRESS or COMPLETED.',
+        description:
+          'Get chat threads for the current user. Threads are returned only for tasks with status IN_PROGRESS or COMPLETED.',
         security: [{ bearerAuth: [] }],
         parameters: [
           {
@@ -1392,7 +1393,8 @@ export const swaggerSpec = {
         ],
         responses: {
           200: {
-            description: 'Paginated list of chat threads sorted by last message date (newest first)',
+            description:
+              'Paginated list of chat threads sorted by last message date (newest first)',
             content: {
               'application/json': {
                 schema: { $ref: '#/components/schemas/GetMyThreadsResponse' },
