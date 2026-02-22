@@ -1,10 +1,10 @@
-export const swaggerSpec = {
+export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
   openapi: '3.0.0',
   info: {
     title: 'TeamUp IT API',
     version: '0.1.0',
   },
-  servers: [{ url: 'http://localhost:3000' }],
+  servers: [{ url: appBaseUrl }],
   tags: [
     { name: 'Health' },
     { name: 'Auth' },
@@ -3210,4 +3210,4 @@ export const swaggerSpec = {
       },
     },
   },
-};
+});

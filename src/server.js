@@ -3,24 +3,31 @@ import { env } from './config/env.js';
 import { prisma } from './db/prisma.js';
 import { startVerificationTokenCleanup } from './jobs/verification-token-cleanup.js';
 
-const app = createApp();
+const app = createApp(env.appBaseUrl);
 
 let server;
 let cleanupTask;
 
 async function start() {
   try {
+    console.log(`\n🚀 Starting TeamUp Backend in ${env.nodeEnv.toUpperCase()} mode\n`);
+
     await prisma.$connect();
-    console.log('Connection to database - success');
+    console.log('✓ Database connection successful');
 
     const cleanup = startVerificationTokenCleanup();
     cleanupTask = cleanup.task;
     await cleanup.runOnce();
 
     server = app.listen(env.port, () => {
-      console.log(`API listening on http://localhost:${env.port}/`);
-      console.log(`Health check: GET http://localhost:${env.port}/api/v1/health`);
-      console.log(`Swagger: http://localhost:${env.port}/api/v1/docs`);
+      const baseUrl = env.appBaseUrl.replace(/\/$/, '');
+      const frontendUrl = env.frontendBaseUrl.replace(/\/$/, '');
+
+      console.log('\n📍 Service URLs:');
+      console.log(`  🔗 Backend:  ${baseUrl}`);
+      console.log(`  🔗 Frontend: ${frontendUrl}`);
+      console.log(`  📚 Swagger:  ${baseUrl}/api/v1/docs`);
+      console.log(`  💚 Health:   GET ${baseUrl}/api/v1/health\n`);
     });
   } catch (error) {
     console.error('Failed to connect to database on startup.');

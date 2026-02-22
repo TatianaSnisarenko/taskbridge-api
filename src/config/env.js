@@ -28,7 +28,7 @@ export const env = {
   verificationTokenRetentionDays: Number(process.env.VERIFICATION_TOKEN_RETENTION_DAYS ?? 7),
   emailNotificationsEnabled:
     String(process.env.EMAIL_NOTIFICATIONS_ENABLED ?? 'false').toLowerCase() === 'true',
-  frontendBaseUrl: process.env.FRONTEND_BASE_URL ?? 'http://localhost:3000/api/v1/docs',
+  frontendBaseUrl: process.env.FRONTEND_BASE_URL ?? 'http://localhost:5173',
   cloudinaryCloudName: process.env.CLOUDINARY_CLOUD_NAME,
   cloudinaryApiKey: process.env.CLOUDINARY_API_KEY,
   cloudinaryApiSecret: process.env.CLOUDINARY_API_SECRET,
