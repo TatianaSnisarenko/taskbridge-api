@@ -609,8 +609,8 @@ describe('me routes', () => {
         data: {
           userId: user.id,
           actorUserId: actor.id,
-          type: 'TASK_COMPLETED',
-          payload: { task_id: 'test-id-2' },
+          type: 'APPLICATION_REJECTED',
+          payload: { application_id: 'test-id-2' },
           createdAt: new Date('2026-02-14T11:00:00Z'),
         },
       });
@@ -634,12 +634,12 @@ describe('me routes', () => {
       // Verify notification structure
       expect(res.body.items[0]).toMatchObject({
         id: notif2.id,
-        type: 'TASK_COMPLETED',
+        type: 'APPLICATION_REJECTED',
         actor_user_id: actor.id,
         project_id: null,
         task_id: null,
         thread_id: null,
-        payload: { task_id: 'test-id-2' },
+        payload: { application_id: 'test-id-2' },
         read_at: null,
       });
     });
@@ -663,8 +663,8 @@ describe('me routes', () => {
         data: {
           userId: user.id,
           actorUserId: actor.id,
-          type: 'TASK_COMPLETED',
-          payload: { task_id: 'test-id-2' },
+          type: 'APPLICATION_REJECTED',
+          payload: { application_id: 'test-id-2' },
           readAt: new Date(),
         },
       });
@@ -687,7 +687,7 @@ describe('me routes', () => {
       const actor = await createUser({ companyProfile: { companyName: 'Company' } });
       const token = buildAccessToken({ userId: user.id, email: user.email });
 
-      // Create 3 unread and 2 read notifications
+      // Create 3 unread and 2 read notifications (all relevant to developer persona)
       await prisma.notification.create({
         data: {
           userId: user.id,
@@ -701,25 +701,25 @@ describe('me routes', () => {
         data: {
           userId: user.id,
           actorUserId: actor.id,
-          type: 'TASK_COMPLETED',
-          payload: { task_id: 'test-id-2' },
-        },
-      });
-
-      await prisma.notification.create({
-        data: {
-          userId: user.id,
-          actorUserId: actor.id,
-          type: 'REVIEW_CREATED',
-          payload: { review_id: 'test-id-3' },
-        },
-      });
-
-      await prisma.notification.create({
-        data: {
-          userId: user.id,
-          actorUserId: actor.id,
           type: 'APPLICATION_REJECTED',
+          payload: { application_id: 'test-id-2' },
+        },
+      });
+
+      await prisma.notification.create({
+        data: {
+          userId: user.id,
+          actorUserId: actor.id,
+          type: 'COMPLETION_REQUESTED',
+          payload: { task_id: 'test-id-3' },
+        },
+      });
+
+      await prisma.notification.create({
+        data: {
+          userId: user.id,
+          actorUserId: actor.id,
+          type: 'APPLICATION_ACCEPTED',
           payload: { application_id: 'test-id-4' },
           readAt: new Date(),
         },
@@ -847,31 +847,12 @@ describe('me routes', () => {
       const actor = await createUser({ companyProfile: { companyName: 'Company' } });
       const token = buildAccessToken({ userId: user.id, email: user.email });
 
-      const project = await prisma.project.create({
-        data: {
-          ownerUserId: actor.id,
-          title: 'Test Project',
-        },
-      });
-
-      const task = await prisma.task.create({
-        data: {
-          ownerUserId: actor.id,
-          projectId: project.id,
-          title: 'Test Task',
-          description: 'Test',
-          status: 'PUBLISHED',
-        },
-      });
-
       const notif = await prisma.notification.create({
         data: {
           userId: user.id,
           actorUserId: actor.id,
-          projectId: project.id,
-          taskId: task.id,
-          type: 'TASK_COMPLETED',
-          payload: { task_id: task.id },
+          type: 'APPLICATION_ACCEPTED',
+          payload: { application_id: 'test-id' },
         },
       });
 
@@ -883,12 +864,12 @@ describe('me routes', () => {
       expect(res.status).toBe(200);
       expect(res.body.items[0]).toMatchObject({
         id: notif.id,
-        type: 'TASK_COMPLETED',
+        type: 'APPLICATION_ACCEPTED',
         actor_user_id: actor.id,
-        project_id: project.id,
-        task_id: task.id,
+        project_id: null,
+        task_id: null,
         thread_id: null,
-        payload: { task_id: task.id },
+        payload: { application_id: 'test-id' },
         read_at: null,
       });
 
@@ -921,7 +902,8 @@ describe('me routes', () => {
 
       const res = await request(app)
         .post('/api/v1/me/notifications/00000000-0000-0000-0000-000000000000/read')
-        .set('Authorization', `Bearer ${token}`);
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'developer');
 
       expect(res.status).toBe(404);
       expect(res.body.error.code).toBe('NOT_FOUND');
@@ -1049,8 +1031,8 @@ describe('me routes', () => {
         data: {
           userId: user.id,
           actorUserId: actor.id,
-          type: 'TASK_COMPLETED',
-          payload: { task_id: 'test-id-2' },
+          type: 'APPLICATION_REJECTED',
+          payload: { application_id: 'test-id-2' },
           createdAt: new Date('2026-02-14T10:00:01Z'),
         },
       });
@@ -1128,7 +1110,7 @@ describe('me routes', () => {
       const actor = await createUser({ companyProfile: { companyName: 'Company' } });
       const token = buildAccessToken({ userId: user.id, email: user.email });
 
-      // Create 3 unread notifications
+      // Create 3 unread notifications (all relevant to developer persona)
       await prisma.notification.create({
         data: {
           userId: user.id,
@@ -1143,7 +1125,7 @@ describe('me routes', () => {
         data: {
           userId: user.id,
           actorUserId: actor.id,
-          type: 'TASK_COMPLETED',
+          type: 'COMPLETION_REQUESTED',
           payload: { task_id: 'test-id-2' },
           createdAt: new Date('2026-02-14T10:00:01Z'),
         },
@@ -1153,8 +1135,8 @@ describe('me routes', () => {
         data: {
           userId: user.id,
           actorUserId: actor.id,
-          type: 'REVIEW_CREATED',
-          payload: { review_id: 'test-id-3' },
+          type: 'APPLICATION_REJECTED',
+          payload: { application_id: 'test-id-3' },
           createdAt: new Date('2026-02-14T10:00:02Z'),
         },
       });
@@ -1162,7 +1144,8 @@ describe('me routes', () => {
       // Verify all are unread
       let notificationsRes = await request(app)
         .get('/api/v1/me/notifications')
-        .set('Authorization', `Bearer ${token}`);
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'developer');
 
       expect(notificationsRes.body.unread_total).toBe(3);
       expect(notificationsRes.body.total).toBe(3);
@@ -1170,7 +1153,8 @@ describe('me routes', () => {
       // Mark all as read
       const markRes = await request(app)
         .post('/api/v1/me/notifications/read-all')
-        .set('Authorization', `Bearer ${token}`);
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'developer');
 
       expect(markRes.status).toBe(200);
       expect(markRes.body.updated).toBe(true);
@@ -1178,7 +1162,8 @@ describe('me routes', () => {
       // Verify all are now marked as read
       notificationsRes = await request(app)
         .get('/api/v1/me/notifications')
-        .set('Authorization', `Bearer ${token}`);
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'developer');
 
       expect(notificationsRes.body.unread_total).toBe(0);
       expect(notificationsRes.body.total).toBe(3);
@@ -1192,7 +1177,7 @@ describe('me routes', () => {
       const actor = await createUser({ companyProfile: { companyName: 'Company' } });
       const token = buildAccessToken({ userId: user.id, email: user.email });
 
-      // Create some read notifications and some unread
+      // Create some read notifications and some unread (all relevant to developer persona)
       await prisma.notification.create({
         data: {
           userId: user.id,
@@ -1207,7 +1192,7 @@ describe('me routes', () => {
         data: {
           userId: user.id,
           actorUserId: actor.id,
-          type: 'TASK_COMPLETED',
+          type: 'COMPLETION_REQUESTED',
           payload: { task_id: 'test-id-2' },
         },
       });
@@ -1216,15 +1201,16 @@ describe('me routes', () => {
         data: {
           userId: user.id,
           actorUserId: actor.id,
-          type: 'REVIEW_CREATED',
-          payload: { review_id: 'test-id-3' },
+          type: 'APPLICATION_REJECTED',
+          payload: { application_id: 'test-id-3' },
         },
       });
 
       // Verify initial state
       let notificationsRes = await request(app)
         .get('/api/v1/me/notifications')
-        .set('Authorization', `Bearer ${token}`);
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'developer');
 
       expect(notificationsRes.body.unread_total).toBe(2);
       expect(notificationsRes.body.total).toBe(3);
@@ -1232,7 +1218,8 @@ describe('me routes', () => {
       // Mark all as read
       const markRes = await request(app)
         .post('/api/v1/me/notifications/read-all')
-        .set('Authorization', `Bearer ${token}`);
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'developer');
 
       expect(markRes.status).toBe(200);
       expect(markRes.body.updated).toBe(true);
@@ -1240,7 +1227,8 @@ describe('me routes', () => {
       // Verify all are now marked as read
       notificationsRes = await request(app)
         .get('/api/v1/me/notifications')
-        .set('Authorization', `Bearer ${token}`);
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'developer');
 
       expect(notificationsRes.body.unread_total).toBe(0);
       expect(notificationsRes.body.total).toBe(3);
@@ -1269,7 +1257,8 @@ describe('me routes', () => {
       // First call
       let markRes = await request(app)
         .post('/api/v1/me/notifications/read-all')
-        .set('Authorization', `Bearer ${token}`);
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'developer');
 
       expect(markRes.status).toBe(200);
       expect(markRes.body.updated).toBe(true);
@@ -1277,7 +1266,8 @@ describe('me routes', () => {
       // Second call - should still succeed
       markRes = await request(app)
         .post('/api/v1/me/notifications/read-all')
-        .set('Authorization', `Bearer ${token}`);
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'developer');
 
       expect(markRes.status).toBe(200);
       expect(markRes.body.updated).toBe(true);
@@ -1285,7 +1275,8 @@ describe('me routes', () => {
       // Verify all are still read
       const notificationsRes = await request(app)
         .get('/api/v1/me/notifications')
-        .set('Authorization', `Bearer ${token}`);
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'developer');
 
       expect(notificationsRes.body.unread_total).toBe(0);
     });
@@ -1319,21 +1310,24 @@ describe('me routes', () => {
       // Mark all as read for user1
       const markRes = await request(app)
         .post('/api/v1/me/notifications/read-all')
-        .set('Authorization', `Bearer ${token1}`);
+        .set('Authorization', `Bearer ${token1}`)
+        .set('X-Persona', 'developer');
 
       expect(markRes.status).toBe(200);
 
       // Verify user1 has no unread
       let notificationsRes = await request(app)
         .get('/api/v1/me/notifications')
-        .set('Authorization', `Bearer ${token1}`);
+        .set('Authorization', `Bearer ${token1}`)
+        .set('X-Persona', 'developer');
 
       expect(notificationsRes.body.unread_total).toBe(0);
 
       // Verify user2 still has unread
       notificationsRes = await request(app)
         .get('/api/v1/me/notifications')
-        .set('Authorization', `Bearer ${token2}`);
+        .set('Authorization', `Bearer ${token2}`)
+        .set('X-Persona', 'developer');
 
       expect(notificationsRes.body.unread_total).toBe(1);
     });

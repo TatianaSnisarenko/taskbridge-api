@@ -156,40 +156,9 @@ export async function getMyNotifications({
   ]);
 
   // Filter notifications by persona
-  const filteredItems = allItems.filter((notif) => {
-    // Determine if this notification is relevant for the given persona
-    switch (notif.type) {
-      case 'APPLICATION_CREATED':
-        // Company receives this when a developer applies to their task
-        return persona === 'company' && notif.task?.ownerUserId === userId;
-      case 'APPLICATION_ACCEPTED':
-      case 'APPLICATION_REJECTED':
-      case 'COMPLETION_REQUESTED':
-        // Developer receives these
-        return persona === 'developer';
-      case 'TASK_COMPLETED':
-        // Company (task owner) receives this
-        return persona === 'company' && notif.task?.ownerUserId === userId;
-      case 'REVIEW_CREATED':
-        // Both can receive depending on who authored the review
-        // If actor is the current user and they're a developer, notification is for company (task owner)
-        // If actor is the task owner (company), notification is for developer
-        if (notif.actor?.developerProfile?.userId === userId) {
-          // Current user is developer, notification is for company
-          return persona === 'company' && notif.task?.ownerUserId === userId;
-        }
-        if (notif.task?.ownerUserId === userId) {
-          // Current user is company owner, notification is for developer
-          return persona === 'developer';
-        }
-        return false;
-      case 'CHAT_MESSAGE':
-        // Both participants receive this, show for both personas
-        return true;
-      default:
-        return true;
-    }
-  });
+  const filteredItems = allItems.filter((notif) =>
+    isNotificationRelevantForPersona(notif, userId, persona)
+  );
 
   // Apply pagination to filtered items
   const paginatedItems = filteredItems.slice(skip, skip + size);
@@ -331,7 +300,7 @@ function isNotificationRelevantForPersona(notif, userId, persona) {
     case 'APPLICATION_ACCEPTED':
     case 'APPLICATION_REJECTED':
     case 'COMPLETION_REQUESTED':
-      // Developer receives these
+      // Developer receives these (doesn't depend on task ownership)
       return persona === 'developer';
     case 'TASK_COMPLETED':
       // Company (task owner) receives this
