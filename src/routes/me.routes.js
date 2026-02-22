@@ -27,13 +27,24 @@ meRouter.get(
 meRouter.get(
   '/notifications',
   requireAuth,
+  requirePersona('developer', 'company'),
   validate(getMyNotificationsQuerySchema, 'query'),
   meController.getMyNotifications
 );
 
-meRouter.post('/notifications/read-all', requireAuth, meController.markAllNotificationsAsRead);
+meRouter.post(
+  '/notifications/read-all',
+  requireAuth,
+  requirePersona('developer', 'company'),
+  meController.markAllNotificationsAsRead
+);
 
-meRouter.post('/notifications/:id/read', requireAuth, meController.markNotificationAsRead);
+meRouter.post(
+  '/notifications/:id/read',
+  requireAuth,
+  requirePersona('developer', 'company'),
+  meController.markNotificationAsRead
+);
 
 meRouter.get(
   '/chat/threads',

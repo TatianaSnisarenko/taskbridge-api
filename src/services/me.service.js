@@ -94,8 +94,15 @@ export async function getMyApplications({ userId, page = 1, size = 20 }) {
 
 /**
  * Get notifications for the current user with pagination
+ * @param {string} persona - Required persona filter ('developer' or 'company')
  */
-export async function getMyNotifications({ userId, page = 1, size = 20, unreadOnly = false }) {
+export async function getMyNotifications({
+  userId,
+  page = 1,
+  size = 20,
+  unreadOnly = false,
+  persona,
+}) {
   const skip = (page - 1) * size;
 
   // Build filter for notifications
@@ -106,8 +113,8 @@ export async function getMyNotifications({ userId, page = 1, size = 20, unreadOn
     whereFilter.readAt = null;
   }
 
-  // Fetch notifications and total count in parallel
-  const [items, total, unreadTotal] = await Promise.all([
+  // Fetch all notifications (for filtering by persona after retrieval)
+  const [allItems, , unreadTotal] = await Promise.all([
     prisma.notification.findMany({
       where: whereFilter,
       select: {
@@ -120,9 +127,18 @@ export async function getMyNotifications({ userId, page = 1, size = 20, unreadOn
         payload: true,
         createdAt: true,
         readAt: true,
+        task: {
+          select: {
+            ownerUserId: true,
+          },
+        },
+        actor: {
+          select: {
+            developerProfile: { select: { userId: true } },
+            companyProfile: { select: { userId: true } },
+          },
+        },
       },
-      skip,
-      take: size,
       orderBy: {
         createdAt: 'desc',
       },
@@ -139,8 +155,48 @@ export async function getMyNotifications({ userId, page = 1, size = 20, unreadOn
     }),
   ]);
 
+  // Filter notifications by persona
+  const filteredItems = allItems.filter((notif) => {
+    // Determine if this notification is relevant for the given persona
+    switch (notif.type) {
+      case 'APPLICATION_CREATED':
+        // Company receives this when a developer applies to their task
+        return persona === 'company' && notif.task?.ownerUserId === userId;
+      case 'APPLICATION_ACCEPTED':
+      case 'APPLICATION_REJECTED':
+      case 'COMPLETION_REQUESTED':
+        // Developer receives these
+        return persona === 'developer';
+      case 'TASK_COMPLETED':
+        // Company (task owner) receives this
+        return persona === 'company' && notif.task?.ownerUserId === userId;
+      case 'REVIEW_CREATED':
+        // Both can receive depending on who authored the review
+        // If actor is the current user and they're a developer, notification is for company (task owner)
+        // If actor is the task owner (company), notification is for developer
+        if (notif.actor?.developerProfile?.userId === userId) {
+          // Current user is developer, notification is for company
+          return persona === 'company' && notif.task?.ownerUserId === userId;
+        }
+        if (notif.task?.ownerUserId === userId) {
+          // Current user is company owner, notification is for developer
+          return persona === 'developer';
+        }
+        return false;
+      case 'CHAT_MESSAGE':
+        // Both participants receive this, show for both personas
+        return true;
+      default:
+        return true;
+    }
+  });
+
+  // Apply pagination to filtered items
+  const paginatedItems = filteredItems.slice(skip, skip + size);
+  const filteredTotal = filteredItems.length;
+
   return {
-    items: items.map((notif) => ({
+    items: paginatedItems.map((notif) => ({
       id: notif.id,
       type: notif.type,
       actor_user_id: notif.actorUserId,
@@ -153,28 +209,46 @@ export async function getMyNotifications({ userId, page = 1, size = 20, unreadOn
     })),
     page,
     size,
-    total,
+    total: filteredTotal,
     unread_total: unreadTotal,
   };
 }
 
 /**
- * Mark a notification as read for the current user
+ * Mark a notification as read for the current user (persona-aware)
  */
-export async function markNotificationAsRead({ userId, notificationId }) {
+export async function markNotificationAsRead({ userId, notificationId, persona }) {
   // Find the notification and verify it belongs to the current user
   const notification = await prisma.notification.findUnique({
     where: { id: notificationId },
     select: {
       id: true,
       userId: true,
+      type: true,
       readAt: true,
       createdAt: true,
+      task: {
+        select: {
+          ownerUserId: true,
+        },
+      },
+      actor: {
+        select: {
+          developerProfile: { select: { userId: true } },
+          companyProfile: { select: { userId: true } },
+        },
+      },
     },
   });
 
   // Check if notification exists and belongs to current user
   if (!notification || notification.userId !== userId) {
+    throw new ApiError(404, 'NOT_FOUND', 'Notification not found');
+  }
+
+  // Check if notification is relevant for the given persona
+  const isRelevant = isNotificationRelevantForPersona(notification, userId, persona);
+  if (!isRelevant) {
     throw new ApiError(404, 'NOT_FOUND', 'Notification not found');
   }
 
@@ -195,26 +269,90 @@ export async function markNotificationAsRead({ userId, notificationId }) {
 }
 
 /**
- * Mark all notifications as read for the current user
+ * Mark all notifications as read for the current user (persona-aware)
  */
-export async function markAllNotificationsAsRead({ userId }) {
+export async function markAllNotificationsAsRead({ userId, persona }) {
   const now = new Date();
 
-  // Update all unread notifications for the user
-  await prisma.notification.updateMany({
+  // Get all unread notifications for the user to filter by persona
+  const unreadNotifications = await prisma.notification.findMany({
     where: {
       userId,
       readAt: null,
     },
-    data: {
-      readAt: now,
+    select: {
+      id: true,
+      type: true,
+      task: {
+        select: {
+          ownerUserId: true,
+        },
+      },
+      actor: {
+        select: {
+          developerProfile: { select: { userId: true } },
+          companyProfile: { select: { userId: true } },
+        },
+      },
     },
   });
+
+  // Filter notifications that are relevant for this persona
+  const notificationsToMark = unreadNotifications.filter((notif) =>
+    isNotificationRelevantForPersona(notif, userId, persona)
+  );
+
+  // Mark all relevant notifications as read
+  if (notificationsToMark.length > 0) {
+    await prisma.notification.updateMany({
+      where: {
+        id: { in: notificationsToMark.map((n) => n.id) },
+      },
+      data: {
+        readAt: now,
+      },
+    });
+  }
 
   return {
     updated: true,
     read_at: now.toISOString(),
   };
+}
+
+/**
+ * Helper function to check if a notification is relevant for a given persona
+ */
+function isNotificationRelevantForPersona(notif, userId, persona) {
+  switch (notif.type) {
+    case 'APPLICATION_CREATED':
+      // Company receives this when a developer applies to their task
+      return persona === 'company' && notif.task?.ownerUserId === userId;
+    case 'APPLICATION_ACCEPTED':
+    case 'APPLICATION_REJECTED':
+    case 'COMPLETION_REQUESTED':
+      // Developer receives these
+      return persona === 'developer';
+    case 'TASK_COMPLETED':
+      // Company (task owner) receives this
+      return persona === 'company' && notif.task?.ownerUserId === userId;
+    case 'REVIEW_CREATED':
+      // Both can receive depending on who authored the review
+      if (notif.actor?.developerProfile?.userId === userId) {
+        // Current user is developer, notification is for company
+        return persona === 'company' && notif.task?.ownerUserId === userId;
+      }
+      if (notif.task?.ownerUserId === userId) {
+        // Current user is company owner, notification is for developer
+        return persona === 'developer';
+      }
+      return false;
+    case 'CHAT_MESSAGE':
+      // Both participants receive this, show for both personas
+      return true;
+    default:
+      return true;
+  }
 }
 
 /**

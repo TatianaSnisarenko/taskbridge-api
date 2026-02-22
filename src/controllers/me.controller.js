@@ -38,6 +38,7 @@ export const getMyNotifications = asyncHandler(async (req, res) => {
     page: parseInt(req.query.page) || 1,
     size: parseInt(req.query.size) || 20,
     unreadOnly: req.query.unread_only === 'true' || req.query.unread_only === true,
+    persona: req.persona,
   });
 
   return res.status(200).json({
@@ -53,6 +54,7 @@ export const markNotificationAsRead = asyncHandler(async (req, res) => {
   const result = await meService.markNotificationAsRead({
     userId: req.user.id,
     notificationId: req.params.id,
+    persona: req.persona,
   });
 
   return res.status(200).json({
@@ -64,6 +66,7 @@ export const markNotificationAsRead = asyncHandler(async (req, res) => {
 export const markAllNotificationsAsRead = asyncHandler(async (req, res) => {
   const result = await meService.markAllNotificationsAsRead({
     userId: req.user.id,
+    persona: req.persona,
   });
 
   return res.status(200).json({

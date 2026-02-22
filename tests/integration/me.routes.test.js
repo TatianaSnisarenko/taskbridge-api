@@ -516,7 +516,8 @@ describe('me routes', () => {
 
       const res = await request(app)
         .get('/api/v1/me/notifications?page=0')
-        .set('Authorization', `Bearer ${token}`);
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'developer');
 
       expect(res.status).toBe(400);
       expect(res.body.error.code).toBe('VALIDATION_ERROR');
@@ -535,7 +536,8 @@ describe('me routes', () => {
 
       const res = await request(app)
         .get('/api/v1/me/notifications?size=150')
-        .set('Authorization', `Bearer ${token}`);
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'developer');
 
       expect(res.status).toBe(400);
       expect(res.body.error.code).toBe('VALIDATION_ERROR');
@@ -554,7 +556,8 @@ describe('me routes', () => {
 
       const res = await request(app)
         .get('/api/v1/me/notifications?unread_only=maybe')
-        .set('Authorization', `Bearer ${token}`);
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'developer');
 
       expect(res.status).toBe(400);
       expect(res.body.error.code).toBe('VALIDATION_ERROR');
@@ -573,7 +576,8 @@ describe('me routes', () => {
 
       const res = await request(app)
         .get('/api/v1/me/notifications')
-        .set('Authorization', `Bearer ${token}`);
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'developer');
 
       expect(res.status).toBe(200);
       expect(res.body).toMatchObject({
@@ -613,7 +617,8 @@ describe('me routes', () => {
 
       const res = await request(app)
         .get('/api/v1/me/notifications')
-        .set('Authorization', `Bearer ${token}`);
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'developer');
 
       expect(res.status).toBe(200);
       expect(res.body.items).toHaveLength(2);
@@ -666,7 +671,8 @@ describe('me routes', () => {
 
       const res = await request(app)
         .get('/api/v1/me/notifications?unread_only=true')
-        .set('Authorization', `Bearer ${token}`);
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'developer');
 
       expect(res.status).toBe(200);
       expect(res.body.items).toHaveLength(1);
@@ -732,7 +738,8 @@ describe('me routes', () => {
       // Get all notifications
       const resAll = await request(app)
         .get('/api/v1/me/notifications')
-        .set('Authorization', `Bearer ${token}`);
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'developer');
 
       expect(resAll.status).toBe(200);
       expect(resAll.body.total).toBe(5);
@@ -741,7 +748,8 @@ describe('me routes', () => {
       // Get only unread notifications
       const resUnread = await request(app)
         .get('/api/v1/me/notifications?unread_only=true')
-        .set('Authorization', `Bearer ${token}`);
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'developer');
 
       expect(resUnread.status).toBe(200);
       expect(resUnread.body.total).toBe(3);
@@ -768,7 +776,8 @@ describe('me routes', () => {
       // Get first page with size 2
       const res1 = await request(app)
         .get('/api/v1/me/notifications?page=1&size=2')
-        .set('Authorization', `Bearer ${token}`);
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'developer');
 
       expect(res1.status).toBe(200);
       expect(res1.body.items).toHaveLength(2);
@@ -779,7 +788,8 @@ describe('me routes', () => {
       // Get second page with size 2
       const res2 = await request(app)
         .get('/api/v1/me/notifications?page=2&size=2')
-        .set('Authorization', `Bearer ${token}`);
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'developer');
 
       expect(res2.status).toBe(200);
       expect(res2.body.items).toHaveLength(2);
@@ -820,7 +830,8 @@ describe('me routes', () => {
       // User1 should only see their notification
       const res = await request(app)
         .get('/api/v1/me/notifications')
-        .set('Authorization', `Bearer ${token1}`);
+        .set('Authorization', `Bearer ${token1}`)
+        .set('X-Persona', 'developer');
 
       expect(res.status).toBe(200);
       expect(res.body.items).toHaveLength(1);
@@ -866,7 +877,8 @@ describe('me routes', () => {
 
       const res = await request(app)
         .get('/api/v1/me/notifications')
-        .set('Authorization', `Bearer ${token}`);
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'developer');
 
       expect(res.status).toBe(200);
       expect(res.body.items[0]).toMatchObject({
@@ -935,7 +947,8 @@ describe('me routes', () => {
       // Try to mark it as read as user1
       const res = await request(app)
         .post(`/api/v1/me/notifications/${notif.id}/read`)
-        .set('Authorization', `Bearer ${token1}`);
+        .set('Authorization', `Bearer ${token1}`)
+        .set('X-Persona', 'developer');
 
       expect(res.status).toBe(404);
       expect(res.body.error.code).toBe('NOT_FOUND');
@@ -962,7 +975,8 @@ describe('me routes', () => {
       // Mark as read
       const res = await request(app)
         .post(`/api/v1/me/notifications/${notif.id}/read`)
-        .set('Authorization', `Bearer ${token}`);
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'developer');
 
       expect(res.status).toBe(200);
       expect(res.body).toHaveProperty('id', notif.id);
@@ -1002,7 +1016,8 @@ describe('me routes', () => {
       // Mark as read again
       const res = await request(app)
         .post(`/api/v1/me/notifications/${notif.id}/read`)
-        .set('Authorization', `Bearer ${token}`);
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'developer');
 
       expect(res.status).toBe(200);
       expect(res.body).toHaveProperty('id', notif.id);
@@ -1043,7 +1058,8 @@ describe('me routes', () => {
       // Check unread_total before
       let notificationsRes = await request(app)
         .get('/api/v1/me/notifications')
-        .set('Authorization', `Bearer ${token}`);
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'developer');
 
       expect(notificationsRes.body.unread_total).toBe(2);
       expect(notificationsRes.body.total).toBe(2);
@@ -1051,14 +1067,16 @@ describe('me routes', () => {
       // Mark first notification as read
       const markRes = await request(app)
         .post(`/api/v1/me/notifications/${notif1.id}/read`)
-        .set('Authorization', `Bearer ${token}`);
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'developer');
 
       expect(markRes.status).toBe(200);
 
       // Check unread_total after
       notificationsRes = await request(app)
         .get('/api/v1/me/notifications')
-        .set('Authorization', `Bearer ${token}`);
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'developer');
 
       expect(notificationsRes.body.unread_total).toBe(1);
       expect(notificationsRes.body.total).toBe(2); // Both still in list
@@ -1095,7 +1113,8 @@ describe('me routes', () => {
 
       const res = await request(app)
         .post('/api/v1/me/notifications/read-all')
-        .set('Authorization', `Bearer ${token}`);
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'developer');
 
       expect(res.status).toBe(200);
       expect(res.body.updated).toBe(true);

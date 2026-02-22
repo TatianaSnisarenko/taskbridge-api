@@ -1337,6 +1337,13 @@ export const swaggerSpec = {
         security: [{ bearerAuth: [] }],
         parameters: [
           {
+            name: 'X-Persona',
+            in: 'header',
+            required: true,
+            schema: { type: 'string', enum: ['developer', 'company'] },
+            description: 'User persona context (required)',
+          },
+          {
             name: 'page',
             in: 'query',
             schema: { type: 'integer', minimum: 1, default: 1 },
@@ -1376,6 +1383,13 @@ export const swaggerSpec = {
         security: [{ bearerAuth: [] }],
         parameters: [
           {
+            name: 'X-Persona',
+            in: 'header',
+            required: true,
+            schema: { type: 'string', enum: ['developer', 'company'] },
+            description: 'User persona context (required)',
+          },
+          {
             name: 'id',
             in: 'path',
             required: true,
@@ -1402,6 +1416,15 @@ export const swaggerSpec = {
         tags: ['Me'],
         summary: 'Mark all notifications as read',
         security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'X-Persona',
+            in: 'header',
+            required: true,
+            schema: { type: 'string', enum: ['developer', 'company'] },
+            description: 'User persona context (required)',
+          },
+        ],
         responses: {
           200: {
             description: 'All notifications marked as read',
