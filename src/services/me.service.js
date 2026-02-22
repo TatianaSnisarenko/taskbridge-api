@@ -686,3 +686,76 @@ export async function createMessage({ userId, persona, threadId, text }) {
     read_at: null, // New message is always unread
   };
 }
+
+/**
+ * Mark all messages in a thread as read for the current user
+ * User must be a participant in the thread with matching persona
+ */
+export async function markThreadAsRead({ userId, persona, threadId }) {
+  // Fetch thread and verify access
+  const thread = await prisma.chatThread.findUnique({
+    where: { id: threadId },
+    select: {
+      id: true,
+      taskId: true,
+      companyUserId: true,
+      developerUserId: true,
+      task: {
+        select: {
+          id: true,
+          status: true,
+          deletedAt: true,
+        },
+      },
+    },
+  });
+
+  if (!thread) {
+    throw new ApiError(404, 'NOT_FOUND', 'Chat thread not found');
+  }
+
+  if (thread.task.deletedAt) {
+    throw new ApiError(404, 'NOT_FOUND', 'Chat thread not found');
+  }
+
+  // Verify user matches the persona role in this thread
+  if (persona === 'developer') {
+    if (thread.developerUserId !== userId) {
+      throw new ApiError(403, 'FORBIDDEN', 'You are not the developer in this thread');
+    }
+  } else if (persona === 'company') {
+    if (thread.companyUserId !== userId) {
+      throw new ApiError(403, 'FORBIDDEN', 'You are not the company representative in this thread');
+    }
+  }
+
+  // Verify task status is IN_PROGRESS or COMPLETED
+  if (!['IN_PROGRESS', 'COMPLETED'].includes(thread.task.status)) {
+    throw new ApiError(403, 'FORBIDDEN', 'Cannot mark messages as read for this task status');
+  }
+
+  const now = new Date();
+
+  // Upsert ChatThreadRead record
+  await prisma.chatThreadRead.upsert({
+    where: {
+      threadId_userId: {
+        threadId,
+        userId,
+      },
+    },
+    create: {
+      threadId,
+      userId,
+      lastReadAt: now,
+    },
+    update: {
+      lastReadAt: now,
+    },
+  });
+
+  return {
+    thread_id: threadId,
+    read_at: now.toISOString(),
+  };
+}

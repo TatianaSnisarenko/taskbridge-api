@@ -123,3 +123,13 @@ export const createMessage = asyncHandler(async (req, res) => {
 
   return res.status(201).json(result);
 });
+
+export const markThreadAsRead = asyncHandler(async (req, res) => {
+  const result = await meService.markThreadAsRead({
+    userId: req.user.id,
+    persona: req.headers['x-persona'],
+    threadId: req.params.threadId,
+  });
+
+  return res.status(200).json(result);
+});

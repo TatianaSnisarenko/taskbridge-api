@@ -1044,6 +1044,13 @@ export const swaggerSpec = {
           read_at: { type: 'null', description: 'New messages are always unread (null)' },
         },
       },
+      MarkThreadAsReadResponse: {
+        type: 'object',
+        properties: {
+          thread_id: { type: 'string', format: 'uuid' },
+          read_at: { type: 'string', format: 'date-time', example: '2026-02-14T15:00:00Z' },
+        },
+      },
       UploadAvatarResponse: {
         type: 'object',
         required: ['user_id', 'avatar_url', 'updated_at'],
@@ -1585,6 +1592,45 @@ export const swaggerSpec = {
             content: {
               'application/json': {
                 schema: { $ref: '#/components/schemas/CreateMessageResponse' },
+              },
+            },
+          },
+          400: { description: 'Validation error' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Forbidden - user is not a participant or task status is invalid' },
+          404: { description: 'Chat thread not found' },
+        },
+      },
+    },
+    '/api/v1/me/chat/threads/{threadId}/read': {
+      post: {
+        tags: ['Me'],
+        summary: 'Mark all messages in a thread as read',
+        description:
+          'Mark all messages in a specific chat thread as read for the current user. User must be a participant in the thread and the associated task must have status IN_PROGRESS or COMPLETED. Updates or creates a ChatThreadRead record with the current timestamp.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'X-Persona',
+            in: 'header',
+            required: true,
+            schema: { type: 'string', enum: ['developer', 'company'] },
+            description: 'User persona - must match user role in thread',
+          },
+          {
+            name: 'threadId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+            description: 'Chat thread ID',
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Thread marked as read successfully',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/MarkThreadAsReadResponse' },
               },
             },
           },

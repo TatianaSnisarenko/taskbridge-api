@@ -68,3 +68,11 @@ meRouter.post(
   validate(createMessageBodySchema, 'body'),
   meController.createMessage
 );
+
+meRouter.post(
+  '/chat/threads/:threadId/read',
+  requireAuth,
+  requirePersona('developer', 'company'),
+  validate(threadIdParamSchema, 'params'),
+  meController.markThreadAsRead
+);
