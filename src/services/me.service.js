@@ -1,5 +1,6 @@
 import { prisma } from '../db/prisma.js';
 import { ApiError } from '../utils/ApiError.js';
+import { createNotification } from './notifications.service.js';
 
 /**
  * Get applications created by the current developer user with pagination
@@ -575,5 +576,113 @@ export async function getThreadMessages({ userId, persona, threadId, page = 1, s
     page,
     size,
     total,
+  };
+}
+
+/**
+ * Create a new message in a chat thread
+ * User must be a participant in the thread with matching persona
+ * Creates notification for the other participant
+ */
+export async function createMessage({ userId, persona, threadId, text }) {
+  // Fetch thread and verify access
+  const thread = await prisma.chatThread.findUnique({
+    where: { id: threadId },
+    select: {
+      id: true,
+      taskId: true,
+      companyUserId: true,
+      developerUserId: true,
+      task: {
+        select: {
+          id: true,
+          status: true,
+          deletedAt: true,
+        },
+      },
+    },
+  });
+
+  if (!thread) {
+    throw new ApiError(404, 'NOT_FOUND', 'Chat thread not found');
+  }
+
+  if (thread.task.deletedAt) {
+    throw new ApiError(404, 'NOT_FOUND', 'Chat thread not found');
+  }
+
+  // Verify user matches the persona role in this thread
+  if (persona === 'developer') {
+    if (thread.developerUserId !== userId) {
+      throw new ApiError(403, 'FORBIDDEN', 'You are not the developer in this thread');
+    }
+  } else if (persona === 'company') {
+    if (thread.companyUserId !== userId) {
+      throw new ApiError(403, 'FORBIDDEN', 'You are not the company representative in this thread');
+    }
+  }
+
+  // Verify task status is IN_PROGRESS or COMPLETED
+  if (!['IN_PROGRESS', 'COMPLETED'].includes(thread.task.status)) {
+    throw new ApiError(403, 'FORBIDDEN', 'Cannot send messages for this task status');
+  }
+
+  const now = new Date();
+
+  // Create message and update thread's lastMessageAt in a transaction
+  const result = await prisma.$transaction(async (tx) => {
+    // Create the message
+    const message = await tx.chatMessage.create({
+      data: {
+        threadId,
+        senderUserId: userId,
+        senderPersona: persona,
+        text: text.trim(),
+        sentAt: now,
+      },
+      select: {
+        id: true,
+        threadId: true,
+        senderUserId: true,
+        senderPersona: true,
+        text: true,
+        sentAt: true,
+      },
+    });
+
+    // Update thread's lastMessageAt
+    await tx.chatThread.update({
+      where: { id: threadId },
+      data: { lastMessageAt: now },
+    });
+
+    // Determine the recipient (other participant)
+    const recipientUserId = persona === 'developer' ? thread.companyUserId : thread.developerUserId;
+
+    // Create notification for the other participant
+    await createNotification({
+      client: tx,
+      userId: recipientUserId,
+      actorUserId: userId,
+      taskId: thread.taskId,
+      type: 'CHAT_MESSAGE',
+      payload: {
+        thread_id: threadId,
+        task_id: thread.taskId,
+      },
+    });
+
+    return message;
+  });
+
+  // Return message in response format
+  return {
+    id: result.id,
+    thread_id: result.threadId,
+    sender_user_id: result.senderUserId,
+    sender_persona: result.senderPersona,
+    text: result.text,
+    sent_at: result.sentAt.toISOString(),
+    read_at: null, // New message is always unread
   };
 }

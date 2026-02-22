@@ -90,6 +90,7 @@ enum NotificationType {
   COMPLETION_REQUESTED
   TASK_COMPLETED
   REVIEW_CREATED
+  CHAT_MESSAGE
 }
 
 enum VerificationType {

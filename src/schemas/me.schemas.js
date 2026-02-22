@@ -67,3 +67,13 @@ export const threadMessagesQuerySchema = Joi.object({
     'number.max': 'Size must not exceed 50',
   }),
 });
+
+export const createMessageBodySchema = Joi.object({
+  text: Joi.string().min(1).max(2000).required().messages({
+    'string.base': 'Text must be a string',
+    'string.empty': 'Text is required',
+    'string.min': 'Text must be at least 1 character',
+    'string.max': 'Text must not exceed 2000 characters',
+    'any.required': 'Text is required',
+  }),
+});

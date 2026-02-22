@@ -112,3 +112,14 @@ export const getThreadMessages = asyncHandler(async (req, res) => {
     total: result.total,
   });
 });
+
+export const createMessage = asyncHandler(async (req, res) => {
+  const result = await meService.createMessage({
+    userId: req.user.id,
+    persona: req.headers['x-persona'],
+    threadId: req.params.threadId,
+    text: req.body.text,
+  });
+
+  return res.status(201).json(result);
+});

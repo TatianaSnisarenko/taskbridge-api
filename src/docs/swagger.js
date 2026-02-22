@@ -1020,6 +1020,25 @@ export const swaggerSpec = {
           total: { type: 'integer', example: 1 },
         },
       },
+      CreateMessageRequest: {
+        type: 'object',
+        required: ['text'],
+        properties: {
+          text: { type: 'string', minLength: 1, maxLength: 2000, example: 'Hello! I have a question about this task.' },
+        },
+      },
+      CreateMessageResponse: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          thread_id: { type: 'string', format: 'uuid' },
+          sender_user_id: { type: 'string', format: 'uuid' },
+          sender_persona: { type: 'string', enum: ['developer', 'company'] },
+          text: { type: 'string', example: 'Hello! I have a question about this task.' },
+          sent_at: { type: 'string', format: 'date-time' },
+          read_at: { type: 'null', description: 'New messages are always unread (null)' },
+        },
+      },
       UploadAvatarResponse: {
         type: 'object',
         required: ['user_id', 'avatar_url', 'updated_at'],
@@ -1513,6 +1532,54 @@ export const swaggerSpec = {
             content: {
               'application/json': {
                 schema: { $ref: '#/components/schemas/GetThreadMessagesResponse' },
+              },
+            },
+          },
+          400: { description: 'Validation error' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Forbidden - user is not a participant or task status is invalid' },
+          404: { description: 'Chat thread not found' },
+        },
+      },
+      post: {
+        tags: ['Me'],
+        summary: 'Send a message in a chat thread',
+        description:
+          'Send a new message in a specific chat thread. User must be a participant in the thread and the associated task must have status IN_PROGRESS or COMPLETED. Creates a notification for the other participant.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'X-Persona',
+            in: 'header',
+            required: true,
+            schema: { type: 'string', enum: ['developer', 'company'] },
+            description: 'User persona - must match user role in thread',
+          },
+          {
+            name: 'threadId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+            description: 'Chat thread ID',
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/CreateMessageRequest' },
+              example: {
+                text: 'Hello! I have a question about this task.',
+              },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: 'Message sent successfully',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/CreateMessageResponse' },
               },
             },
           },

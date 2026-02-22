@@ -9,6 +9,7 @@ import {
   getMyThreadsQuerySchema,
   threadIdParamSchema,
   threadMessagesQuerySchema,
+  createMessageBodySchema,
 } from '../schemas/me.schemas.js';
 
 export const meRouter = Router();
@@ -57,4 +58,13 @@ meRouter.get(
   validate(threadIdParamSchema, 'params'),
   validate(threadMessagesQuerySchema, 'query'),
   meController.getThreadMessages
+);
+
+meRouter.post(
+  '/chat/threads/:threadId/messages',
+  requireAuth,
+  requirePersona('developer', 'company'),
+  validate(threadIdParamSchema, 'params'),
+  validate(createMessageBodySchema, 'body'),
+  meController.createMessage
 );
