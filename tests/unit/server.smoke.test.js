@@ -24,7 +24,12 @@ async function loadServer({ connectImpl, listenImpl }) {
   }));
 
   jest.unstable_mockModule('../../src/config/env.js', () => ({
-    env: { port: 3000 },
+    env: {
+      port: 3000,
+      nodeEnv: 'test',
+      appBaseUrl: 'http://localhost:3000',
+      frontendBaseUrl: 'http://localhost:5173',
+    },
   }));
 
   jest.unstable_mockModule('../../src/db/prisma.js', () => ({
