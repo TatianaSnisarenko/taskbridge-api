@@ -7,6 +7,7 @@ import {
   getMyApplicationsQuerySchema,
   getMyNotificationsQuerySchema,
   getMyThreadsQuerySchema,
+  threadIdParamSchema,
 } from '../schemas/me.schemas.js';
 
 export const meRouter = Router();
@@ -37,4 +38,11 @@ meRouter.get(
   requireAuth,
   validate(getMyThreadsQuerySchema, 'query'),
   meController.getMyThreads
+);
+
+meRouter.get(
+  '/chat/threads/:threadId',
+  requireAuth,
+  validate(threadIdParamSchema, 'params'),
+  meController.getThreadById
 );

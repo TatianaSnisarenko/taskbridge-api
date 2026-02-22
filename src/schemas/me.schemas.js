@@ -47,3 +47,10 @@ export const getMyThreadsQuerySchema = Joi.object({
     'string.base': 'Search must be a string',
   }),
 });
+export const threadIdParamSchema = Joi.object({
+  threadId: Joi.string().guid({ version: 'uuidv4' }).required().messages({
+    'string.empty': 'Thread id is required',
+    'string.guid': 'Thread id must be a valid UUID',
+    'any.required': 'Thread id is required',
+  }),
+});

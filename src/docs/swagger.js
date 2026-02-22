@@ -1406,6 +1406,38 @@ export const swaggerSpec = {
         },
       },
     },
+    '/api/v1/me/chat/threads/{threadId}': {
+      get: {
+        tags: ['Me'],
+        summary: 'Get chat thread by ID',
+        description:
+          'Get a specific chat thread by ID. User must be a participant in the thread and the associated task must have status IN_PROGRESS or COMPLETED.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'threadId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+            description: 'Chat thread ID',
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Chat thread details',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ChatThreadItem' },
+              },
+            },
+          },
+          400: { description: 'Validation error' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Forbidden - user is not a participant or task status is invalid' },
+          404: { description: 'Chat thread not found' },
+        },
+      },
+    },
     '/api/v1/profiles/developer': {
       post: {
         tags: ['Profiles'],

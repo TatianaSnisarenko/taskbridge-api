@@ -86,3 +86,11 @@ export const getMyThreads = asyncHandler(async (req, res) => {
     total: result.total,
   });
 });
+export const getThreadById = asyncHandler(async (req, res) => {
+  const result = await meService.getThreadById({
+    userId: req.user.id,
+    threadId: req.params.threadId,
+  });
+
+  return res.status(200).json(result);
+});

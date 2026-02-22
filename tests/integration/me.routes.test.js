@@ -1873,4 +1873,436 @@ describe('me routes', () => {
       expect(res.body.items[1].thread_id).toBe(thread1.id);
     });
   });
+
+  describe('GET /me/chat/threads/{threadId}', () => {
+    test('rejects unauthorized', async () => {
+      const res = await request(app).get(
+        '/api/v1/me/chat/threads/3fa85f64-5717-4562-b3fc-2c963f66afa6'
+      );
+
+      expect(res.status).toBe(401);
+      expect(res.body.error.code).toBe('AUTH_REQUIRED');
+    });
+
+    test('rejects invalid token', async () => {
+      const res = await request(app)
+        .get('/api/v1/me/chat/threads/3fa85f64-5717-4562-b3fc-2c963f66afa6')
+        .set('Authorization', 'Bearer invalid');
+
+      expect(res.status).toBe(401);
+      expect(res.body.error.code).toBe('INVALID_TOKEN');
+    });
+
+    test('returns 400 on invalid threadId format', async () => {
+      const user = await createUser({ developerProfile: { displayName: 'Dev' } });
+      const token = buildAccessToken({ userId: user.id, email: user.email });
+
+      const res = await request(app)
+        .get('/api/v1/me/chat/threads/invalid-id')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    });
+
+    test('returns 404 when thread does not exist', async () => {
+      const user = await createUser({ developerProfile: { displayName: 'Dev' } });
+      const token = buildAccessToken({ userId: user.id, email: user.email });
+
+      const res = await request(app)
+        .get('/api/v1/me/chat/threads/3fa85f64-5717-4562-b3fc-2c963f66afa6')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(404);
+      expect(res.body.error.code).toBe('NOT_FOUND');
+    });
+
+    test('returns 403 when user is not a participant', async () => {
+      const user1 = await createUser({ developerProfile: { displayName: 'Dev1' } });
+      const user2 = await createUser({ developerProfile: { displayName: 'Dev2' } });
+      const company = await createUser({ companyProfile: { companyName: 'Company' } });
+      const user2Token = buildAccessToken({ userId: user2.id, email: user2.email });
+
+      const task = await prisma.task.create({
+        data: {
+          ownerUserId: company.id,
+          status: 'IN_PROGRESS',
+          title: 'Task',
+          description: 'Description',
+        },
+      });
+
+      const thread = await prisma.chatThread.create({
+        data: {
+          taskId: task.id,
+          companyUserId: company.id,
+          developerUserId: user1.id,
+        },
+      });
+
+      const res = await request(app)
+        .get(`/api/v1/me/chat/threads/${thread.id}`)
+        .set('Authorization', `Bearer ${user2Token}`);
+
+      expect(res.status).toBe(403);
+      expect(res.body.error.code).toBe('FORBIDDEN');
+    });
+
+    test('returns 403 when task status is DRAFT', async () => {
+      const developer = await createUser({ developerProfile: { displayName: 'Dev' } });
+      const company = await createUser({ companyProfile: { companyName: 'Company' } });
+      const devToken = buildAccessToken({ userId: developer.id, email: developer.email });
+
+      const task = await prisma.task.create({
+        data: {
+          ownerUserId: company.id,
+          status: 'DRAFT',
+          title: 'Draft Task',
+          description: 'Description',
+        },
+      });
+
+      const thread = await prisma.chatThread.create({
+        data: {
+          taskId: task.id,
+          companyUserId: company.id,
+          developerUserId: developer.id,
+        },
+      });
+
+      const res = await request(app)
+        .get(`/api/v1/me/chat/threads/${thread.id}`)
+        .set('Authorization', `Bearer ${devToken}`);
+
+      expect(res.status).toBe(403);
+      expect(res.body.error.code).toBe('FORBIDDEN');
+    });
+
+    test('returns 404 when associated task is deleted', async () => {
+      const developer = await createUser({ developerProfile: { displayName: 'Dev' } });
+      const company = await createUser({ companyProfile: { companyName: 'Company' } });
+      const devToken = buildAccessToken({ userId: developer.id, email: developer.email });
+
+      const task = await prisma.task.create({
+        data: {
+          ownerUserId: company.id,
+          status: 'IN_PROGRESS',
+          title: 'Task',
+          description: 'Description',
+        },
+      });
+
+      const thread = await prisma.chatThread.create({
+        data: {
+          taskId: task.id,
+          companyUserId: company.id,
+          developerUserId: developer.id,
+        },
+      });
+
+      // Delete the task
+      await prisma.task.update({
+        where: { id: task.id },
+        data: { deletedAt: new Date() },
+      });
+
+      const res = await request(app)
+        .get(`/api/v1/me/chat/threads/${thread.id}`)
+        .set('Authorization', `Bearer ${devToken}`);
+
+      expect(res.status).toBe(404);
+      expect(res.body.error.code).toBe('NOT_FOUND');
+    });
+
+    test('returns thread details for developer participant', async () => {
+      const developer = await createUser({
+        developerProfile: {
+          displayName: 'John Dev',
+          avatarUrl: 'https://example.com/avatar.jpg',
+        },
+      });
+      const company = await createUser({
+        companyProfile: {
+          companyName: 'Acme Inc',
+          logoUrl: 'https://example.com/logo.jpg',
+        },
+      });
+      const devToken = buildAccessToken({ userId: developer.id, email: developer.email });
+
+      const task = await prisma.task.create({
+        data: {
+          ownerUserId: company.id,
+          status: 'IN_PROGRESS',
+          title: 'React Dashboard',
+          description: 'Description',
+        },
+      });
+
+      const thread = await prisma.chatThread.create({
+        data: {
+          taskId: task.id,
+          companyUserId: company.id,
+          developerUserId: developer.id,
+        },
+      });
+
+      const res = await request(app)
+        .get(`/api/v1/me/chat/threads/${thread.id}`)
+        .set('Authorization', `Bearer ${devToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body).toMatchObject({
+        thread_id: thread.id,
+        task: {
+          task_id: task.id,
+          title: 'React Dashboard',
+          status: 'IN_PROGRESS',
+        },
+        other_participant: {
+          user_id: company.id,
+          display_name: 'Acme Inc',
+          company_name: 'Acme Inc',
+          avatar_url: 'https://example.com/logo.jpg',
+        },
+        unread_count: 0,
+      });
+      expect(res.body.created_at).toBeDefined();
+    });
+
+    test('returns thread details for company participant', async () => {
+      const developer = await createUser({
+        developerProfile: {
+          displayName: 'John Dev',
+          avatarUrl: 'https://example.com/avatar.jpg',
+        },
+      });
+      const company = await createUser({
+        companyProfile: {
+          companyName: 'Acme Inc',
+          logoUrl: 'https://example.com/logo.jpg',
+        },
+      });
+      const companyToken = buildAccessToken({ userId: company.id, email: company.email });
+
+      const task = await prisma.task.create({
+        data: {
+          ownerUserId: company.id,
+          status: 'IN_PROGRESS',
+          title: 'Node.js API',
+          description: 'Description',
+        },
+      });
+
+      const thread = await prisma.chatThread.create({
+        data: {
+          taskId: task.id,
+          companyUserId: company.id,
+          developerUserId: developer.id,
+        },
+      });
+
+      const res = await request(app)
+        .get(`/api/v1/me/chat/threads/${thread.id}`)
+        .set('Authorization', `Bearer ${companyToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body).toMatchObject({
+        thread_id: thread.id,
+        task: {
+          task_id: task.id,
+          title: 'Node.js API',
+          status: 'IN_PROGRESS',
+        },
+        other_participant: {
+          user_id: developer.id,
+          display_name: 'John Dev',
+          company_name: null,
+          avatar_url: 'https://example.com/avatar.jpg',
+        },
+        unread_count: 0,
+      });
+      expect(res.body.created_at).toBeDefined();
+    });
+
+    test('returns correct last_message when messages exist', async () => {
+      const developer = await createUser({ developerProfile: { displayName: 'Dev' } });
+      const company = await createUser({ companyProfile: { companyName: 'Company' } });
+      const devToken = buildAccessToken({ userId: developer.id, email: developer.email });
+
+      const task = await prisma.task.create({
+        data: {
+          ownerUserId: company.id,
+          status: 'IN_PROGRESS',
+          title: 'Task',
+          description: 'Description',
+        },
+      });
+
+      const thread = await prisma.chatThread.create({
+        data: {
+          taskId: task.id,
+          companyUserId: company.id,
+          developerUserId: developer.id,
+        },
+      });
+
+      const messageTime = new Date('2026-02-14T14:30:00Z');
+      const message = await prisma.chatMessage.create({
+        data: {
+          threadId: thread.id,
+          senderUserId: company.id,
+          senderPersona: 'company',
+          text: 'This is an important message',
+          sentAt: messageTime,
+        },
+      });
+
+      const res = await request(app)
+        .get(`/api/v1/me/chat/threads/${thread.id}`)
+        .set('Authorization', `Bearer ${devToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.last_message).toMatchObject({
+        id: message.id,
+        text: 'This is an important message',
+        sender_user_id: company.id,
+        sender_persona: 'company',
+        sent_at: messageTime.toISOString(),
+      });
+    });
+
+    test('returns null for last_message when thread has no messages', async () => {
+      const developer = await createUser({ developerProfile: { displayName: 'Dev' } });
+      const company = await createUser({ companyProfile: { companyName: 'Company' } });
+      const devToken = buildAccessToken({ userId: developer.id, email: developer.email });
+
+      const task = await prisma.task.create({
+        data: {
+          ownerUserId: company.id,
+          status: 'IN_PROGRESS',
+          title: 'Task',
+          description: 'Description',
+        },
+      });
+
+      const thread = await prisma.chatThread.create({
+        data: {
+          taskId: task.id,
+          companyUserId: company.id,
+          developerUserId: developer.id,
+        },
+      });
+
+      const res = await request(app)
+        .get(`/api/v1/me/chat/threads/${thread.id}`)
+        .set('Authorization', `Bearer ${devToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.last_message).toBeNull();
+    });
+
+    test('calculates unread_count correctly for developer', async () => {
+      const developer = await createUser({ developerProfile: { displayName: 'Dev' } });
+      const company = await createUser({ companyProfile: { companyName: 'Company' } });
+      const devToken = buildAccessToken({ userId: developer.id, email: developer.email });
+
+      const task = await prisma.task.create({
+        data: {
+          ownerUserId: company.id,
+          status: 'IN_PROGRESS',
+          title: 'Task',
+          description: 'Description',
+        },
+      });
+
+      const thread = await prisma.chatThread.create({
+        data: {
+          taskId: task.id,
+          companyUserId: company.id,
+          developerUserId: developer.id,
+        },
+      });
+
+      // Create 3 messages
+      const now = new Date();
+      await prisma.chatMessage.create({
+        data: {
+          threadId: thread.id,
+          senderUserId: company.id,
+          senderPersona: 'company',
+          text: 'Message 1',
+          sentAt: new Date(now.getTime() - 10000),
+        },
+      });
+
+      await prisma.chatMessage.create({
+        data: {
+          threadId: thread.id,
+          senderUserId: company.id,
+          senderPersona: 'company',
+          text: 'Message 2',
+          sentAt: new Date(now.getTime() - 5000),
+        },
+      });
+
+      await prisma.chatMessage.create({
+        data: {
+          threadId: thread.id,
+          senderUserId: company.id,
+          senderPersona: 'company',
+          text: 'Message 3',
+          sentAt: now,
+        },
+      });
+
+      // Mark some messages as read
+      const readAt = new Date(now.getTime() - 7000);
+      await prisma.chatThreadRead.create({
+        data: {
+          threadId: thread.id,
+          userId: developer.id,
+          lastReadAt: readAt,
+        },
+      });
+
+      const res = await request(app)
+        .get(`/api/v1/me/chat/threads/${thread.id}`)
+        .set('Authorization', `Bearer ${devToken}`);
+
+      expect(res.status).toBe(200);
+      // 2 messages are after the read time
+      expect(res.body.unread_count).toBe(2);
+    });
+
+    test('allows access to COMPLETED tasks', async () => {
+      const developer = await createUser({ developerProfile: { displayName: 'Dev' } });
+      const company = await createUser({ companyProfile: { companyName: 'Company' } });
+      const devToken = buildAccessToken({ userId: developer.id, email: developer.email });
+
+      const task = await prisma.task.create({
+        data: {
+          ownerUserId: company.id,
+          status: 'COMPLETED',
+          title: 'Completed Task',
+          description: 'Description',
+          completedAt: new Date(),
+        },
+      });
+
+      const thread = await prisma.chatThread.create({
+        data: {
+          taskId: task.id,
+          companyUserId: company.id,
+          developerUserId: developer.id,
+        },
+      });
+
+      const res = await request(app)
+        .get(`/api/v1/me/chat/threads/${thread.id}`)
+        .set('Authorization', `Bearer ${devToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.task.status).toBe('COMPLETED');
+    });
+  });
 });
