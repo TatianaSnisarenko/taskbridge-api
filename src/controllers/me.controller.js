@@ -94,3 +94,18 @@ export const getThreadById = asyncHandler(async (req, res) => {
 
   return res.status(200).json(result);
 });
+export const getThreadMessages = asyncHandler(async (req, res) => {
+  const result = await meService.getThreadMessages({
+    userId: req.user.id,
+    threadId: req.params.threadId,
+    page: parseInt(req.query.page) || 1,
+    size: parseInt(req.query.size) || 50,
+  });
+
+  return res.status(200).json({
+    items: result.items,
+    page: result.page,
+    size: result.size,
+    total: result.total,
+  });
+});

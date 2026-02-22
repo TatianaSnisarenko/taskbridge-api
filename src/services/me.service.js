@@ -467,3 +467,97 @@ export async function getThreadById({ userId, threadId }) {
     created_at: thread.createdAt.toISOString(),
   };
 }
+/**
+ * Get messages for a chat thread with pagination.
+ * Messages are returned in chronological order (oldest first).
+ * User must be a participant in the thread and task must be IN_PROGRESS or COMPLETED.
+ */
+export async function getThreadMessages({ userId, threadId, page = 1, size = 50 }) {
+  const skip = (page - 1) * size;
+
+  const thread = await prisma.chatThread.findUnique({
+    where: { id: threadId },
+    select: {
+      id: true,
+      companyUserId: true,
+      developerUserId: true,
+      taskId: true,
+      createdAt: true,
+      task: {
+        select: {
+          id: true,
+          status: true,
+          deletedAt: true,
+        },
+      },
+      reads: {
+        where: { userId },
+        select: {
+          lastReadAt: true,
+        },
+      },
+    },
+  });
+
+  if (!thread) {
+    throw new ApiError(404, 'NOT_FOUND', 'Chat thread not found');
+  }
+
+  if (thread.task.deletedAt) {
+    throw new ApiError(404, 'NOT_FOUND', 'Chat thread not found');
+  }
+
+  // Verify user is a participant in this thread
+  if (thread.companyUserId !== userId && thread.developerUserId !== userId) {
+    throw new ApiError(403, 'FORBIDDEN', 'You are not a participant in this thread');
+  }
+
+  // Verify task status is IN_PROGRESS or COMPLETED
+  if (!['IN_PROGRESS', 'COMPLETED'].includes(thread.task.status)) {
+    throw new ApiError(403, 'FORBIDDEN', 'Cannot access messages for this task status');
+  }
+
+  // Get the user's lastReadAt timestamp
+  const userRead = thread.reads[0];
+  const lastReadAt = userRead?.lastReadAt || thread.createdAt;
+
+  // Fetch messages with pagination, sorted chronologically (ascending)
+  const [items, total] = await Promise.all([
+    prisma.chatMessage.findMany({
+      where: { threadId },
+      select: {
+        id: true,
+        senderUserId: true,
+        senderPersona: true,
+        text: true,
+        sentAt: true,
+      },
+      skip,
+      take: size,
+      orderBy: {
+        sentAt: 'asc', // Chronological order - oldest first
+      },
+    }),
+    prisma.chatMessage.count({
+      where: { threadId },
+    }),
+  ]);
+
+  // Add read_at based on lastReadAt timestamp
+  const messages = items.map((msg) => ({
+    id: msg.id,
+    sender_user_id: msg.senderUserId,
+    sender_persona: msg.senderPersona,
+    text: msg.text,
+    sent_at: msg.sentAt.toISOString(),
+    // If message was sent before or at the last read time, user has read it
+    read_at: new Date(msg.sentAt) <= lastReadAt ? lastReadAt.toISOString() : null,
+  }));
+
+  return {
+    items: messages,
+    page,
+    size,
+    total,
+  };
+}

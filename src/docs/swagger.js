@@ -1000,6 +1000,26 @@ export const swaggerSpec = {
           total: { type: 'integer', example: 1 },
         },
       },
+      ChatMessage: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          sender_user_id: { type: 'string', format: 'uuid' },
+          sender_persona: { type: 'string', enum: ['developer', 'company'] },
+          text: { type: 'string', example: 'Hello!' },
+          sent_at: { type: 'string', format: 'date-time' },
+          read_at: { type: 'string', format: 'date-time', nullable: true },
+        },
+      },
+      GetThreadMessagesResponse: {
+        type: 'object',
+        properties: {
+          items: { type: 'array', items: { $ref: '#/components/schemas/ChatMessage' } },
+          page: { type: 'integer', example: 1 },
+          size: { type: 'integer', example: 50 },
+          total: { type: 'integer', example: 1 },
+        },
+      },
       UploadAvatarResponse: {
         type: 'object',
         required: ['user_id', 'avatar_url', 'updated_at'],
@@ -1428,6 +1448,50 @@ export const swaggerSpec = {
             content: {
               'application/json': {
                 schema: { $ref: '#/components/schemas/ChatThreadItem' },
+              },
+            },
+          },
+          400: { description: 'Validation error' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Forbidden - user is not a participant or task status is invalid' },
+          404: { description: 'Chat thread not found' },
+        },
+      },
+    },
+    '/api/v1/me/chat/threads/{threadId}/messages': {
+      get: {
+        tags: ['Me'],
+        summary: 'Get messages in a chat thread',
+        description:
+          'Get messages from a specific chat thread with pagination. Messages are sorted by sent_at in ascending order (chronological). User must be a participant in the thread and the associated task must have status IN_PROGRESS or COMPLETED.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'threadId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+            description: 'Chat thread ID',
+          },
+          {
+            name: 'page',
+            in: 'query',
+            schema: { type: 'integer', minimum: 1, default: 1 },
+            description: 'Page number (starting from 1)',
+          },
+          {
+            name: 'size',
+            in: 'query',
+            schema: { type: 'integer', minimum: 1, maximum: 50, default: 50 },
+            description: 'Number of items per page',
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Paginated list of messages in chronological order',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/GetThreadMessagesResponse' },
               },
             },
           },
