@@ -652,6 +652,7 @@ export async function getTaskApplications({ userId, taskId, page = 1, size = 20 
               select: {
                 displayName: true,
                 jobTitle: true,
+                avatarUrl: true,
                 avgRating: true,
                 reviewsCount: true,
               },
@@ -684,6 +685,7 @@ export async function getTaskApplications({ userId, taskId, page = 1, size = 20 
         user_id: app.developer.id,
         display_name: app.developer.developerProfile?.displayName,
         primary_role: app.developer.developerProfile?.jobTitle,
+        avatar_url: app.developer.developerProfile?.avatarUrl ?? null,
         avg_rating: app.developer.developerProfile?.avgRating
           ? Number(app.developer.developerProfile.avgRating)
           : null,

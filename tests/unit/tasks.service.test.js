@@ -19,6 +19,7 @@ const prismaMock = {
   },
   application: {
     findFirst: jest.fn(),
+    findMany: jest.fn(),
     count: jest.fn(),
     create: jest.fn(),
   },
@@ -1780,6 +1781,69 @@ describe('tasks.service', () => {
         is_accepted_developer: true,
         can_apply: false,
         applications_count: 1,
+      });
+    });
+  });
+
+  describe('getTaskApplications', () => {
+    test('returns applications with developer avatar', async () => {
+      prismaMock.task.findUnique.mockResolvedValue({
+        id: 't1',
+        ownerUserId: 'u1',
+        deletedAt: null,
+      });
+
+      prismaMock.application.findMany.mockResolvedValue([
+        {
+          id: 'a1',
+          status: 'APPLIED',
+          message: 'Message',
+          proposedPlan: 'Plan',
+          availabilityNote: 'Evenings',
+          createdAt: new Date('2026-02-14T12:00:00Z'),
+          developer: {
+            id: 'dev1',
+            developerProfile: {
+              displayName: 'Tetiana',
+              jobTitle: 'Java Backend Engineer',
+              avatarUrl: 'https://cdn.example.com/dev-avatar.webp',
+              avgRating: 4.6,
+              reviewsCount: 3,
+            },
+          },
+        },
+      ]);
+      prismaMock.application.count.mockResolvedValue(1);
+
+      const result = await tasksService.getTaskApplications({
+        userId: 'u1',
+        taskId: 't1',
+        page: 1,
+        size: 20,
+      });
+
+      expect(result).toEqual({
+        items: [
+          {
+            application_id: 'a1',
+            status: 'APPLIED',
+            message: 'Message',
+            proposed_plan: 'Plan',
+            availability_note: 'Evenings',
+            created_at: new Date('2026-02-14T12:00:00Z').toISOString(),
+            developer: {
+              user_id: 'dev1',
+              display_name: 'Tetiana',
+              primary_role: 'Java Backend Engineer',
+              avatar_url: 'https://cdn.example.com/dev-avatar.webp',
+              avg_rating: 4.6,
+              reviews_count: 3,
+            },
+          },
+        ],
+        page: 1,
+        size: 20,
+        total: 1,
       });
     });
   });

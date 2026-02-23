@@ -3900,6 +3900,7 @@ describe('tasks routes', () => {
         developerProfile: {
           displayName: 'Tetiana',
           jobTitle: 'Java Backend Engineer',
+          avatarUrl: 'https://cdn.example.com/dev-avatar.webp',
           avgRating: 4.7,
           reviewsCount: 12,
         },
@@ -3957,6 +3958,7 @@ describe('tasks routes', () => {
           user_id: developer.id,
           display_name: 'Tetiana',
           primary_role: 'Java Backend Engineer',
+          avatar_url: 'https://cdn.example.com/dev-avatar.webp',
           avg_rating: 4.7,
           reviews_count: 12,
         },

@@ -708,6 +708,7 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
           user_id: { type: 'string', format: 'uuid' },
           display_name: { type: 'string' },
           primary_role: { type: 'string' },
+          avatar_url: { type: 'string', format: 'uri', nullable: true },
           avg_rating: { type: 'number', format: 'float', nullable: true },
           reviews_count: { type: 'integer' },
         },
