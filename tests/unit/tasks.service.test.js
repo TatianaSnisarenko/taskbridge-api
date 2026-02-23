@@ -14,8 +14,12 @@ const prismaMock = {
   user: {
     findUnique: jest.fn(),
   },
+  developerProfile: {
+    findUnique: jest.fn(),
+  },
   application: {
     findFirst: jest.fn(),
+    count: jest.fn(),
     create: jest.fn(),
   },
 };
@@ -1565,6 +1569,7 @@ describe('tasks.service', () => {
         requirements: 'REST + pagination',
         niceToHave: 'OpenAPI',
         acceptedApplicationId: null,
+        acceptedApplication: null,
         createdAt: new Date('2026-02-14T13:00:00Z'),
         publishedAt: new Date('2026-02-14T13:20:00Z'),
         deletedAt: null,
@@ -1579,6 +1584,7 @@ describe('tasks.service', () => {
       };
 
       prismaMock.task.findUnique.mockResolvedValue(task);
+      prismaMock.application.count.mockResolvedValue(0);
 
       const result = await tasksService.getTaskById({ taskId: 't1' });
 
@@ -1606,6 +1612,10 @@ describe('tasks.service', () => {
         published_at: new Date('2026-02-14T13:20:00Z').toISOString(),
         accepted_application_id: null,
         deleted_at: null,
+        applications_count: 0,
+        can_apply: false,
+        is_owner: false,
+        is_accepted_developer: false,
         company: {
           user_id: 'u1',
           company_name: 'TeamUp Studio',
@@ -1613,6 +1623,163 @@ describe('tasks.service', () => {
           avg_rating: 4.6,
           reviews_count: 8,
         },
+      });
+    });
+
+    test('returns can_apply true for eligible developer', async () => {
+      const task = {
+        id: 't1',
+        ownerUserId: 'u1',
+        status: 'PUBLISHED',
+        visibility: 'PUBLIC',
+        project: null,
+        title: 'Task title',
+        description: 'Task description',
+        category: 'BACKEND',
+        type: 'EXPERIENCE',
+        difficulty: 'JUNIOR',
+        requiredSkills: ['Node.js'],
+        estimatedEffortHours: 6,
+        expectedDuration: 'DAYS_8_14',
+        communicationLanguage: 'EN',
+        timezonePreference: 'Europe/Any',
+        applicationDeadline: new Date('2026-02-20'),
+        deliverables: 'PR with code + tests',
+        requirements: 'REST + pagination',
+        niceToHave: 'OpenAPI',
+        acceptedApplicationId: null,
+        acceptedApplication: null,
+        createdAt: new Date('2026-02-14T13:00:00Z'),
+        publishedAt: new Date('2026-02-14T13:20:00Z'),
+        deletedAt: null,
+        owner: {
+          companyProfile: {
+            companyName: 'TeamUp Studio',
+            verified: false,
+            avgRating: 4.6,
+            reviewsCount: 8,
+          },
+        },
+      };
+
+      prismaMock.task.findUnique.mockResolvedValue(task);
+      prismaMock.application.count.mockResolvedValue(0);
+      prismaMock.developerProfile.findUnique.mockResolvedValue({ userId: 'u2' });
+      prismaMock.application.findFirst.mockResolvedValue(null);
+
+      const result = await tasksService.getTaskById({
+        taskId: 't1',
+        userId: 'u2',
+        persona: 'developer',
+      });
+
+      expect(result).toMatchObject({
+        can_apply: true,
+        is_owner: false,
+        is_accepted_developer: false,
+        applications_count: 0,
+      });
+    });
+
+    test('returns can_apply false when developer already applied', async () => {
+      const task = {
+        id: 't1',
+        ownerUserId: 'u1',
+        status: 'PUBLISHED',
+        visibility: 'PUBLIC',
+        project: null,
+        title: 'Task title',
+        description: 'Task description',
+        category: 'BACKEND',
+        type: 'EXPERIENCE',
+        difficulty: 'JUNIOR',
+        requiredSkills: ['Node.js'],
+        estimatedEffortHours: 6,
+        expectedDuration: 'DAYS_8_14',
+        communicationLanguage: 'EN',
+        timezonePreference: 'Europe/Any',
+        applicationDeadline: new Date('2026-02-20'),
+        deliverables: 'PR with code + tests',
+        requirements: 'REST + pagination',
+        niceToHave: 'OpenAPI',
+        acceptedApplicationId: null,
+        acceptedApplication: null,
+        createdAt: new Date('2026-02-14T13:00:00Z'),
+        publishedAt: new Date('2026-02-14T13:20:00Z'),
+        deletedAt: null,
+        owner: {
+          companyProfile: {
+            companyName: 'TeamUp Studio',
+            verified: false,
+            avgRating: 4.6,
+            reviewsCount: 8,
+          },
+        },
+      };
+
+      prismaMock.task.findUnique.mockResolvedValue(task);
+      prismaMock.application.count.mockResolvedValue(1);
+      prismaMock.developerProfile.findUnique.mockResolvedValue({ userId: 'u2' });
+      prismaMock.application.findFirst.mockResolvedValue({ id: 'a1' });
+
+      const result = await tasksService.getTaskById({
+        taskId: 't1',
+        userId: 'u2',
+        persona: 'developer',
+      });
+
+      expect(result).toMatchObject({
+        can_apply: false,
+        is_owner: false,
+        applications_count: 1,
+      });
+    });
+
+    test('returns is_accepted_developer true for accepted developer', async () => {
+      const task = {
+        id: 't1',
+        ownerUserId: 'u1',
+        status: 'PUBLISHED',
+        visibility: 'PUBLIC',
+        project: null,
+        title: 'Task title',
+        description: 'Task description',
+        category: 'BACKEND',
+        type: 'EXPERIENCE',
+        difficulty: 'JUNIOR',
+        requiredSkills: ['Node.js'],
+        estimatedEffortHours: 6,
+        expectedDuration: 'DAYS_8_14',
+        communicationLanguage: 'EN',
+        timezonePreference: 'Europe/Any',
+        applicationDeadline: new Date('2026-02-20'),
+        deliverables: 'PR with code + tests',
+        requirements: 'REST + pagination',
+        niceToHave: 'OpenAPI',
+        acceptedApplicationId: 'a1',
+        acceptedApplication: { developerUserId: 'u2' },
+        createdAt: new Date('2026-02-14T13:00:00Z'),
+        publishedAt: new Date('2026-02-14T13:20:00Z'),
+        deletedAt: null,
+        owner: {
+          companyProfile: {
+            companyName: 'TeamUp Studio',
+            verified: false,
+            avgRating: 4.6,
+            reviewsCount: 8,
+          },
+        },
+      };
+
+      prismaMock.task.findUnique.mockResolvedValue(task);
+      prismaMock.application.count.mockResolvedValue(1);
+
+      const result = await tasksService.getTaskById({ taskId: 't1', userId: 'u2' });
+
+      expect(result).toMatchObject({
+        is_accepted_developer: true,
+        can_apply: false,
+        applications_count: 1,
       });
     });
   });

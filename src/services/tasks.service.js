@@ -28,7 +28,7 @@ function mapTaskInput(input) {
   };
 }
 
-function mapTaskDetailsOutput(task) {
+function mapTaskDetailsOutput(task, computed) {
   const companyProfile = task.owner.companyProfile;
   const avgRating = companyProfile?.avgRating;
 
@@ -58,6 +58,10 @@ function mapTaskDetailsOutput(task) {
     published_at: task.publishedAt ? task.publishedAt.toISOString() : null,
     accepted_application_id: task.acceptedApplicationId,
     deleted_at: task.deletedAt ? task.deletedAt.toISOString() : null,
+    applications_count: computed.applicationsCount,
+    can_apply: computed.canApply,
+    is_owner: computed.isOwner,
+    is_accepted_developer: computed.isAcceptedDeveloper,
     company: {
       user_id: task.ownerUserId,
       company_name: companyProfile?.companyName,
@@ -391,6 +395,11 @@ export async function getTaskById({ userId, taskId, persona }) {
       createdAt: true,
       publishedAt: true,
       deletedAt: true,
+      acceptedApplication: {
+        select: {
+          developerUserId: true,
+        },
+      },
       project: {
         select: {
           id: true,
@@ -448,7 +457,31 @@ export async function getTaskById({ userId, taskId, persona }) {
     }
   }
 
-  return mapTaskDetailsOutput(task);
+  const applicationsCount = await prisma.application.count({
+    where: { taskId: task.id },
+  });
+
+  const isOwner = !!userId && task.ownerUserId === userId;
+  const isAcceptedDeveloper = !!userId && task.acceptedApplication?.developerUserId === userId;
+
+  let canApply = false;
+  if (userId && persona === 'developer' && task.status === 'PUBLISHED' && !isOwner) {
+    const [developerProfile, existingApplication] = await Promise.all([
+      prisma.developerProfile.findUnique({ where: { userId }, select: { userId: true } }),
+      prisma.application.findFirst({ where: { taskId: task.id, developerUserId: userId } }),
+    ]);
+
+    if (developerProfile && !existingApplication) {
+      canApply = true;
+    }
+  }
+
+  return mapTaskDetailsOutput(task, {
+    applicationsCount,
+    canApply,
+    isOwner,
+    isAcceptedDeveloper,
+  });
 }
 
 export async function getTasksCatalog(query) {
