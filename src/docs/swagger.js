@@ -464,6 +464,22 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
           linkedin_url: { type: 'string', format: 'uri' },
           avg_rating: { type: 'number', format: 'float', example: 4.7 },
           reviews_count: { type: 'integer', example: 12 },
+          projects_completed: {
+            type: 'integer',
+            description:
+              'Number of completed projects (tasks with COMPLETED status where developer was accepted)',
+            example: 5,
+          },
+          success_rate: {
+            type: 'number',
+            format: 'float',
+            nullable: true,
+            description:
+              'Success rate calculated as completed / (completed + failed). null if no projects. Failed tasks occur after 3 completion rejections.',
+            example: 0.85,
+            minimum: 0,
+            maximum: 1,
+          },
         },
       },
       CreateTaskDraftRequest: {
@@ -634,6 +650,41 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
           task_id: { type: 'string', format: 'uuid' },
           status: { type: 'string', enum: ['COMPLETED'] },
           completed_at: { type: 'string', format: 'date-time' },
+        },
+      },
+      RejectTaskCompletionRequest: {
+        type: 'object',
+        properties: {
+          feedback: {
+            type: 'string',
+            minLength: 10,
+            maxLength: 2000,
+            description:
+              'Feedback explaining why the completion is rejected and what needs to be fixed',
+            example:
+              'The implementation does not meet the requirements. Please fix the following issues: 1) Add proper error handling, 2) Improve test coverage',
+          },
+        },
+      },
+      RejectTaskCompletionResponse: {
+        type: 'object',
+        properties: {
+          task_id: { type: 'string', format: 'uuid' },
+          status: {
+            type: 'string',
+            enum: ['IN_PROGRESS', 'FAILED'],
+            description: 'IN_PROGRESS if attempts < 3, FAILED if attempts >= 3',
+          },
+          rejection_count: {
+            type: 'integer',
+            description: 'Number of times completion has been rejected (1-3)',
+            example: 1,
+          },
+          is_final_rejection: {
+            type: 'boolean',
+            description: 'True if this was the 3rd rejection and task is now FAILED',
+            example: false,
+          },
         },
       },
       CreateReviewResponse: {
@@ -2949,6 +3000,71 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
             recipient: 'accepted developer',
             actor: 'company',
             payload: { task_id: 'uuid', completed_at: '2026-02-14T15:00:00Z' },
+          },
+        ],
+      },
+    },
+    '/api/v1/tasks/{taskId}/completion/reject': {
+      post: {
+        tags: ['Tasks'],
+        summary:
+          'Reject task completion with feedback (COMPLETION_REQUESTED -> IN_PROGRESS or FAILED)',
+        description:
+          'Company rejects the completion request. After 1-2 rejections, task returns to IN_PROGRESS. On 3rd rejection, task becomes FAILED. Feedback is sent to developer via chat thread and notification.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'taskId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+          {
+            name: 'X-Persona',
+            in: 'header',
+            required: true,
+            schema: { type: 'string', enum: ['company'] },
+          },
+        ],
+        requestBody: {
+          required: false,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/RejectTaskCompletionRequest' },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'Completion rejected',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/RejectTaskCompletionResponse' },
+              },
+            },
+          },
+          400: { description: 'Validation error' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Not task owner' },
+          404: { description: 'Task not found' },
+          409: { description: 'Task in invalid state (must be COMPLETION_REQUESTED)' },
+        },
+        'x-side-effects': [
+          {
+            type: 'NOTIFICATION',
+            recipient: 'accepted developer',
+            actor: 'company',
+            payload: {
+              task_id: 'uuid',
+              status: 'IN_PROGRESS or FAILED',
+              rejection_count: 1,
+              is_final: false,
+            },
+          },
+          {
+            type: 'CHAT_MESSAGE',
+            recipient: 'chat thread',
+            content: 'Feedback message sent to chat thread with rejection count and feedback text',
           },
         ],
       },

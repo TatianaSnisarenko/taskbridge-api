@@ -19,6 +19,9 @@ const prismaMock = {
     findMany: jest.fn(),
     count: jest.fn(),
   },
+  task: {
+    count: jest.fn(),
+  },
 };
 
 // Mock cloudinary utilities
@@ -188,6 +191,11 @@ describe('profiles.service', () => {
       reviewsCount: 12,
     });
 
+    // Mock task.count for projects_completed and projects_failed
+    prismaMock.task.count
+      .mockResolvedValueOnce(5) // completed tasks
+      .mockResolvedValueOnce(1); // failed tasks
+
     const result = await profilesService.getDeveloperProfileByUserId({ userId: 'u1' });
 
     expect(result).toEqual({
@@ -205,6 +213,26 @@ describe('profiles.service', () => {
       linkedin_url: 'https://linkedin.com/in/example',
       avg_rating: 4.7,
       reviews_count: 12,
+      projects_completed: 5,
+      success_rate: 5 / 6, // 5 completed / (5 completed + 1 failed)
+    });
+
+    expect(prismaMock.task.count).toHaveBeenCalledWith({
+      where: {
+        status: 'COMPLETED',
+        acceptedApplication: {
+          developerUserId: 'u1',
+        },
+      },
+    });
+
+    expect(prismaMock.task.count).toHaveBeenCalledWith({
+      where: {
+        status: 'FAILED',
+        acceptedApplication: {
+          developerUserId: 'u1',
+        },
+      },
     });
   });
 

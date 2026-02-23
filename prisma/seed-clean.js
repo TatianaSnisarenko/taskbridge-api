@@ -813,6 +813,49 @@ async function main() {
     console.log(`✅ Created ${chatThreadCount} chat threads with messages`);
     console.log(`✅ Created ${reviewCount} reviews`);
 
+    // Update avg_rating and reviews_count for all profiles
+    console.log('\n📊 Updating profile statistics...');
+
+    // Update developer profiles
+    for (const developer of developers) {
+      const reviews = await prisma.review.findMany({
+        where: { targetUserId: developer.user.id },
+        select: { rating: true },
+      });
+
+      if (reviews.length > 0) {
+        const avgRating = reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
+        await prisma.developerProfile.update({
+          where: { userId: developer.user.id },
+          data: {
+            avgRating: avgRating.toFixed(1),
+            reviewsCount: reviews.length,
+          },
+        });
+      }
+    }
+
+    // Update company profiles
+    for (const company of companies) {
+      const reviews = await prisma.review.findMany({
+        where: { targetUserId: company.user.id },
+        select: { rating: true },
+      });
+
+      if (reviews.length > 0) {
+        const avgRating = reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
+        await prisma.companyProfile.update({
+          where: { userId: company.user.id },
+          data: {
+            avgRating: avgRating.toFixed(1),
+            reviewsCount: reviews.length,
+          },
+        });
+      }
+    }
+
+    console.log('✅ Updated profile statistics');
+
     console.log('\n✨ Database seeding completed successfully!');
     console.log(`
     📊 Summary:

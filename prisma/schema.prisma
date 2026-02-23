@@ -61,6 +61,7 @@ enum TaskStatus {
   IN_PROGRESS
   COMPLETION_REQUESTED
   COMPLETED
+  FAILED
   CLOSED
   DELETED
 }
@@ -306,11 +307,14 @@ model Task {
 
   acceptedApplicationId String? @unique @map("accepted_application_id") @db.Uuid
 
+  rejectionCount Int @default(0) @map("rejection_count")
+
   createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
   publishedAt DateTime? @map("published_at") @db.Timestamptz(6)
   closedAt    DateTime? @map("closed_at") @db.Timestamptz(6)
   completedAt DateTime? @map("completed_at") @db.Timestamptz(6)
+  failedAt    DateTime? @map("failed_at") @db.Timestamptz(6)
   deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(6)
 
   owner               User          @relation("TaskOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)

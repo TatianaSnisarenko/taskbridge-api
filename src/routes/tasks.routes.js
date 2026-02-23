@@ -10,6 +10,7 @@ import {
   taskIdParamSchema,
   getTasksCatalogSchema,
   createReviewSchema,
+  rejectTaskCompletionSchema,
 } from '../schemas/tasks.schemas.js';
 
 export const tasksRouter = Router();
@@ -97,6 +98,15 @@ tasksRouter.post(
   requirePersona('company'),
   validate(taskIdParamSchema, 'params'),
   tasksController.confirmTaskCompletion
+);
+
+tasksRouter.post(
+  '/:taskId/completion/reject',
+  requireAuth,
+  requirePersona('company'),
+  validate(taskIdParamSchema, 'params'),
+  validate(rejectTaskCompletionSchema),
+  tasksController.rejectTaskCompletion
 );
 
 tasksRouter.post(

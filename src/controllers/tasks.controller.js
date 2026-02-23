@@ -188,6 +188,21 @@ export const confirmTaskCompletion = asyncHandler(async (req, res) => {
   });
 });
 
+export const rejectTaskCompletion = asyncHandler(async (req, res) => {
+  const result = await tasksService.rejectTaskCompletion({
+    userId: req.user.id,
+    taskId: req.params.taskId,
+    feedback: req.body.feedback,
+  });
+
+  return res.status(200).json({
+    task_id: result.taskId,
+    status: result.status,
+    rejection_count: result.rejectionCount,
+    is_final_rejection: result.isFinalRejection,
+  });
+});
+
 export const createReview = asyncHandler(async (req, res) => {
   const result = await tasksService.createReview({
     userId: req.user.id,

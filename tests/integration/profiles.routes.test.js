@@ -365,6 +365,107 @@ describe('profiles routes', () => {
       linkedin_url: 'https://linkedin.com/in/example',
       avg_rating: 4.7,
       reviews_count: 12,
+      projects_completed: 0,
+      success_rate: null,
+    });
+  });
+
+  test('GET /profiles/developer/:userId returns profile with statistics', async () => {
+    const company = await createUser({ companyProfile: { companyName: 'TeamUp' } });
+    const developer = await createUser({
+      developerProfile: {
+        displayName: 'Oleksandr',
+        jobTitle: 'Full Stack Developer',
+        bio: 'Passionate about building great products',
+        experienceLevel: 'MIDDLE',
+      },
+    });
+    const otherDev = await createUser({
+      developerProfile: {
+        displayName: 'Other Dev',
+        jobTitle: 'Backend Dev',
+        bio: 'Another developer',
+      },
+    });
+
+    // Create 3 completed tasks where developer was accepted
+    for (let i = 0; i < 3; i++) {
+      const task = await prisma.task.create({
+        data: {
+          ownerUserId: company.id,
+          status: 'COMPLETED',
+          completedAt: new Date('2026-02-20T10:00:00Z'),
+          title: `Completed task ${i + 1}`,
+          description: 'Task description',
+        },
+      });
+      const app = await prisma.application.create({
+        data: {
+          taskId: task.id,
+          developerUserId: developer.id,
+          status: 'ACCEPTED',
+        },
+      });
+      await prisma.task.update({
+        where: { id: task.id },
+        data: { acceptedApplicationId: app.id },
+      });
+    }
+
+    // Create 1 failed task where developer was accepted
+    const failedTask = await prisma.task.create({
+      data: {
+        ownerUserId: company.id,
+        status: 'FAILED',
+        failedAt: new Date('2026-02-21T10:00:00Z'),
+        rejectionCount: 3,
+        title: 'Failed task',
+        description: 'Task that failed after 3 rejections',
+      },
+    });
+    const failedApp = await prisma.application.create({
+      data: {
+        taskId: failedTask.id,
+        developerUserId: developer.id,
+        status: 'ACCEPTED',
+      },
+    });
+    await prisma.task.update({
+      where: { id: failedTask.id },
+      data: { acceptedApplicationId: failedApp.id },
+    });
+
+    // Create 1 completed task where another developer was accepted (should not count)
+    const otherTask = await prisma.task.create({
+      data: {
+        ownerUserId: company.id,
+        status: 'COMPLETED',
+        completedAt: new Date('2026-02-22T10:00:00Z'),
+        title: 'Other dev task',
+        description: 'Task for other dev',
+      },
+    });
+    const otherApp = await prisma.application.create({
+      data: {
+        taskId: otherTask.id,
+        developerUserId: otherDev.id,
+        status: 'ACCEPTED',
+      },
+    });
+    await prisma.task.update({
+      where: { id: otherTask.id },
+      data: { acceptedApplicationId: otherApp.id },
+    });
+
+    const res = await request(app).get(`/api/v1/profiles/developer/${developer.id}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      user_id: developer.id,
+      display_name: 'Oleksandr',
+      primary_role: 'Full Stack Developer',
+      projects_completed: 3,
+      success_rate: 0.75, // 3 completed / (3 completed + 1 failed) = 0.75
     });
   });
 

@@ -327,6 +327,13 @@ export const createReviewSchema = Joi.object({
   }),
 });
 
+export const rejectTaskCompletionSchema = Joi.object({
+  feedback: Joi.string().trim().min(10).max(2000).optional().messages({
+    'string.min': 'Feedback must be at least 10 characters',
+    'string.max': 'Feedback must not exceed 2000 characters',
+  }),
+});
+
 export const getProjectTasksQuerySchema = Joi.object({
   page: Joi.number().integer().min(1).default(1).messages({
     'number.base': 'Page must be a number',
@@ -346,13 +353,14 @@ export const getProjectTasksQuerySchema = Joi.object({
       'IN_PROGRESS',
       'COMPLETION_REQUESTED',
       'COMPLETED',
+      'FAILED',
       'CLOSED',
       'DELETED'
     )
     .optional()
     .messages({
       'any.only':
-        'Status must be one of: DRAFT, PUBLISHED, IN_PROGRESS, COMPLETION_REQUESTED, COMPLETED, CLOSED, DELETED',
+        'Status must be one of: DRAFT, PUBLISHED, IN_PROGRESS, COMPLETION_REQUESTED, COMPLETED, FAILED, CLOSED, DELETED',
     }),
   include_deleted: Joi.boolean().default(false).messages({
     'boolean.base': 'The include_deleted parameter must be true or false',

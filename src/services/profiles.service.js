@@ -117,7 +117,35 @@ export async function getDeveloperProfileByUserId({ userId }) {
     throw new ApiError(404, 'PROFILE_NOT_FOUND', 'Developer profile not found');
   }
 
-  return mapDeveloperProfileOutput(profile);
+  // Calculate projects_completed: count of COMPLETED tasks where this developer was accepted
+  const projectsCompleted = await prisma.task.count({
+    where: {
+      status: 'COMPLETED',
+      acceptedApplication: {
+        developerUserId: userId,
+      },
+    },
+  });
+
+  // Count FAILED tasks where this developer was accepted
+  const projectsFailed = await prisma.task.count({
+    where: {
+      status: 'FAILED',
+      acceptedApplication: {
+        developerUserId: userId,
+      },
+    },
+  });
+
+  // Calculate success_rate = completed / (completed + failed)
+  const totalProjects = projectsCompleted + projectsFailed;
+  const successRate = totalProjects > 0 ? projectsCompleted / totalProjects : null;
+
+  return {
+    ...mapDeveloperProfileOutput(profile),
+    projects_completed: projectsCompleted,
+    success_rate: successRate,
+  };
 }
 
 export async function createCompanyProfile({ userId, profile }) {
