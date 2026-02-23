@@ -7,6 +7,73 @@ function generateEmail(name) {
   return `${name.toLowerCase().replace(/\s+/g, '.')}@example.com`;
 }
 
+function buildNotificationPayload({
+  taskId,
+  applicationId = null,
+  reviewId = null,
+  rating = null,
+  completedAt = null,
+  threadId = null,
+}) {
+  const payload = {};
+
+  if (taskId) payload.task_id = taskId;
+  if (applicationId) payload.application_id = applicationId;
+  if (reviewId) payload.review_id = reviewId;
+  if (rating !== null) payload.rating = rating;
+  if (completedAt) payload.completed_at = completedAt;
+  if (threadId) payload.thread_id = threadId;
+
+  return payload;
+}
+
+async function createNotificationIfMissing({
+  userId,
+  actorUserId,
+  taskId,
+  type,
+  payload,
+  threadId = null,
+  projectId = null,
+}) {
+  if (type === 'CHAT_MESSAGE') {
+    return prisma.notification.create({
+      data: {
+        userId,
+        actorUserId,
+        taskId,
+        threadId,
+        projectId,
+        type,
+        payload,
+      },
+    });
+  }
+
+  const existing = await prisma.notification.findFirst({
+    where: {
+      userId,
+      actorUserId,
+      taskId,
+      type,
+    },
+  });
+
+  if (existing) return existing;
+
+  return prisma.notification.create({
+    data: {
+      userId,
+      actorUserId,
+      taskId,
+      threadId,
+      projectId,
+      type,
+      payload,
+    },
+  });
+}
+
 async function createUser({
   email,
   password = 'Password123!',
@@ -658,6 +725,17 @@ async function main() {
         });
         applicationCount++;
 
+        await createNotificationIfMissing({
+          userId: task.ownerUserId,
+          actorUserId: developer.user.id,
+          taskId: task.id,
+          type: 'APPLICATION_CREATED',
+          payload: buildNotificationPayload({
+            taskId: task.id,
+            applicationId: application.id,
+          }),
+        });
+
         // If application accepted, create chat and collaborative flow
         if (application.status === 'ACCEPTED') {
           // Update task to link accepted application
@@ -667,6 +745,17 @@ async function main() {
               acceptedApplicationId: application.id,
               status: 'IN_PROGRESS',
             },
+          });
+
+          await createNotificationIfMissing({
+            userId: developer.user.id,
+            actorUserId: task.ownerUserId,
+            taskId: task.id,
+            type: 'APPLICATION_ACCEPTED',
+            payload: buildNotificationPayload({
+              taskId: task.id,
+              applicationId: application.id,
+            }),
           });
 
           // Create chat thread
@@ -699,16 +788,57 @@ async function main() {
                   text: chatMessages[messageIndex],
                 },
               });
+
+              await createNotificationIfMissing({
+                userId: isSentByDev ? task.ownerUserId : developer.user.id,
+                actorUserId: isSentByDev ? developer.user.id : task.ownerUserId,
+                taskId: task.id,
+                threadId: chatThread.id,
+                type: 'CHAT_MESSAGE',
+                payload: buildNotificationPayload({
+                  taskId: task.id,
+                  threadId: chatThread.id,
+                }),
+              });
             }
           }
 
+          await prisma.task.update({
+            where: { id: task.id },
+            data: {
+              status: 'COMPLETION_REQUESTED',
+            },
+          });
+
+          await createNotificationIfMissing({
+            userId: task.ownerUserId,
+            actorUserId: developer.user.id,
+            taskId: task.id,
+            type: 'COMPLETION_REQUESTED',
+            payload: buildNotificationPayload({
+              taskId: task.id,
+            }),
+          });
+
           // Update task to completed status
+          const completedAt = new Date();
           await prisma.task.update({
             where: { id: task.id },
             data: {
               status: 'COMPLETED',
-              completedAt: new Date(),
+              completedAt,
             },
+          });
+
+          await createNotificationIfMissing({
+            userId: developer.user.id,
+            actorUserId: task.ownerUserId,
+            taskId: task.id,
+            type: 'TASK_COMPLETED',
+            payload: buildNotificationPayload({
+              taskId: task.id,
+              completedAt: completedAt.toISOString(),
+            }),
           });
 
           // Create reviews if not already exist
@@ -732,7 +862,7 @@ async function main() {
             const companyReviewText =
               reviewTextsToUse[Math.floor(Math.random() * reviewTextsToUse.length)];
 
-            await prisma.review.create({
+            const createdCompanyReview = await prisma.review.create({
               data: {
                 taskId: task.id,
                 authorUserId: task.ownerUserId,
@@ -742,6 +872,18 @@ async function main() {
               },
             });
             reviewCount++;
+
+            await createNotificationIfMissing({
+              userId: developer.user.id,
+              actorUserId: task.ownerUserId,
+              taskId: task.id,
+              type: 'REVIEW_CREATED',
+              payload: buildNotificationPayload({
+                taskId: task.id,
+                reviewId: createdCompanyReview.id,
+                rating: companyRating,
+              }),
+            });
           }
 
           // Developer reviews company
@@ -762,7 +904,7 @@ async function main() {
                   : reviewTexts.acceptable;
             const devReviewText = devReviewTexts[Math.floor(Math.random() * devReviewTexts.length)];
 
-            await prisma.review.create({
+            const createdDevReview = await prisma.review.create({
               data: {
                 taskId: task.id,
                 authorUserId: developer.user.id,
@@ -772,6 +914,18 @@ async function main() {
               },
             });
             reviewCount++;
+
+            await createNotificationIfMissing({
+              userId: task.ownerUserId,
+              actorUserId: developer.user.id,
+              taskId: task.id,
+              type: 'REVIEW_CREATED',
+              payload: buildNotificationPayload({
+                taskId: task.id,
+                reviewId: createdDevReview.id,
+                rating: devRating,
+              }),
+            });
           }
         }
       }
