@@ -493,6 +493,308 @@ describe('me routes', () => {
     });
   });
 
+  describe('GET /me/tasks', () => {
+    test('rejects unauthorized', async () => {
+      const res = await request(app).get('/api/v1/me/tasks');
+
+      expect(res.status).toBe(401);
+      expect(res.body.error.code).toBe('AUTH_REQUIRED');
+    });
+
+    test('rejects invalid token', async () => {
+      const res = await request(app).get('/api/v1/me/tasks').set('Authorization', 'Bearer invalid');
+
+      expect(res.status).toBe(401);
+      expect(res.body.error.code).toBe('INVALID_TOKEN');
+    });
+
+    test('rejects missing X-Persona header', async () => {
+      const user = await createUser({ developerProfile: { displayName: 'Dev' } });
+      const token = buildAccessToken({ userId: user.id, email: user.email });
+
+      const res = await request(app)
+        .get('/api/v1/me/tasks')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('PERSONA_REQUIRED');
+    });
+
+    test('rejects non-developer persona', async () => {
+      const user = await createUser({ companyProfile: { companyName: 'Company' } });
+      const token = buildAccessToken({ userId: user.id, email: user.email });
+
+      const res = await request(app)
+        .get('/api/v1/me/tasks')
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'company');
+
+      expect(res.status).toBe(403);
+      expect(res.body.error.code).toBe('PERSONA_NOT_AVAILABLE');
+    });
+
+    test('rejects invalid status parameter', async () => {
+      const user = await createUser({ developerProfile: { displayName: 'Dev' } });
+      const token = buildAccessToken({ userId: user.id, email: user.email });
+
+      const res = await request(app)
+        .get('/api/v1/me/tasks?status=INVALID')
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'developer');
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('VALIDATION_ERROR');
+      expect(res.body.error.details).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            field: 'status',
+          }),
+        ])
+      );
+    });
+
+    test('returns accepted developer tasks and excludes deleted', async () => {
+      const developer = await createUser({ developerProfile: { displayName: 'Dev' } });
+      const otherDev = await createUser({ developerProfile: { displayName: 'Other' } });
+      const company = await createUser({ companyProfile: { companyName: 'Company' } });
+      const token = buildAccessToken({ userId: developer.id, email: developer.email });
+
+      const project = await prisma.project.create({
+        data: {
+          ownerUserId: company.id,
+          title: 'TeamUp MVP',
+          status: 'ACTIVE',
+        },
+      });
+
+      const task1 = await prisma.task.create({
+        data: {
+          ownerUserId: company.id,
+          projectId: project.id,
+          status: 'IN_PROGRESS',
+          publishedAt: new Date('2026-02-10T10:00:00Z'),
+          title: 'Task A',
+          description: 'Description A',
+        },
+      });
+
+      const app1 = await prisma.application.create({
+        data: {
+          taskId: task1.id,
+          developerUserId: developer.id,
+          status: 'ACCEPTED',
+        },
+      });
+
+      await prisma.task.update({
+        where: { id: task1.id },
+        data: { acceptedApplicationId: app1.id },
+      });
+
+      const completedAt = new Date('2026-02-12T10:00:00Z');
+      const task2 = await prisma.task.create({
+        data: {
+          ownerUserId: company.id,
+          projectId: null,
+          status: 'COMPLETED',
+          publishedAt: new Date('2026-02-11T10:00:00Z'),
+          completedAt,
+          title: 'Task B',
+          description: 'Description B',
+        },
+      });
+
+      const app2 = await prisma.application.create({
+        data: {
+          taskId: task2.id,
+          developerUserId: developer.id,
+          status: 'ACCEPTED',
+        },
+      });
+
+      await prisma.task.update({
+        where: { id: task2.id },
+        data: { acceptedApplicationId: app2.id },
+      });
+
+      const task3 = await prisma.task.create({
+        data: {
+          ownerUserId: company.id,
+          status: 'COMPLETION_REQUESTED',
+          publishedAt: new Date('2026-02-13T10:00:00Z'),
+          title: 'Task C',
+          description: 'Description C',
+        },
+      });
+
+      const app3 = await prisma.application.create({
+        data: {
+          taskId: task3.id,
+          developerUserId: developer.id,
+          status: 'ACCEPTED',
+        },
+      });
+
+      await prisma.task.update({
+        where: { id: task3.id },
+        data: { acceptedApplicationId: app3.id },
+      });
+
+      const taskOther = await prisma.task.create({
+        data: {
+          ownerUserId: company.id,
+          status: 'IN_PROGRESS',
+          publishedAt: new Date('2026-02-14T10:00:00Z'),
+          title: 'Other Task',
+          description: 'Other Description',
+        },
+      });
+
+      const appOther = await prisma.application.create({
+        data: {
+          taskId: taskOther.id,
+          developerUserId: otherDev.id,
+          status: 'ACCEPTED',
+        },
+      });
+
+      await prisma.task.update({
+        where: { id: taskOther.id },
+        data: { acceptedApplicationId: appOther.id },
+      });
+
+      const taskDeleted = await prisma.task.create({
+        data: {
+          ownerUserId: company.id,
+          status: 'IN_PROGRESS',
+          publishedAt: new Date('2026-02-15T10:00:00Z'),
+          title: 'Deleted Task',
+          description: 'Deleted Description',
+        },
+      });
+
+      const appDeleted = await prisma.application.create({
+        data: {
+          taskId: taskDeleted.id,
+          developerUserId: developer.id,
+          status: 'ACCEPTED',
+        },
+      });
+
+      await prisma.task.update({
+        where: { id: taskDeleted.id },
+        data: { acceptedApplicationId: appDeleted.id, deletedAt: new Date() },
+      });
+
+      const res = await request(app)
+        .get('/api/v1/me/tasks?page=1&size=2')
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'developer');
+
+      expect(res.status).toBe(200);
+      expect(res.body.page).toBe(1);
+      expect(res.body.size).toBe(2);
+      expect(res.body.total).toBe(3);
+      expect(res.body.items).toHaveLength(2);
+
+      const res2 = await request(app)
+        .get('/api/v1/me/tasks?page=2&size=2')
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'developer');
+
+      expect(res2.status).toBe(200);
+      expect(res2.body.items).toHaveLength(1);
+      expect(res2.body.total).toBe(3);
+
+      const allItems = [...res.body.items, ...res2.body.items];
+      const taskIds = allItems.map((item) => item.task_id);
+      expect(taskIds).toEqual(expect.arrayContaining([task1.id, task2.id, task3.id]));
+      expect(taskIds).not.toContain(taskOther.id);
+      expect(taskIds).not.toContain(taskDeleted.id);
+
+      const completedItem = allItems.find((item) => item.task_id === task2.id);
+      expect(completedItem).toBeTruthy();
+      expect(completedItem).toMatchObject({
+        task_id: task2.id,
+        status: 'COMPLETED',
+        project: null,
+        company: {
+          user_id: company.id,
+          company_name: 'Company',
+          verified: false,
+          avg_rating: 0,
+          reviews_count: 0,
+        },
+      });
+      expect(completedItem.completed_at).toBeDefined();
+    });
+
+    test('filters by status when provided', async () => {
+      const developer = await createUser({ developerProfile: { displayName: 'Dev' } });
+      const company = await createUser({ companyProfile: { companyName: 'Company' } });
+      const token = buildAccessToken({ userId: developer.id, email: developer.email });
+
+      const taskInProgress = await prisma.task.create({
+        data: {
+          ownerUserId: company.id,
+          status: 'IN_PROGRESS',
+          publishedAt: new Date('2026-02-10T10:00:00Z'),
+          title: 'In Progress',
+          description: 'Description',
+        },
+      });
+
+      const appInProgress = await prisma.application.create({
+        data: {
+          taskId: taskInProgress.id,
+          developerUserId: developer.id,
+          status: 'ACCEPTED',
+        },
+      });
+
+      await prisma.task.update({
+        where: { id: taskInProgress.id },
+        data: { acceptedApplicationId: appInProgress.id },
+      });
+
+      const taskCompleted = await prisma.task.create({
+        data: {
+          ownerUserId: company.id,
+          status: 'COMPLETED',
+          publishedAt: new Date('2026-02-11T10:00:00Z'),
+          completedAt: new Date('2026-02-12T10:00:00Z'),
+          title: 'Completed',
+          description: 'Description',
+        },
+      });
+
+      const appCompleted = await prisma.application.create({
+        data: {
+          taskId: taskCompleted.id,
+          developerUserId: developer.id,
+          status: 'ACCEPTED',
+        },
+      });
+
+      await prisma.task.update({
+        where: { id: taskCompleted.id },
+        data: { acceptedApplicationId: appCompleted.id },
+      });
+
+      const res = await request(app)
+        .get('/api/v1/me/tasks?status=COMPLETED')
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'developer');
+
+      expect(res.status).toBe(200);
+      expect(res.body.items).toHaveLength(1);
+      expect(res.body.items[0]).toMatchObject({
+        task_id: taskCompleted.id,
+        status: 'COMPLETED',
+      });
+    });
+  });
+
   describe('GET /me/notifications', () => {
     test('rejects unauthorized', async () => {
       const res = await request(app).get('/api/v1/me/notifications');

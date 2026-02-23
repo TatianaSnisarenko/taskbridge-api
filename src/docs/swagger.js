@@ -903,6 +903,30 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
           total: { type: 'integer', example: 5 },
         },
       },
+      MyTaskItem: {
+        type: 'object',
+        properties: {
+          task_id: { type: 'string', format: 'uuid' },
+          title: { type: 'string' },
+          status: {
+            type: 'string',
+            enum: ['IN_PROGRESS', 'COMPLETION_REQUESTED', 'COMPLETED'],
+          },
+          published_at: { type: 'string', format: 'date-time', nullable: true },
+          completed_at: { type: 'string', format: 'date-time', nullable: true },
+          project: { $ref: '#/components/schemas/TaskProject', nullable: true },
+          company: { $ref: '#/components/schemas/TaskCompany' },
+        },
+      },
+      GetMyTasksResponse: {
+        type: 'object',
+        properties: {
+          items: { type: 'array', items: { $ref: '#/components/schemas/MyTaskItem' } },
+          page: { type: 'integer', example: 1 },
+          size: { type: 'integer', example: 20 },
+          total: { type: 'integer', example: 1 },
+        },
+      },
       NotificationItem: {
         type: 'object',
         properties: {
@@ -1321,6 +1345,56 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
             content: {
               'application/json': {
                 schema: { $ref: '#/components/schemas/GetMyApplicationsResponse' },
+              },
+            },
+          },
+          400: { description: 'Validation error' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Developer profile does not exist' },
+        },
+      },
+    },
+    '/api/v1/me/tasks': {
+      get: {
+        tags: ['Me'],
+        summary: 'Get my tasks as accepted developer',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'X-Persona',
+            in: 'header',
+            required: true,
+            schema: { type: 'string', enum: ['developer'] },
+            description: 'Must be developer persona',
+          },
+          {
+            name: 'page',
+            in: 'query',
+            schema: { type: 'integer', minimum: 1, default: 1 },
+            description: 'Page number (starting from 1)',
+          },
+          {
+            name: 'size',
+            in: 'query',
+            schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
+            description: 'Number of items per page',
+          },
+          {
+            name: 'status',
+            in: 'query',
+            schema: {
+              type: 'string',
+              enum: ['IN_PROGRESS', 'COMPLETION_REQUESTED', 'COMPLETED'],
+            },
+            description: 'Filter by task status',
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Paginated list of tasks for the accepted developer',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/GetMyTasksResponse' },
               },
             },
           },

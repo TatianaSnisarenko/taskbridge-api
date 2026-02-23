@@ -93,6 +93,93 @@ export async function getMyApplications({ userId, page = 1, size = 20 }) {
 }
 
 /**
+ * Get tasks where the current developer is accepted
+ */
+export async function getMyTasks({ userId, page = 1, size = 20, status }) {
+  const developerProfile = await prisma.developerProfile.findUnique({
+    where: { userId },
+    select: { userId: true },
+  });
+
+  if (!developerProfile) {
+    throw new ApiError(403, 'PERSONA_NOT_AVAILABLE', 'Developer profile does not exist');
+  }
+
+  const allowedStatuses = ['IN_PROGRESS', 'COMPLETION_REQUESTED', 'COMPLETED'];
+  const skip = (page - 1) * size;
+
+  const where = {
+    deletedAt: null,
+    acceptedApplication: {
+      developerUserId: userId,
+    },
+    status: status ?? { in: allowedStatuses },
+  };
+
+  const [items, total] = await Promise.all([
+    prisma.task.findMany({
+      where,
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        publishedAt: true,
+        completedAt: true,
+        project: {
+          select: {
+            id: true,
+            title: true,
+          },
+        },
+        ownerUserId: true,
+        owner: {
+          select: {
+            companyProfile: {
+              select: {
+                companyName: true,
+                verified: true,
+                avgRating: true,
+                reviewsCount: true,
+              },
+            },
+          },
+        },
+      },
+      skip,
+      take: size,
+      orderBy: { updatedAt: 'desc' },
+    }),
+    prisma.task.count({ where }),
+  ]);
+
+  return {
+    items: items.map((task) => {
+      const companyProfile = task.owner.companyProfile;
+      const avgRating = companyProfile?.avgRating;
+
+      return {
+        task_id: task.id,
+        title: task.title,
+        status: task.status,
+        published_at: task.publishedAt ? task.publishedAt.toISOString() : null,
+        completed_at: task.completedAt ? task.completedAt.toISOString() : null,
+        project: task.project ? { project_id: task.project.id, title: task.project.title } : null,
+        company: {
+          user_id: task.ownerUserId,
+          company_name: companyProfile?.companyName,
+          verified: companyProfile?.verified,
+          avg_rating: avgRating === null || avgRating === undefined ? null : Number(avgRating),
+          reviews_count: companyProfile?.reviewsCount,
+        },
+      };
+    }),
+    page,
+    size,
+    total,
+  };
+}
+
+/**
  * Get notifications for the current user with pagination
  * @param {string} persona - Required persona filter ('developer' or 'company')
  */
