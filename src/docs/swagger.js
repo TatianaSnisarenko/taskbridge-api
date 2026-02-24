@@ -3072,7 +3072,7 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
     '/api/v1/tasks/{taskId}/reviews': {
       post: {
         tags: ['Tasks'],
-        summary: 'Create a review for a completed task',
+        summary: 'Create a review for a completed or failed task',
         security: [{ bearerAuth: [] }],
         parameters: [
           {
@@ -3132,7 +3132,7 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
           401: { description: 'Unauthorized' },
           403: { description: 'User is not a task participant' },
           404: { description: 'Task not found' },
-          409: { description: 'Task not completed, or user already reviewed this task' },
+          409: { description: 'Task not completed or failed, or user already reviewed this task' },
         },
         'x-side-effects': [
           {

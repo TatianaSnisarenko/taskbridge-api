@@ -1266,8 +1266,8 @@ export async function createReview({ userId, taskId, review }) {
       throw new ApiError(404, 'NOT_FOUND', 'Task not found');
     }
 
-    if (task.status !== 'COMPLETED') {
-      throw new ApiError(409, 'INVALID_STATE', 'Task is not completed');
+    if (task.status !== 'COMPLETED' && task.status !== 'FAILED') {
+      throw new ApiError(409, 'INVALID_STATE', 'Task is not completed or failed');
     }
 
     // Check if author is a task participant
