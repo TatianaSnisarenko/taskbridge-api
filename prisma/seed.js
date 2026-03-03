@@ -3,6 +3,10 @@ import { prisma } from '../src/db/prisma.js';
 import { hashPassword } from '../src/utils/password.js';
 
 // Utility functions
+const TARGET_PROJECTS_PER_COMPANY = 3;
+const TARGET_TASKS_PER_PROJECT = 5;
+const MIN_PROJECT_MAX_TALENTS = 8;
+
 function generateEmail(name) {
   return `${name.toLowerCase().replace(/\s+/g, '.')}@example.com`;
 }
@@ -583,29 +587,42 @@ async function main() {
     }
     console.log(`✅ Developers ready: ${developers.length}`);
 
-    // Create projects
-    console.log('📁 Creating projects (if not exists)...');
+    // Create projects (idempotent and without uncontrolled growth)
+    console.log('📁 Creating projects (if missing)...');
     const projects = [];
-    let projectIndex = 0;
-    for (const company of companies) {
-      const projectsPerCompany = Math.floor(Math.random() * 2) + 2; // 2-3 projects per company
-      for (let i = 0; i < projectsPerCompany && projectIndex < projectData.length; i++) {
-        const projectInfo = projectData[projectIndex];
 
-        // Check if project already exists
-        const existingProject = await prisma.project.findFirst({
-          where: {
-            ownerUserId: company.user.id,
-            title: projectInfo.title,
-          },
-        });
+    for (let companyIndex = 0; companyIndex < companies.length; companyIndex++) {
+      const company = companies[companyIndex];
 
-        if (existingProject) {
-          console.log(`⏭️  Project "${projectInfo.title}" already exists for company, skipping...`);
-          projects.push(existingProject);
-          projectIndex++;
-          continue;
-        }
+      const existingProjects = await prisma.project.findMany({
+        where: {
+          ownerUserId: company.user.id,
+          deletedAt: null,
+        },
+      });
+
+      projects.push(...existingProjects);
+
+      if (existingProjects.length >= TARGET_PROJECTS_PER_COMPANY) {
+        console.log(
+          `⏭️  Company ${company.user.email} already has ${existingProjects.length} projects, skipping creation...`
+        );
+        continue;
+      }
+
+      const existingTitles = new Set(existingProjects.map((project) => project.title));
+      const companyProjectTemplates = projectData.slice(
+        companyIndex * TARGET_PROJECTS_PER_COMPANY,
+        companyIndex * TARGET_PROJECTS_PER_COMPANY + TARGET_PROJECTS_PER_COMPANY
+      );
+
+      const missingCount = TARGET_PROJECTS_PER_COMPANY - existingProjects.length;
+      let createdForCompany = 0;
+
+      for (const projectInfo of companyProjectTemplates) {
+        if (!projectInfo) continue;
+        if (existingTitles.has(projectInfo.title)) continue;
+        if (createdForCompany >= missingCount) break;
 
         const project = await prisma.project.create({
           data: {
@@ -614,63 +631,74 @@ async function main() {
             shortDescription: projectInfo.shortDescription,
             description: projectInfo.description,
             technologies: projectInfo.technologies,
-            maxTalents: 8, // Allow 8 published tasks per project (4-5 created + buffer)
+            maxTalents: MIN_PROJECT_MAX_TALENTS,
             visibility: 'PUBLIC',
             status: 'ACTIVE',
           },
         });
+
         projects.push(project);
-        projectIndex++;
+        existingTitles.add(projectInfo.title);
+        createdForCompany++;
       }
     }
     console.log(`✅ Projects ready: ${projects.length}`);
 
-    // Create tasks
-    console.log('📝 Creating tasks (if not exists)...');
+    // Create tasks (idempotent, with fixed target per project)
+    console.log('📝 Creating tasks (if missing)...');
     const tasks = [];
+    const newlyCreatedTasks = [];
+
     for (const project of projects) {
-      const tasksPerProject = Math.floor(Math.random() * 2) + 4; // 4-5 tasks per project
-      for (let i = 0; i < tasksPerProject; i++) {
-        const templateIndex = Math.floor(Math.random() * taskTemplates.length);
-        const template = taskTemplates[templateIndex];
+      const existingTasks = await prisma.task.findMany({
+        where: {
+          projectId: project.id,
+          deletedAt: null,
+        },
+      });
 
-        // Check if task already exists
-        const existingTask = await prisma.task.findFirst({
-          where: {
-            projectId: project.id,
-            title: template.title,
-          },
-        });
+      const existingTitles = new Set(existingTasks.map((task) => task.title));
+      const projectTasks = [...existingTasks];
 
-        if (existingTask) {
-          console.log(`⏭️  Task "${template.title}" already exists in project, skipping...`);
-          tasks.push(existingTask);
-          continue;
+      if (projectTasks.length < TARGET_TASKS_PER_PROJECT) {
+        const missingCount = TARGET_TASKS_PER_PROJECT - projectTasks.length;
+        const availableTemplates = taskTemplates.filter(
+          (template) => !existingTitles.has(template.title)
+        );
+
+        for (let i = 0; i < missingCount && i < availableTemplates.length; i++) {
+          const template = availableTemplates[i];
+
+          const task = await prisma.task.create({
+            data: {
+              ownerUserId: project.ownerUserId,
+              projectId: project.id,
+              title: template.title,
+              description: template.description,
+              requirements: template.requirements,
+              deliverables: template.deliverables,
+              category: template.category,
+              type: template.type,
+              difficulty: template.difficulty,
+              estimatedEffortHours: template.estimatedEffortHours,
+              expectedDuration: template.duration,
+              communicationLanguage: 'English',
+              status: 'PUBLISHED',
+              visibility: 'PUBLIC',
+              publishedAt: new Date(Date.now() - (i + 1) * 60 * 60 * 1000), // deterministic: 1h, 2h, ... ago
+            },
+          });
+
+          existingTitles.add(template.title);
+          projectTasks.push(task);
+          newlyCreatedTasks.push(task);
         }
-
-        const task = await prisma.task.create({
-          data: {
-            ownerUserId: project.ownerUserId,
-            projectId: project.id,
-            title: template.title,
-            description: template.description,
-            requirements: template.requirements,
-            deliverables: template.deliverables,
-            category: template.category,
-            type: template.type,
-            difficulty: template.difficulty,
-            estimatedEffortHours: template.estimatedEffortHours,
-            expectedDuration: template.duration,
-            communicationLanguage: 'English',
-            status: 'PUBLISHED',
-            visibility: 'PUBLIC',
-            publishedAt: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000), // Random past date within last 7 days
-          },
-        });
-        tasks.push(task);
       }
+
+      tasks.push(...projectTasks);
     }
-    console.log(`✅ Created ${tasks.length} tasks`);
+    console.log(`✅ Tasks ready: ${tasks.length}`);
+    console.log(`✅ Newly created tasks this run: ${newlyCreatedTasks.length}`);
 
     // Create applications and accepted work flows
     console.log('📤 Creating applications and work flows (if not exists)...');
@@ -678,7 +706,7 @@ async function main() {
     let chatThreadCount = 0;
     let reviewCount = 0;
 
-    for (const task of tasks) {
+    for (const task of newlyCreatedTasks) {
       // Check if task already has an accepted application
       const existingAccepted = await prisma.application.findFirst({
         where: {
@@ -940,6 +968,64 @@ async function main() {
     console.log(`✅ Created ${chatThreadCount} chat threads with messages`);
     console.log(`✅ Created ${reviewCount} reviews`);
 
+    // Reconcile project counters/limits for existing data (non-destructive)
+    console.log('\n🛠️  Reconciling existing project counters and limits...');
+    let reconciledProjectsCount = 0;
+
+    for (const project of projects) {
+      const [freshProject, taskGroups] = await Promise.all([
+        prisma.project.findUnique({
+          where: { id: project.id },
+          select: {
+            id: true,
+            maxTalents: true,
+            publishedTasksCount: true,
+          },
+        }),
+        prisma.task.groupBy({
+          by: ['status'],
+          where: {
+            projectId: project.id,
+            deletedAt: null,
+          },
+          _count: { _all: true },
+        }),
+      ]);
+
+      if (!freshProject) continue;
+
+      const countByStatus = Object.fromEntries(taskGroups.map((g) => [g.status, g._count._all]));
+      const publishedCount = countByStatus.PUBLISHED ?? 0;
+      const completedCount = countByStatus.COMPLETED ?? 0;
+      const failedCount = countByStatus.FAILED ?? 0;
+      const usedTalents = completedCount + failedCount;
+
+      const desiredMaxTalents = Math.max(
+        freshProject.maxTalents,
+        MIN_PROJECT_MAX_TALENTS,
+        usedTalents,
+        publishedCount
+      );
+
+      const updateData = {};
+      if (freshProject.maxTalents !== desiredMaxTalents) {
+        updateData.maxTalents = desiredMaxTalents;
+      }
+      if (freshProject.publishedTasksCount !== publishedCount) {
+        updateData.publishedTasksCount = publishedCount;
+      }
+
+      if (Object.keys(updateData).length > 0) {
+        await prisma.project.update({
+          where: { id: project.id },
+          data: updateData,
+        });
+        reconciledProjectsCount++;
+      }
+    }
+
+    console.log(`✅ Reconciled ${reconciledProjectsCount} projects`);
+
     // Update avg_rating and reviews_count for all profiles
     console.log('\n📊 Updating profile statistics...');
 
@@ -950,16 +1036,18 @@ async function main() {
         select: { rating: true },
       });
 
-      if (reviews.length > 0) {
-        const avgRating = reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
-        await prisma.developerProfile.update({
-          where: { userId: developer.user.id },
-          data: {
-            avgRating: avgRating.toFixed(1),
-            reviewsCount: reviews.length,
-          },
-        });
-      }
+      const avgRating =
+        reviews.length > 0
+          ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
+          : '0.0';
+
+      await prisma.developerProfile.update({
+        where: { userId: developer.user.id },
+        data: {
+          avgRating,
+          reviewsCount: reviews.length,
+        },
+      });
     }
 
     // Update company profiles
@@ -969,16 +1057,18 @@ async function main() {
         select: { rating: true },
       });
 
-      if (reviews.length > 0) {
-        const avgRating = reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
-        await prisma.companyProfile.update({
-          where: { userId: company.user.id },
-          data: {
-            avgRating: avgRating.toFixed(1),
-            reviewsCount: reviews.length,
-          },
-        });
-      }
+      const avgRating =
+        reviews.length > 0
+          ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
+          : '0.0';
+
+      await prisma.companyProfile.update({
+        where: { userId: company.user.id },
+        data: {
+          avgRating,
+          reviewsCount: reviews.length,
+        },
+      });
     }
 
     console.log('✅ Updated profile statistics');
