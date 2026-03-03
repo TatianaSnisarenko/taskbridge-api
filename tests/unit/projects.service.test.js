@@ -540,9 +540,9 @@ describe('projects.service', () => {
 
     test('includes tasks_preview with default 3 tasks', async () => {
       const mockTasks = [
-        { id: 't1', title: 'Task 1', status: 'PUBLISHED' },
-        { id: 't2', title: 'Task 2', status: 'PUBLISHED' },
-        { id: 't3', title: 'Task 3', status: 'PUBLISHED' },
+        { id: 't1', title: 'Task 1', description: 'Description 1', status: 'PUBLISHED' },
+        { id: 't2', title: 'Task 2', description: 'Description 2', status: 'PUBLISHED' },
+        { id: 't3', title: 'Task 3', description: 'Description 3', status: 'PUBLISHED' },
       ];
       prismaMock.project.findUnique.mockResolvedValue(mockProject);
       prismaMock.task.groupBy.mockResolvedValue([{ status: 'PUBLISHED', _count: { _all: 5 } }]);
@@ -564,6 +564,7 @@ describe('projects.service', () => {
         select: {
           id: true,
           title: true,
+          description: true,
           status: true,
         },
         orderBy: {
@@ -572,13 +573,17 @@ describe('projects.service', () => {
         take: 3,
       });
       expect(result.tasks_preview).toHaveLength(3);
-      expect(result.tasks_preview[0]).toMatchObject({ id: 't1', title: 'Task 1' });
+      expect(result.tasks_preview[0]).toMatchObject({
+        id: 't1',
+        title: 'Task 1',
+        description: 'Description 1',
+      });
     });
 
     test('respects custom previewLimit parameter', async () => {
       const mockTasks = [
-        { id: 't1', title: 'Task 1', status: 'PUBLISHED' },
-        { id: 't2', title: 'Task 2', status: 'PUBLISHED' },
+        { id: 't1', title: 'Task 1', description: 'Description 1', status: 'PUBLISHED' },
+        { id: 't2', title: 'Task 2', description: 'Description 2', status: 'PUBLISHED' },
       ];
       prismaMock.project.findUnique.mockResolvedValue(mockProject);
       prismaMock.task.groupBy.mockResolvedValue([{ status: 'PUBLISHED', _count: { _all: 5 } }]);
@@ -601,6 +606,7 @@ describe('projects.service', () => {
         select: {
           id: true,
           title: true,
+          description: true,
           status: true,
         },
         orderBy: {
@@ -613,8 +619,13 @@ describe('projects.service', () => {
 
     test('owner sees all tasks in preview without status filter', async () => {
       const mockTasks = [
-        { id: 't1', title: 'Draft Task', status: 'DRAFT' },
-        { id: 't2', title: 'Published Task', status: 'PUBLISHED' },
+        { id: 't1', title: 'Draft Task', description: 'Draft description', status: 'DRAFT' },
+        {
+          id: 't2',
+          title: 'Published Task',
+          description: 'Published description',
+          status: 'PUBLISHED',
+        },
       ];
       prismaMock.project.findUnique.mockResolvedValue(mockProject);
       prismaMock.task.groupBy.mockResolvedValue([
@@ -638,6 +649,7 @@ describe('projects.service', () => {
         select: {
           id: true,
           title: true,
+          description: true,
           status: true,
         },
         orderBy: {

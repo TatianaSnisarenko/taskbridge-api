@@ -783,6 +783,7 @@ describe('projects routes', () => {
       expect(res.body.tasks_preview[0]).toMatchObject({
         id: expect.any(String),
         title: expect.any(String),
+        description: expect.any(String),
         status: 'PUBLISHED',
       });
     });

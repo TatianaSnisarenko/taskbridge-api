@@ -385,6 +385,7 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
         properties: {
           id: { type: 'string', format: 'uuid' },
           title: { type: 'string' },
+          description: { type: 'string', nullable: true },
           status: {
             type: 'string',
             enum: [
