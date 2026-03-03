@@ -380,6 +380,17 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
           closed: { type: 'integer', example: 0 },
         },
       },
+      TaskPreview: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          title: { type: 'string' },
+          status: {
+            type: 'string',
+            enum: ['DRAFT', 'PUBLISHED', 'IN_PROGRESS', 'COMPLETION_REQUESTED', 'COMPLETED', 'FAILED', 'CLOSED', 'DELETED'],
+          },
+        },
+      },
       ProjectDetailsResponse: {
         type: 'object',
         properties: {
@@ -406,6 +417,11 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
             },
           },
           tasks_summary: { $ref: '#/components/schemas/ProjectTasksSummary' },
+          tasks_preview: {
+            type: 'array',
+            items: { $ref: '#/components/schemas/TaskPreview' },
+            description: 'Preview of tasks in the project, sorted by published_at DESC. Public users see only PUBLISHED+PUBLIC tasks. Configurable via preview_limit parameter (default: 3, max: 20).',
+          },
         },
       },
       GetProjectsResponse: {
@@ -2404,6 +2420,12 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
             in: 'query',
             schema: { type: 'boolean', default: false },
             description: 'Include deleted project (owner only, requires Authorization header)',
+          },
+          {
+            name: 'preview_limit',
+            in: 'query',
+            schema: { type: 'integer', minimum: 1, maximum: 20, default: 3 },
+            description: 'Number of tasks to include in tasks_preview (default: 3, max: 20)',
           },
         ],
         responses: {

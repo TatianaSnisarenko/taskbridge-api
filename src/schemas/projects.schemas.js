@@ -136,6 +136,12 @@ export const getProjectQuerySchema = Joi.object({
   include_deleted: Joi.boolean().default(false).messages({
     'boolean.base': 'Include deleted must be true or false',
   }),
+  preview_limit: Joi.number().integer().min(1).max(20).default(3).messages({
+    'number.base': 'Preview limit must be a number',
+    'number.integer': 'Preview limit must be an integer',
+    'number.min': 'Preview limit must be at least 1',
+    'number.max': 'Preview limit must not exceed 20',
+  }),
 });
 
 export const getProjectsQuerySchema = Joi.object({

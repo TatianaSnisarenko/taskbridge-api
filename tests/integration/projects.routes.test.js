@@ -598,6 +598,252 @@ describe('projects routes', () => {
       expect(res.status).toBe(404);
       expect(res.body.error.code).toBe('NOT_FOUND');
     });
+
+    test('returns tasks_preview with default 3 tasks', async () => {
+      const owner = await createUser({ companyProfile: { companyName: 'TeamUp Studio' } });
+
+      const project = await prisma.project.create({
+        data: {
+          ownerUserId: owner.id,
+          title: 'Test Project',
+          shortDescription: 'Test',
+          description: 'Test description',
+          technologies: ['Node.js'],
+          visibility: 'PUBLIC',
+        },
+      });
+
+      // Create 5 published public tasks
+      for (let i = 0; i < 5; i++) {
+        await prisma.task.create({
+          data: {
+            ownerUserId: owner.id,
+            projectId: project.id,
+            title: `Published task ${i}`,
+            description: 'Test task',
+            status: 'PUBLISHED',
+            visibility: 'PUBLIC',
+            publishedAt: new Date(Date.now() - i * 1000 * 60), // Each 1 minute apart
+          },
+        });
+      }
+
+      const res = await request(app).get(`/api/v1/projects/${project.id}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.tasks_preview).toHaveLength(3);
+      expect(res.body.tasks_preview[0]).toMatchObject({
+        id: expect.any(String),
+        title: expect.any(String),
+        status: 'PUBLISHED',
+      });
+    });
+
+    test('respects custom preview_limit parameter', async () => {
+      const owner = await createUser({ companyProfile: { companyName: 'TeamUp Studio' } });
+
+      const project = await prisma.project.create({
+        data: {
+          ownerUserId: owner.id,
+          title: 'Test Project',
+          shortDescription: 'Test',
+          description: 'Test description',
+          technologies: ['Node.js'],
+          visibility: 'PUBLIC',
+        },
+      });
+
+      // Create 5 published public tasks
+      for (let i = 0; i < 5; i++) {
+        await prisma.task.create({
+          data: {
+            ownerUserId: owner.id,
+            projectId: project.id,
+            title: `Published task ${i}`,
+            description: 'Test task',
+            status: 'PUBLISHED',
+            visibility: 'PUBLIC',
+            publishedAt: new Date(Date.now() - i * 1000 * 60),
+          },
+        });
+      }
+
+      const res = await request(app).get(`/api/v1/projects/${project.id}?preview_limit=2`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.tasks_preview).toHaveLength(2);
+    });
+
+    test('public users only see PUBLISHED+PUBLIC tasks in preview', async () => {
+      const owner = await createUser({ companyProfile: { companyName: 'TeamUp Studio' } });
+
+      const project = await prisma.project.create({
+        data: {
+          ownerUserId: owner.id,
+          title: 'Test Project',
+          shortDescription: 'Test',
+          description: 'Test description',
+          technologies: ['Node.js'],
+          visibility: 'PUBLIC',
+        },
+      });
+
+      // Create draft task (not visible to public)
+      await prisma.task.create({
+        data: {
+          ownerUserId: owner.id,
+          projectId: project.id,
+          title: 'Draft task',
+          description: 'Draft',
+          status: 'DRAFT',
+          visibility: 'PUBLIC',
+          publishedAt: new Date(),
+        },
+      });
+
+      // Create published unlisted task (not visible to public)
+      await prisma.task.create({
+        data: {
+          ownerUserId: owner.id,
+          projectId: project.id,
+          title: 'Published unlisted task',
+          description: 'Unlisted',
+          status: 'PUBLISHED',
+          visibility: 'UNLISTED',
+          publishedAt: new Date(),
+        },
+      });
+
+      // Create published public task (visible to public)
+      const visibleTask = await prisma.task.create({
+        data: {
+          ownerUserId: owner.id,
+          projectId: project.id,
+          title: 'Published public task',
+          description: 'Public',
+          status: 'PUBLISHED',
+          visibility: 'PUBLIC',
+          publishedAt: new Date(),
+        },
+      });
+
+      const res = await request(app).get(`/api/v1/projects/${project.id}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.tasks_preview).toHaveLength(1);
+      expect(res.body.tasks_preview[0].id).toBe(visibleTask.id);
+    });
+
+    test('owner sees all tasks including DRAFT in preview', async () => {
+      const owner = await createUser({ companyProfile: { companyName: 'TeamUp Studio' } });
+      const token = buildAccessToken({ userId: owner.id, email: owner.email });
+
+      const project = await prisma.project.create({
+        data: {
+          ownerUserId: owner.id,
+          title: 'Test Project',
+          shortDescription: 'Test',
+          description: 'Test description',
+          technologies: ['Node.js'],
+          visibility: 'PUBLIC',
+        },
+      });
+
+      // Create draft task
+      const draftTask = await prisma.task.create({
+        data: {
+          ownerUserId: owner.id,
+          projectId: project.id,
+          title: 'Draft task',
+          description: 'Draft',
+          status: 'DRAFT',
+          visibility: 'PUBLIC',
+        },
+      });
+
+      // Create published public task
+      const publishedTask = await prisma.task.create({
+        data: {
+          ownerUserId: owner.id,
+          projectId: project.id,
+          title: 'Published public task',
+          description: 'Public',
+          status: 'PUBLISHED',
+          visibility: 'PUBLIC',
+          publishedAt: new Date(),
+        },
+      });
+
+      const res = await request(app)
+        .get(`/api/v1/projects/${project.id}`)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.tasks_preview).toHaveLength(2);
+      const taskIds = res.body.tasks_preview.map((t) => t.id);
+      expect(taskIds).toContain(draftTask.id);
+      expect(taskIds).toContain(publishedTask.id);
+    });
+
+    test('tasks_preview sorted by publishedAt DESC', async () => {
+      const owner = await createUser({ companyProfile: { companyName: 'TeamUp Studio' } });
+
+      const project = await prisma.project.create({
+        data: {
+          ownerUserId: owner.id,
+          title: 'Test Project',
+          shortDescription: 'Test',
+          description: 'Test description',
+          technologies: ['Node.js'],
+          visibility: 'PUBLIC',
+        },
+      });
+
+      // Create tasks with different publishedAt dates
+      const task1 = await prisma.task.create({
+        data: {
+          ownerUserId: owner.id,
+          projectId: project.id,
+          title: 'Task 1',
+          description: 'Test',
+          status: 'PUBLISHED',
+          visibility: 'PUBLIC',
+          publishedAt: new Date('2024-01-01'),
+        },
+      });
+
+      const task2 = await prisma.task.create({
+        data: {
+          ownerUserId: owner.id,
+          projectId: project.id,
+          title: 'Task 2',
+          description: 'Test',
+          status: 'PUBLISHED',
+          visibility: 'PUBLIC',
+          publishedAt: new Date('2024-01-03'),
+        },
+      });
+
+      const task3 = await prisma.task.create({
+        data: {
+          ownerUserId: owner.id,
+          projectId: project.id,
+          title: 'Task 3',
+          description: 'Test',
+          status: 'PUBLISHED',
+          visibility: 'PUBLIC',
+          publishedAt: new Date('2024-01-02'),
+        },
+      });
+
+      const res = await request(app).get(`/api/v1/projects/${project.id}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.tasks_preview).toHaveLength(3);
+      expect(res.body.tasks_preview[0].id).toBe(task2.id); // Most recent
+      expect(res.body.tasks_preview[1].id).toBe(task3.id);
+      expect(res.body.tasks_preview[2].id).toBe(task1.id); // Oldest
+    });
   });
 
   test('POST /projects rejects unauthorized', async () => {

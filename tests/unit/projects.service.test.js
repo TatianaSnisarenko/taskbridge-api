@@ -12,6 +12,7 @@ const prismaMock = {
   task: {
     updateMany: jest.fn(),
     groupBy: jest.fn(),
+    findMany: jest.fn(),
   },
   projectReport: {
     create: jest.fn(),
@@ -403,6 +404,7 @@ describe('projects.service', () => {
         { status: 'COMPLETED', _count: { _all: 3 } },
         { status: 'CLOSED', _count: { _all: 2 } },
       ]);
+      prismaMock.task.findMany.mockResolvedValue([]);
 
       const result = await projectsService.getProjectById({
         userId: null,
@@ -519,6 +521,7 @@ describe('projects.service', () => {
         deletedAt: new Date('2026-02-14T13:00:00Z'),
       });
       prismaMock.task.groupBy.mockResolvedValue([]);
+      prismaMock.task.findMany.mockResolvedValue([]);
 
       const result = await projectsService.getProjectById({
         userId: 'u1',
@@ -533,6 +536,116 @@ describe('projects.service', () => {
       });
       expect(result.project_id).toBe('p1');
       expect(result.deleted_at).toEqual(expect.any(String));
+    });
+
+    test('includes tasks_preview with default 3 tasks', async () => {
+      const mockTasks = [
+        { id: 't1', title: 'Task 1', status: 'PUBLISHED' },
+        { id: 't2', title: 'Task 2', status: 'PUBLISHED' },
+        { id: 't3', title: 'Task 3', status: 'PUBLISHED' },
+      ];
+      prismaMock.project.findUnique.mockResolvedValue(mockProject);
+      prismaMock.task.groupBy.mockResolvedValue([{ status: 'PUBLISHED', _count: { _all: 5 } }]);
+      prismaMock.task.findMany.mockResolvedValue(mockTasks);
+
+      const result = await projectsService.getProjectById({
+        userId: null,
+        projectId: 'p1',
+        includeDeleted: false,
+      });
+
+      expect(prismaMock.task.findMany).toHaveBeenCalledWith({
+        where: {
+          projectId: 'p1',
+          status: 'PUBLISHED',
+          visibility: 'PUBLIC',
+          deletedAt: null,
+        },
+        select: {
+          id: true,
+          title: true,
+          status: true,
+        },
+        orderBy: {
+          publishedAt: 'desc',
+        },
+        take: 3,
+      });
+      expect(result.tasks_preview).toHaveLength(3);
+      expect(result.tasks_preview[0]).toMatchObject({ id: 't1', title: 'Task 1' });
+    });
+
+    test('respects custom previewLimit parameter', async () => {
+      const mockTasks = [
+        { id: 't1', title: 'Task 1', status: 'PUBLISHED' },
+        { id: 't2', title: 'Task 2', status: 'PUBLISHED' },
+      ];
+      prismaMock.project.findUnique.mockResolvedValue(mockProject);
+      prismaMock.task.groupBy.mockResolvedValue([{ status: 'PUBLISHED', _count: { _all: 5 } }]);
+      prismaMock.task.findMany.mockResolvedValue(mockTasks);
+
+      const result = await projectsService.getProjectById({
+        userId: null,
+        projectId: 'p1',
+        includeDeleted: false,
+        previewLimit: '2',
+      });
+
+      expect(prismaMock.task.findMany).toHaveBeenCalledWith({
+        where: {
+          projectId: 'p1',
+          status: 'PUBLISHED',
+          visibility: 'PUBLIC',
+          deletedAt: null,
+        },
+        select: {
+          id: true,
+          title: true,
+          status: true,
+        },
+        orderBy: {
+          publishedAt: 'desc',
+        },
+        take: 2,
+      });
+      expect(result.tasks_preview).toHaveLength(2);
+    });
+
+    test('owner sees all tasks in preview without status filter', async () => {
+      const mockTasks = [
+        { id: 't1', title: 'Draft Task', status: 'DRAFT' },
+        { id: 't2', title: 'Published Task', status: 'PUBLISHED' },
+      ];
+      prismaMock.project.findUnique.mockResolvedValue(mockProject);
+      prismaMock.task.groupBy.mockResolvedValue([
+        { status: 'DRAFT', _count: { _all: 1 } },
+        { status: 'PUBLISHED', _count: { _all: 1 } },
+      ]);
+      prismaMock.task.findMany.mockResolvedValue(mockTasks);
+
+      const result = await projectsService.getProjectById({
+        userId: 'u1', // Owner
+        projectId: 'p1',
+        includeDeleted: false,
+      });
+
+      // Owner should not have status filter applied
+      expect(prismaMock.task.findMany).toHaveBeenCalledWith({
+        where: {
+          projectId: 'p1',
+          deletedAt: null,
+        },
+        select: {
+          id: true,
+          title: true,
+          status: true,
+        },
+        orderBy: {
+          publishedAt: 'desc',
+        },
+        take: 3,
+      });
+      expect(result.tasks_preview).toHaveLength(2);
     });
   });
 

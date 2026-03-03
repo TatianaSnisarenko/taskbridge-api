@@ -152,7 +152,7 @@ function buildTaskSummary(groups) {
   return summary;
 }
 
-function mapProjectDetailsOutput(project, taskSummary) {
+function mapProjectDetailsOutput(project, taskSummary, tasksPreview) {
   return {
     project_id: project.id,
     owner_user_id: project.ownerUserId,
@@ -174,6 +174,7 @@ function mapProjectDetailsOutput(project, taskSummary) {
       reviews_count: project.owner.companyProfile.reviewsCount,
     },
     tasks_summary: taskSummary,
+    tasks_preview: tasksPreview,
   };
 }
 
@@ -257,7 +258,7 @@ export async function getProjects({ userId, query }) {
   };
 }
 
-export async function getProjectById({ userId, projectId, includeDeleted }) {
+export async function getProjectById({ userId, projectId, includeDeleted, previewLimit }) {
   const project = await prisma.project.findUnique({
     where: { id: projectId },
     include: {
@@ -305,7 +306,37 @@ export async function getProjectById({ userId, projectId, includeDeleted }) {
   });
 
   const taskSummary = buildTaskSummary(taskGroups);
-  return mapProjectDetailsOutput(project, taskSummary);
+
+  // Fetch tasks preview
+  const limit = previewLimit ? parseInt(previewLimit, 10) : 3;
+  const previewWhere = {
+    projectId,
+  };
+
+  // For non-owners, only show PUBLISHED + PUBLIC tasks
+  if (!isOwner) {
+    previewWhere.status = 'PUBLISHED';
+    previewWhere.visibility = 'PUBLIC';
+  }
+
+  if (!(includeDeleted && isOwner)) {
+    previewWhere.deletedAt = null;
+  }
+
+  const tasksPreview = await prisma.task.findMany({
+    where: previewWhere,
+    select: {
+      id: true,
+      title: true,
+      status: true,
+    },
+    orderBy: {
+      publishedAt: 'desc',
+    },
+    take: limit,
+  });
+
+  return mapProjectDetailsOutput(project, taskSummary, tasksPreview);
 }
 
 export async function reportProject({ userId, persona, projectId, report }) {

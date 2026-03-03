@@ -54,6 +54,7 @@ export const getProjectById = asyncHandler(async (req, res) => {
     userId: req.user?.id,
     projectId: req.params.projectId,
     includeDeleted: req.query.include_deleted,
+    previewLimit: req.query.preview_limit,
   });
 
   return res.status(200).json(result);
