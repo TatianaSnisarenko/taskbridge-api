@@ -274,6 +274,16 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
           verified: { type: 'boolean' },
           avg_rating: { type: 'number', format: 'float', example: 4.6 },
           reviews_count: { type: 'integer', example: 8 },
+          projects_completed: {
+            type: 'integer',
+            description: 'Count of unique projects with at least one COMPLETED task',
+            example: 5,
+          },
+          active_projects: {
+            type: 'integer',
+            description: 'Count of projects with status ACTIVE',
+            example: 3,
+          },
         },
       },
       CreateProjectRequest: {

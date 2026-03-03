@@ -185,7 +185,36 @@ export async function getCompanyProfileByUserId({ userId }) {
     throw new ApiError(404, 'PROFILE_NOT_FOUND', 'Company profile not found');
   }
 
-  return mapCompanyProfileOutput(profile);
+  // Calculate active_projects: count of projects with status=ACTIVE
+  const activeProjects = await prisma.project.count({
+    where: {
+      ownerUserId: userId,
+      status: 'ACTIVE',
+      deletedAt: null,
+    },
+  });
+
+  // Calculate projects_completed: count of unique projects with at least one COMPLETED task
+  const completedProjectsData = await prisma.task.findMany({
+    where: {
+      ownerUserId: userId,
+      status: 'COMPLETED',
+      deletedAt: null,
+      projectId: { not: null },
+    },
+    select: {
+      projectId: true,
+    },
+    distinct: ['projectId'],
+  });
+
+  const projectsCompleted = completedProjectsData.length;
+
+  return {
+    ...mapCompanyProfileOutput(profile),
+    projects_completed: projectsCompleted,
+    active_projects: activeProjects,
+  };
 }
 
 export async function getUserReviews({ userId, page = 1, size = 20 }) {

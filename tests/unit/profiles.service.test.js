@@ -21,6 +21,10 @@ const prismaMock = {
   },
   task: {
     count: jest.fn(),
+    findMany: jest.fn(),
+  },
+  project: {
+    count: jest.fn(),
   },
 };
 
@@ -358,12 +362,19 @@ describe('profiles.service', () => {
       teamSize: 4,
       country: 'UA',
       timezone: 'Europe/Zaporozhye',
+      logoUrl: 'https://example.com/logo.png',
       websiteUrl: 'https://teamup.dev',
       links: { linkedin: 'https://linkedin.com/company/teamup' },
       verified: false,
       avgRating: { toNumber: () => 4.6 },
       reviewsCount: 8,
     });
+
+    // Mock for active_projects count
+    prismaMock.project.count.mockResolvedValue(3);
+
+    // Mock for projects_completed (distinct projects with COMPLETED tasks)
+    prismaMock.task.findMany.mockResolvedValue([{ projectId: 'p1' }, { projectId: 'p2' }]);
 
     const result = await profilesService.getCompanyProfileByUserId({ userId: 'u2' });
 
@@ -375,11 +386,35 @@ describe('profiles.service', () => {
       team_size: 4,
       country: 'UA',
       timezone: 'Europe/Zaporozhye',
+      logo_url: 'https://example.com/logo.png',
       website_url: 'https://teamup.dev',
       links: { linkedin: 'https://linkedin.com/company/teamup' },
       verified: false,
       avg_rating: 4.6,
       reviews_count: 8,
+      projects_completed: 2,
+      active_projects: 3,
+    });
+
+    expect(prismaMock.project.count).toHaveBeenCalledWith({
+      where: {
+        ownerUserId: 'u2',
+        status: 'ACTIVE',
+        deletedAt: null,
+      },
+    });
+
+    expect(prismaMock.task.findMany).toHaveBeenCalledWith({
+      where: {
+        ownerUserId: 'u2',
+        status: 'COMPLETED',
+        deletedAt: null,
+        projectId: { not: null },
+      },
+      select: {
+        projectId: true,
+      },
+      distinct: ['projectId'],
     });
   });
 

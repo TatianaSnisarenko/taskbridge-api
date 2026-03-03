@@ -691,6 +691,87 @@ describe('profiles routes', () => {
       verified: false,
       avg_rating: 4.6,
       reviews_count: 8,
+      projects_completed: 0,
+      active_projects: 0,
+    });
+  });
+
+  test('GET /profiles/company/:userId returns profile with statistics', async () => {
+    const company = await createUser({
+      companyProfile: {
+        companyName: 'DevCorp Inc',
+      },
+    });
+
+    // Create 2 active projects
+    const project1 = await prisma.project.create({
+      data: {
+        ownerUserId: company.id,
+        status: 'ACTIVE',
+        title: 'Project Alpha',
+        description: 'First project',
+      },
+    });
+
+    const project2 = await prisma.project.create({
+      data: {
+        ownerUserId: company.id,
+        status: 'ACTIVE',
+        title: 'Project Beta',
+        description: 'Second project',
+      },
+    });
+
+    // Create 1 archived project (should not count as active)
+    await prisma.project.create({
+      data: {
+        ownerUserId: company.id,
+        status: 'ARCHIVED',
+        title: 'Old Project',
+        description: 'Archived project',
+      },
+    });
+
+    // Create 2 tasks for project1 - 1 completed
+    await prisma.task.create({
+      data: {
+        ownerUserId: company.id,
+        projectId: project1.id,
+        status: 'COMPLETED',
+        title: 'Task 1',
+        description: 'Completed task in project 1',
+      },
+    });
+
+    // Create 2 tasks for project2 - 1 completed
+    await prisma.task.create({
+      data: {
+        ownerUserId: company.id,
+        projectId: project2.id,
+        status: 'COMPLETED',
+        title: 'Task 2',
+        description: 'Completed task in project 2',
+      },
+    });
+
+    await prisma.task.create({
+      data: {
+        ownerUserId: company.id,
+        projectId: project2.id,
+        status: 'IN_PROGRESS',
+        title: 'Task 3',
+        description: 'In-progress task in project 2',
+      },
+    });
+
+    const res = await request(app).get(`/api/v1/profiles/company/${company.id}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      user_id: company.id,
+      company_name: 'DevCorp Inc',
+      projects_completed: 2, // 2 unique projects with at least 1 completed task
+      active_projects: 2, // 2 projects with status ACTIVE
     });
   });
 
