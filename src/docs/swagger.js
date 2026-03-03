@@ -387,7 +387,16 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
           title: { type: 'string' },
           status: {
             type: 'string',
-            enum: ['DRAFT', 'PUBLISHED', 'IN_PROGRESS', 'COMPLETION_REQUESTED', 'COMPLETED', 'FAILED', 'CLOSED', 'DELETED'],
+            enum: [
+              'DRAFT',
+              'PUBLISHED',
+              'IN_PROGRESS',
+              'COMPLETION_REQUESTED',
+              'COMPLETED',
+              'FAILED',
+              'CLOSED',
+              'DELETED',
+            ],
           },
         },
       },
@@ -420,7 +429,8 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
           tasks_preview: {
             type: 'array',
             items: { $ref: '#/components/schemas/TaskPreview' },
-            description: 'Preview of tasks in the project, sorted by published_at DESC. Public users see only PUBLISHED+PUBLIC tasks. Configurable via preview_limit parameter (default: 3, max: 20).',
+            description:
+              'Preview of tasks in the project, sorted by published_at DESC. Public users see only PUBLISHED+PUBLIC tasks. Configurable via preview_limit parameter (default: 3, max: 20).',
           },
         },
       },
