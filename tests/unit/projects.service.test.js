@@ -235,7 +235,7 @@ describe('projects.service', () => {
       const result = await projectsService.getProjects({ userId: null, query: {} });
 
       expect(prismaMock.project.findMany).toHaveBeenCalledWith({
-        where: { deletedAt: null, visibility: 'PUBLIC' },
+        where: { deletedAt: null, visibility: 'PUBLIC', status: 'ACTIVE' },
         skip: 0,
         take: 20,
         orderBy: { createdAt: 'desc' },
@@ -256,7 +256,7 @@ describe('projects.service', () => {
         },
       });
       expect(prismaMock.project.count).toHaveBeenCalledWith({
-        where: { deletedAt: null, visibility: 'PUBLIC' },
+        where: { deletedAt: null, visibility: 'PUBLIC', status: 'ACTIVE' },
       });
       expect(result).toEqual({
         items: [

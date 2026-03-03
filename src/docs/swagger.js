@@ -1019,6 +1019,30 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
           total: { type: 'integer', example: 1 },
         },
       },
+      MyProjectItem: {
+        type: 'object',
+        properties: {
+          project_id: { type: 'string', format: 'uuid' },
+          owner_user_id: { type: 'string', format: 'uuid' },
+          title: { type: 'string' },
+          short_description: { type: 'string' },
+          status: { type: 'string', enum: ['ACTIVE', 'ARCHIVED'] },
+          visibility: { type: 'string', enum: ['PUBLIC', 'UNLISTED'] },
+          max_talents: { type: 'integer', minimum: 1 },
+          created_at: { type: 'string', format: 'date-time' },
+          updated_at: { type: 'string', format: 'date-time' },
+          company: { $ref: '#/components/schemas/TaskCompany' },
+        },
+      },
+      GetMyProjectsResponse: {
+        type: 'object',
+        properties: {
+          items: { type: 'array', items: { $ref: '#/components/schemas/MyProjectItem' } },
+          page: { type: 'integer', example: 1 },
+          size: { type: 'integer', example: 20 },
+          total: { type: 'integer', example: 2 },
+        },
+      },
       NotificationItem: {
         type: 'object',
         properties: {
@@ -1487,6 +1511,47 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
             content: {
               'application/json': {
                 schema: { $ref: '#/components/schemas/GetMyTasksResponse' },
+              },
+            },
+          },
+          400: { description: 'Validation error' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Developer profile does not exist' },
+        },
+      },
+    },
+    '/api/v1/me/projects': {
+      get: {
+        tags: ['Me'],
+        summary: 'Get my worked projects as developer',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'X-Persona',
+            in: 'header',
+            required: true,
+            schema: { type: 'string', enum: ['developer'] },
+            description: 'Must be developer persona',
+          },
+          {
+            name: 'page',
+            in: 'query',
+            schema: { type: 'integer', minimum: 1, default: 1 },
+            description: 'Page number (starting from 1)',
+          },
+          {
+            name: 'size',
+            in: 'query',
+            schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
+            description: 'Number of items per page',
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Paginated list of projects where developer has accepted tasks',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/GetMyProjectsResponse' },
               },
             },
           },

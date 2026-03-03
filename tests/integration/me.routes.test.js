@@ -795,6 +795,148 @@ describe('me routes', () => {
     });
   });
 
+  describe('GET /me/projects', () => {
+    test('rejects unauthorized', async () => {
+      const res = await request(app).get('/api/v1/me/projects');
+
+      expect(res.status).toBe(401);
+      expect(res.body.error.code).toBe('AUTH_REQUIRED');
+    });
+
+    test('rejects missing X-Persona header', async () => {
+      const user = await createUser({ developerProfile: { displayName: 'Dev' } });
+      const token = buildAccessToken({ userId: user.id, email: user.email });
+
+      const res = await request(app)
+        .get('/api/v1/me/projects')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('PERSONA_REQUIRED');
+    });
+
+    test('developer sees ACTIVE and ARCHIVED projects they worked on', async () => {
+      const developer = await createUser({ developerProfile: { displayName: 'Dev' } });
+      const otherDev = await createUser({ developerProfile: { displayName: 'Other' } });
+      const company = await createUser({ companyProfile: { companyName: 'TeamUp Studio' } });
+      const token = buildAccessToken({ userId: developer.id, email: developer.email });
+
+      const activeWorked = await prisma.project.create({
+        data: {
+          ownerUserId: company.id,
+          title: 'Active Worked',
+          shortDescription: 'Active project',
+          description: 'Description',
+          technologies: ['Node.js'],
+          status: 'ACTIVE',
+          visibility: 'PUBLIC',
+        },
+      });
+
+      const archivedWorked = await prisma.project.create({
+        data: {
+          ownerUserId: company.id,
+          title: 'Archived Worked',
+          shortDescription: 'Archived project',
+          description: 'Description',
+          technologies: ['Node.js'],
+          status: 'ARCHIVED',
+          visibility: 'PUBLIC',
+        },
+      });
+
+      const archivedNotWorked = await prisma.project.create({
+        data: {
+          ownerUserId: company.id,
+          title: 'Archived Not Worked',
+          shortDescription: 'Archived no work',
+          description: 'Description',
+          technologies: ['Node.js'],
+          status: 'ARCHIVED',
+          visibility: 'PUBLIC',
+        },
+      });
+
+      const activeTask = await prisma.task.create({
+        data: {
+          ownerUserId: company.id,
+          projectId: activeWorked.id,
+          title: 'Active task',
+          description: 'Task',
+          status: 'COMPLETED',
+        },
+      });
+
+      await prisma.application.create({
+        data: {
+          taskId: activeTask.id,
+          developerUserId: developer.id,
+          status: 'ACCEPTED',
+        },
+      });
+
+      const archivedTask = await prisma.task.create({
+        data: {
+          ownerUserId: company.id,
+          projectId: archivedWorked.id,
+          title: 'Archived task',
+          description: 'Task',
+          status: 'COMPLETED',
+        },
+      });
+
+      await prisma.application.create({
+        data: {
+          taskId: archivedTask.id,
+          developerUserId: developer.id,
+          status: 'ACCEPTED',
+        },
+      });
+
+      const notWorkedTask = await prisma.task.create({
+        data: {
+          ownerUserId: company.id,
+          projectId: archivedNotWorked.id,
+          title: 'Not worked task',
+          description: 'Task',
+          status: 'COMPLETED',
+        },
+      });
+
+      await prisma.application.create({
+        data: {
+          taskId: notWorkedTask.id,
+          developerUserId: otherDev.id,
+          status: 'ACCEPTED',
+        },
+      });
+
+      const res = await request(app)
+        .get('/api/v1/me/projects')
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'developer');
+
+      expect(res.status).toBe(200);
+      expect(res.body.total).toBe(2);
+      const titles = res.body.items.map((item) => item.title);
+      expect(titles).toEqual(expect.arrayContaining(['Active Worked', 'Archived Worked']));
+      expect(titles).not.toContain('Archived Not Worked');
+    });
+
+    test('rejects non-developer persona', async () => {
+      const company = await createUser({ companyProfile: { companyName: 'TeamUp Studio' } });
+      const token = buildAccessToken({ userId: company.id, email: company.email });
+
+      const res = await request(app)
+        .get('/api/v1/me/projects')
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'company');
+
+      expect(res.status).toBe(403);
+      expect(res.body.error.code).toBe('PERSONA_NOT_AVAILABLE');
+    });
+  });
+
   describe('GET /me/notifications', () => {
     test('rejects unauthorized', async () => {
       const res = await request(app).get('/api/v1/me/notifications');

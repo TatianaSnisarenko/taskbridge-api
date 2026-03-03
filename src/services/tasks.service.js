@@ -1078,8 +1078,43 @@ export async function rejectTaskCompletion({ userId, taskId, feedback }) {
         status: true,
         rejectionCount: true,
         failedAt: true,
+        projectId: true,
       },
     });
+
+    // Check if all talents are now used when task fails (completed + failed == max_talents)
+    if (isFinalRejection && updated.projectId) {
+      const project = await tx.project.findUnique({
+        where: { id: updated.projectId },
+        select: { id: true, maxTalents: true, status: true },
+      });
+
+      if (project && project.status === 'ACTIVE') {
+        const completedCount = await tx.task.count({
+          where: {
+            projectId: updated.projectId,
+            status: 'COMPLETED',
+            deletedAt: null,
+          },
+        });
+
+        const failedCount = await tx.task.count({
+          where: {
+            projectId: updated.projectId,
+            status: 'FAILED',
+            deletedAt: null,
+          },
+        });
+
+        // Archive project if all talents used
+        if (completedCount + failedCount >= project.maxTalents) {
+          await tx.project.update({
+            where: { id: updated.projectId },
+            data: { status: 'ARCHIVED' },
+          });
+        }
+      }
+    }
 
     // Send feedback message to chat thread
     if (task.chatThread?.id) {
@@ -1185,8 +1220,42 @@ export async function confirmTaskCompletion({ userId, taskId }) {
         status: 'COMPLETED',
         completedAt,
       },
-      select: { id: true, title: true, status: true, completedAt: true },
+      select: { id: true, title: true, status: true, completedAt: true, projectId: true },
     });
+
+    // Check if all talents are now used (completed + failed == max_talents)
+    if (updated.projectId) {
+      const project = await tx.project.findUnique({
+        where: { id: updated.projectId },
+        select: { id: true, maxTalents: true, status: true },
+      });
+
+      if (project && project.status === 'ACTIVE') {
+        const completedCount = await tx.task.count({
+          where: {
+            projectId: updated.projectId,
+            status: 'COMPLETED',
+            deletedAt: null,
+          },
+        });
+
+        const failedCount = await tx.task.count({
+          where: {
+            projectId: updated.projectId,
+            status: 'FAILED',
+            deletedAt: null,
+          },
+        });
+
+        // Archive project if all talents used
+        if (completedCount + failedCount >= project.maxTalents) {
+          await tx.project.update({
+            where: { id: updated.projectId },
+            data: { status: 'ARCHIVED' },
+          });
+        }
+      }
+    }
 
     await createNotification({
       client: tx,

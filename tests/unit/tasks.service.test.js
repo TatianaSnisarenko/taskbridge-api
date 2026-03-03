@@ -1382,7 +1382,7 @@ describe('tasks.service', () => {
           status: 'COMPLETED',
           completedAt: expect.any(Date),
         },
-        select: { id: true, title: true, status: true, completedAt: true },
+        select: { id: true, title: true, status: true, completedAt: true, projectId: true },
       });
 
       expect(notificationsServiceMock.createNotification).toHaveBeenCalledWith({

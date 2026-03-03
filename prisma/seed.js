@@ -614,6 +614,9 @@ async function main() {
             shortDescription: projectInfo.shortDescription,
             description: projectInfo.description,
             technologies: projectInfo.technologies,
+            maxTalents: 8, // Allow 8 published tasks per project (4-5 created + buffer)
+            visibility: 'PUBLIC',
+            status: 'ACTIVE',
           },
         });
         projects.push(project);
@@ -626,7 +629,7 @@ async function main() {
     console.log('📝 Creating tasks (if not exists)...');
     const tasks = [];
     for (const project of projects) {
-      const tasksPerProject = Math.floor(Math.random() * 2) + 3; // 3-4 tasks per project
+      const tasksPerProject = Math.floor(Math.random() * 2) + 4; // 4-5 tasks per project
       for (let i = 0; i < tasksPerProject; i++) {
         const templateIndex = Math.floor(Math.random() * taskTemplates.length);
         const template = taskTemplates[templateIndex];
@@ -661,7 +664,7 @@ async function main() {
             communicationLanguage: 'English',
             status: 'PUBLISHED',
             visibility: 'PUBLIC',
-            publishedAt: new Date(),
+            publishedAt: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000), // Random past date within last 7 days
           },
         });
         tasks.push(task);
@@ -688,6 +691,9 @@ async function main() {
         console.log(`⏭️  Task "${task.title}" already has accepted application, skipping...`);
         continue;
       }
+
+      // Only 70% of tasks get accepted applications to leave some in PUBLISHED state for preview display
+      const shouldCreateAcceptedApp = Math.random() < 0.7;
 
       // 2-4 developers apply per task
       const numApplicants = Math.floor(Math.random() * 2) + 2;
@@ -716,9 +722,9 @@ async function main() {
             taskId: task.id,
             developerUserId: developer.user.id,
             message: `I'm interested in this task and confident I can deliver quality work. ${reviewTexts.good[0]}`,
-            status: i === 0 ? 'ACCEPTED' : 'APPLIED', // First applicant accepted
+            status: i === 0 && shouldCreateAcceptedApp ? 'ACCEPTED' : 'APPLIED',
             proposedPlan:
-              i === 0
+              i === 0 && shouldCreateAcceptedApp
                 ? 'I will start with setup and architecture review, then implement features incrementally with daily updates.'
                 : null,
           },

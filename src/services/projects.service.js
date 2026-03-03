@@ -223,6 +223,12 @@ export async function getProjects({ userId, query }) {
     where.technologies = { hasSome: techs };
   }
 
+  // Status filter: public catalog shows only ACTIVE projects
+  // Owner queries show all projects regardless of status
+  if (!isOwnerQuery) {
+    where.status = 'ACTIVE';
+  }
+
   const skip = (page - 1) * size;
 
   const [items, total] = await prisma.$transaction([
@@ -286,6 +292,26 @@ export async function getProjectById({ userId, projectId, includeDeleted, previe
 
   if (project.deletedAt) {
     if (!includeDeleted || !isOwner) {
+      throw new ApiError(404, 'NOT_FOUND', 'Project not found');
+    }
+  }
+
+  // For ARCHIVED projects: allow access to owner or developer who worked on a task in this project
+  if (project.status === 'ARCHIVED' && !isOwner) {
+    // Check if user has an accepted application for any task in this project
+    const userApplication = await prisma.application.findFirst({
+      where: {
+        developerUserId: userId,
+        status: 'ACCEPTED',
+        task: {
+          projectId: projectId,
+          deletedAt: null,
+        },
+      },
+      select: { id: true },
+    });
+
+    if (!userApplication) {
       throw new ApiError(404, 'NOT_FOUND', 'Project not found');
     }
   }

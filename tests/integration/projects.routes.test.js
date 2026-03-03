@@ -334,6 +334,154 @@ describe('projects routes', () => {
       expect(res.status).toBe(403);
       expect(res.body.error.code).toBe('FORBIDDEN');
     });
+
+    test('anonymous users do not see ARCHIVED projects', async () => {
+      const company = await createUser({ companyProfile: { companyName: 'TeamUp Studio' } });
+
+      await prisma.project.create({
+        data: {
+          ownerUserId: company.id,
+          title: 'Active Project',
+          shortDescription: 'Active',
+          description: 'Full description',
+          technologies: ['Node.js'],
+          visibility: 'PUBLIC',
+          status: 'ACTIVE',
+        },
+      });
+
+      await prisma.project.create({
+        data: {
+          ownerUserId: company.id,
+          title: 'Archived Project',
+          shortDescription: 'Archived',
+          description: 'Full description',
+          technologies: ['Node.js'],
+          visibility: 'PUBLIC',
+          status: 'ARCHIVED',
+        },
+      });
+
+      const res = await request(app).get('/api/v1/projects');
+
+      expect(res.status).toBe(200);
+      expect(res.body.items).toHaveLength(1);
+      expect(res.body.items[0].title).toBe('Active Project');
+      expect(res.body.items[0].status).toBe('ACTIVE');
+    });
+
+    test('developers still do not see ARCHIVED projects in public catalog even if they worked on them', async () => {
+      const company = await createUser({ companyProfile: { companyName: 'TeamUp Studio' } });
+      const developer = await createUser({ developerProfile: { displayName: 'John Dev' } });
+      const token = buildAccessToken({ userId: developer.id, email: developer.email });
+
+      const project = await prisma.project.create({
+        data: {
+          ownerUserId: company.id,
+          title: 'Archived Project',
+          shortDescription: 'Archived',
+          description: 'Full description',
+          technologies: ['Node.js'],
+          visibility: 'PUBLIC',
+          status: 'ARCHIVED',
+          maxTalents: 1,
+        },
+      });
+
+      const task = await prisma.task.create({
+        data: {
+          ownerUserId: company.id,
+          projectId: project.id,
+          title: 'Task 1',
+          description: 'Description',
+          status: 'COMPLETED',
+          visibility: 'PUBLIC',
+          publishedAt: new Date(),
+        },
+      });
+
+      // Create accepted application for developer
+      await prisma.application.create({
+        data: {
+          taskId: task.id,
+          developerUserId: developer.id,
+          status: 'ACCEPTED',
+          message: 'Interested',
+        },
+      });
+
+      // Request as developer who worked on the project
+      const res = await request(app)
+        .get('/api/v1/projects')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.items).toHaveLength(0);
+    });
+
+    test('developers do not see ARCHIVED projects they did NOT work on', async () => {
+      const company = await createUser({ companyProfile: { companyName: 'TeamUp Studio' } });
+      const developer = await createUser({ developerProfile: { displayName: 'John Dev' } });
+      const token = buildAccessToken({ userId: developer.id, email: developer.email });
+
+      await prisma.project.create({
+        data: {
+          ownerUserId: company.id,
+          title: 'Archived Project',
+          shortDescription: 'Archived',
+          description: 'Full description',
+          technologies: ['Node.js'],
+          visibility: 'PUBLIC',
+          status: 'ARCHIVED',
+        },
+      });
+
+      const res = await request(app)
+        .get('/api/v1/projects')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.items).toHaveLength(0);
+    });
+
+    test('company owners see all their projects including ARCHIVED', async () => {
+      const company = await createUser({ companyProfile: { companyName: 'TeamUp Studio' } });
+      const token = buildAccessToken({ userId: company.id, email: company.email });
+
+      await prisma.project.create({
+        data: {
+          ownerUserId: company.id,
+          title: 'Active Project',
+          shortDescription: 'Active',
+          description: 'Full description',
+          technologies: ['Node.js'],
+          visibility: 'PUBLIC',
+          status: 'ACTIVE',
+        },
+      });
+
+      await prisma.project.create({
+        data: {
+          ownerUserId: company.id,
+          title: 'Archived Project',
+          shortDescription: 'Archived',
+          description: 'Full description',
+          technologies: ['Node.js'],
+          visibility: 'PUBLIC',
+          status: 'ARCHIVED',
+        },
+      });
+
+      const res = await request(app)
+        .get('/api/v1/projects?owner=true')
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'company');
+
+      expect(res.status).toBe(200);
+      expect(res.body.items).toHaveLength(2);
+      expect(res.body.items.map((p) => p.status)).toContain('ACTIVE');
+      expect(res.body.items.map((p) => p.status)).toContain('ARCHIVED');
+    });
   });
 
   describe('GET /projects/:projectId', () => {
@@ -843,6 +991,124 @@ describe('projects routes', () => {
       expect(res.body.tasks_preview[0].id).toBe(task2.id); // Most recent
       expect(res.body.tasks_preview[1].id).toBe(task3.id);
       expect(res.body.tasks_preview[2].id).toBe(task1.id); // Oldest
+    });
+
+    test('anonymous users cannot see ARCHIVED projects', async () => {
+      const company = await createUser({ companyProfile: { companyName: 'TeamUp Studio' } });
+
+      const project = await prisma.project.create({
+        data: {
+          ownerUserId: company.id,
+          title: 'Archived Project',
+          shortDescription: 'Archived',
+          description: 'Full description',
+          technologies: ['Node.js'],
+          visibility: 'PUBLIC',
+          status: 'ARCHIVED',
+        },
+      });
+
+      const res = await request(app).get(`/api/v1/projects/${project.id}`);
+
+      expect(res.status).toBe(404);
+    });
+
+    test('developers CAN see ARCHIVED projects they worked on', async () => {
+      const company = await createUser({ companyProfile: { companyName: 'TeamUp Studio' } });
+      const developer = await createUser({ developerProfile: { displayName: 'John Dev' } });
+      const token = buildAccessToken({ userId: developer.id, email: developer.email });
+
+      const project = await prisma.project.create({
+        data: {
+          ownerUserId: company.id,
+          title: 'Archived Project',
+          shortDescription: 'Archived',
+          description: 'Full description',
+          technologies: ['Node.js'],
+          visibility: 'PUBLIC',
+          status: 'ARCHIVED',
+        },
+      });
+
+      const task = await prisma.task.create({
+        data: {
+          ownerUserId: company.id,
+          projectId: project.id,
+          title: 'Task 1',
+          description: 'Description',
+          status: 'COMPLETED',
+          visibility: 'PUBLIC',
+          publishedAt: new Date(),
+        },
+      });
+
+      // Create accepted application for developer
+      await prisma.application.create({
+        data: {
+          taskId: task.id,
+          developerUserId: developer.id,
+          status: 'ACCEPTED',
+          message: 'Interested',
+        },
+      });
+
+      const res = await request(app)
+        .get(`/api/v1/projects/${project.id}`)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.title).toBe('Archived Project');
+      expect(res.body.status).toBe('ARCHIVED');
+    });
+
+    test('developers CANNOT see ARCHIVED projects they did NOT work on', async () => {
+      const company = await createUser({ companyProfile: { companyName: 'TeamUp Studio' } });
+      const developer = await createUser({ developerProfile: { displayName: 'John Dev' } });
+      const token = buildAccessToken({ userId: developer.id, email: developer.email });
+
+      const project = await prisma.project.create({
+        data: {
+          ownerUserId: company.id,
+          title: 'Archived Project',
+          shortDescription: 'Archived',
+          description: 'Full description',
+          technologies: ['Node.js'],
+          visibility: 'PUBLIC',
+          status: 'ARCHIVED',
+        },
+      });
+
+      const res = await request(app)
+        .get(`/api/v1/projects/${project.id}`)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(404);
+    });
+
+    test('company owners can see their ARCHIVED projects', async () => {
+      const company = await createUser({ companyProfile: { companyName: 'TeamUp Studio' } });
+      const token = buildAccessToken({ userId: company.id, email: company.email });
+
+      const project = await prisma.project.create({
+        data: {
+          ownerUserId: company.id,
+          title: 'Archived Project',
+          shortDescription: 'Archived',
+          description: 'Full description',
+          technologies: ['Node.js'],
+          visibility: 'PUBLIC',
+          status: 'ARCHIVED',
+        },
+      });
+
+      const res = await request(app)
+        .get(`/api/v1/projects/${project.id}`)
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'company');
+
+      expect(res.status).toBe(200);
+      expect(res.body.title).toBe('Archived Project');
+      expect(res.body.status).toBe('ARCHIVED');
     });
   });
 

@@ -48,6 +48,22 @@ export const getMyTasks = asyncHandler(async (req, res) => {
   });
 });
 
+export const getMyProjects = asyncHandler(async (req, res) => {
+  const result = await meService.getMyProjects({
+    userId: req.user.id,
+    persona: req.persona,
+    page: parseInt(req.query.page) || 1,
+    size: parseInt(req.query.size) || 20,
+  });
+
+  return res.status(200).json({
+    items: result.items,
+    page: result.page,
+    size: result.size,
+    total: result.total,
+  });
+});
+
 export const getMyNotifications = asyncHandler(async (req, res) => {
   const result = await meService.getMyNotifications({
     userId: req.user.id,
