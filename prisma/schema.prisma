@@ -27,6 +27,15 @@ enum TechnologyType {
   DATA
   MOBILE
   OTHER
+  FULLSTACK
+  AI_ML
+  UI_UX_DESIGN
+  PRODUCT_MANAGEMENT
+  BUSINESS_ANALYSIS
+  CYBERSECURITY
+  GAME_DEV
+  EMBEDDED
+  TECH_WRITING
 }
 
 enum TaskType {
@@ -98,6 +107,12 @@ enum VerificationType {
   EMAIL_VERIFY
   PASSWORD_RESET
   EMAIL_CHANGE
+}
+
+enum TechnologySuggestionStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 enum ProjectStatus {
@@ -205,7 +220,8 @@ model DeveloperProfile {
   createdAt               DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt               DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  technologies DeveloperTechnology[]
 
   @@map("developer_profiles")
 }
@@ -317,12 +333,13 @@ model Task {
   failedAt    DateTime? @map("failed_at") @db.Timestamptz(6)
   deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(6)
 
-  owner               User          @relation("TaskOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
-  project             Project?      @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  owner               User             @relation("TaskOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  project             Project?         @relation(fields: [projectId], references: [id], onDelete: SetNull)
   applications        Application[]
-  acceptedApplication Application?  @relation("AcceptedApplication", fields: [acceptedApplicationId], references: [id])
+  acceptedApplication Application?     @relation("AcceptedApplication", fields: [acceptedApplicationId], references: [id])
   chatThread          ChatThread?
   reviews             Review[]
+  technologies        TaskTechnology[]
 
   notifications Notification[]
 
@@ -446,4 +463,74 @@ model Notification {
   @@index([taskId, createdAt(sort: Desc)])
   @@index([threadId, createdAt(sort: Desc)])
   @@map("notifications")
+}
+
+model Technology {
+  id              String         @id @default(uuid()) @db.Uuid
+  slug            String         @unique
+  name            String
+  type            TechnologyType
+  isActive        Boolean        @default(true) @map("is_active")
+  popularityScore Int            @default(0) @map("popularity_score")
+  createdAt       DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  developers  DeveloperTechnology[]
+  tasks       TaskTechnology[]
+  suggestions TechnologySuggestion[]
+
+  @@index([type, popularityScore(sort: Desc)])
+  @@index([slug])
+  @@index([isActive])
+  @@map("technologies")
+}
+
+model DeveloperTechnology {
+  id               String   @id @default(uuid()) @db.Uuid
+  developerUserId  String   @map("developer_user_id") @db.Uuid
+  technologyId     String   @map("technology_id") @db.Uuid
+  proficiencyYears Int?     @default(0) @map("proficiency_years")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  developer  DeveloperProfile @relation(fields: [developerUserId], references: [userId], onDelete: Cascade)
+  technology Technology       @relation(fields: [technologyId], references: [id], onDelete: Cascade)
+
+  @@unique([developerUserId, technologyId])
+  @@index([developerUserId])
+  @@map("developer_technologies")
+}
+
+model TaskTechnology {
+  id           String   @id @default(uuid()) @db.Uuid
+  taskId       String   @map("task_id") @db.Uuid
+  technologyId String   @map("technology_id") @db.Uuid
+  isRequired   Boolean  @default(true) @map("is_required")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  task       Task       @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  technology Technology @relation(fields: [technologyId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, technologyId])
+  @@index([taskId])
+  @@map("task_technologies")
+}
+
+model TechnologySuggestion {
+  id            String                     @id @default(uuid()) @db.Uuid
+  technologyId  String                     @map("technology_id") @db.Uuid
+  suggestedName String                     @map("suggested_name")
+  suggestedSlug String                     @map("suggested_slug")
+  suggestedType TechnologyType             @map("suggested_type")
+  suggestedBy   String?                    @map("suggested_by") @db.Uuid
+  status        TechnologySuggestionStatus @default(PENDING)
+  reviewedBy    String?                    @map("reviewed_by") @db.Uuid
+  reviewComment String?                    @map("review_comment")
+  createdAt     DateTime                   @default(now()) @map("created_at") @db.Timestamptz(6)
+  reviewedAt    DateTime?                  @map("reviewed_at") @db.Timestamptz(6)
+
+  technology Technology @relation(fields: [technologyId], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt(sort: Desc)])
+  @@index([technologyId])
+  @@map("technology_suggestions")
 }
