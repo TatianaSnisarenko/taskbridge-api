@@ -1,0 +1,106 @@
+import { jest } from '@jest/globals';
+
+const prismaMock = {
+  technology: {
+    findMany: jest.fn(),
+    findUnique: jest.fn(),
+    updateMany: jest.fn(),
+  },
+};
+
+jest.unstable_mockModule('../../src/db/prisma.js', () => ({ prisma: prismaMock }));
+
+const technologiesService = await import('../../src/services/technologies.service.js');
+
+describe('technologies.service', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('searchTechnologies returns popular mode for empty query', async () => {
+    prismaMock.technology.findMany.mockResolvedValue([
+      { id: '1', slug: 'react', name: 'React', type: 'FRONTEND', popularityScore: 100 },
+    ]);
+
+    const result = await technologiesService.searchTechnologies({
+      q: '',
+      limit: 5,
+      activeOnly: true,
+    });
+
+    expect(prismaMock.technology.findMany).toHaveBeenCalledWith({
+      where: { isActive: true },
+      orderBy: [{ popularityScore: 'desc' }, { name: 'asc' }],
+      take: 5,
+      select: {
+        id: true,
+        slug: true,
+        name: true,
+        type: true,
+        popularityScore: true,
+      },
+    });
+    expect(result.items).toHaveLength(1);
+  });
+
+  test('searchTechnologies prioritizes prefix before contains', async () => {
+    prismaMock.technology.findMany.mockResolvedValue([
+      {
+        id: '1',
+        slug: 'sentry-react',
+        name: 'Sentry React SDK',
+        type: 'FRONTEND',
+        popularityScore: 999,
+      },
+      { id: '2', slug: 'react', name: 'React', type: 'FRONTEND', popularityScore: 120 },
+      { id: '3', slug: 'redux', name: 'Redux', type: 'FRONTEND', popularityScore: 100 },
+    ]);
+
+    const result = await technologiesService.searchTechnologies({
+      q: 're',
+      limit: 10,
+      activeOnly: true,
+    });
+
+    const slugs = result.items.map((item) => item.slug);
+    expect(slugs.indexOf('react')).toBeLessThan(slugs.indexOf('sentry-react'));
+    expect(slugs.indexOf('redux')).toBeLessThan(slugs.indexOf('sentry-react'));
+  });
+
+  test('validateTechnologyIds returns deduplicated ids when all valid', async () => {
+    prismaMock.technology.findMany.mockResolvedValue([{ id: 't1' }, { id: 't2' }]);
+
+    const result = await technologiesService.validateTechnologyIds(['t1', 't2', 't1']);
+
+    expect(result).toEqual(['t1', 't2']);
+    expect(prismaMock.technology.findMany).toHaveBeenCalledWith({
+      where: {
+        id: { in: ['t1', 't2'] },
+        isActive: true,
+      },
+      select: { id: true },
+    });
+  });
+
+  test('validateTechnologyIds throws INVALID_TECHNOLOGY_IDS for missing IDs', async () => {
+    prismaMock.technology.findMany.mockResolvedValue([{ id: 't1' }]);
+
+    await expect(technologiesService.validateTechnologyIds(['t1', 't2'])).rejects.toMatchObject({
+      status: 400,
+      code: 'INVALID_TECHNOLOGY_IDS',
+    });
+  });
+
+  test('incrementTechnologyPopularity increments once per unique id', async () => {
+    prismaMock.technology.updateMany.mockResolvedValue({ count: 2 });
+
+    await technologiesService.incrementTechnologyPopularity(['t1', 't2', 't1']);
+
+    expect(prismaMock.technology.updateMany).toHaveBeenCalledWith({
+      where: { id: { in: ['t1', 't2'] } },
+      data: {
+        popularityScore: { increment: 1 },
+      },
+    });
+  });
+});
