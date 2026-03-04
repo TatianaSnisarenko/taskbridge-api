@@ -51,8 +51,17 @@ function mapDeveloperProfileOutput(profile) {
     experience_level: profile.experienceLevel,
     location: profile.location,
     timezone: profile.timezone,
-    skills: profile.skills,
-    tech_stack: profile.techStack,
+    skills: profile.skills, // deprecated, use technologies instead
+    tech_stack: profile.techStack, // deprecated, use technologies instead
+    technologies: profile.technologies
+      ? profile.technologies.map((dt) => ({
+          id: dt.technology.id,
+          slug: dt.technology.slug,
+          name: dt.technology.name,
+          type: dt.technology.type,
+          proficiency_years: dt.proficiencyYears,
+        }))
+      : undefined,
     portfolio_url: profile.portfolioUrl,
     github_url: profile.githubUrl,
     linkedin_url: profile.linkedinUrl,
@@ -112,7 +121,23 @@ export async function updateDeveloperProfile({ userId, profile }) {
 }
 
 export async function getDeveloperProfileByUserId({ userId }) {
-  const profile = await prisma.developerProfile.findUnique({ where: { userId } });
+  const profile = await prisma.developerProfile.findUnique({
+    where: { userId },
+    include: {
+      technologies: {
+        include: {
+          technology: {
+            select: {
+              id: true,
+              slug: true,
+              name: true,
+              type: true,
+            },
+          },
+        },
+      },
+    },
+  });
   if (!profile) {
     throw new ApiError(404, 'PROFILE_NOT_FOUND', 'Developer profile not found');
   }

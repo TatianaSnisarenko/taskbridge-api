@@ -7,6 +7,7 @@ import {
 } from './notifications.service.js';
 import { getOrCreateChatThread } from './chat.service.js';
 import { sendImportantNotificationEmail } from './notification-email.service.js';
+import { validateTechnologyIds, incrementTechnologyPopularity } from './technologies.service.js';
 
 function mapTaskInput(input) {
   return {
@@ -42,7 +43,16 @@ function mapTaskDetailsOutput(task, computed) {
     category: task.category,
     type: task.type,
     difficulty: task.difficulty,
-    required_skills: task.requiredSkills,
+    required_skills: task.requiredSkills, // deprecated, use technologies instead
+    technologies: task.technologies
+      ? task.technologies.map((tt) => ({
+          id: tt.technology.id,
+          slug: tt.technology.slug,
+          name: tt.technology.name,
+          type: tt.technology.type,
+          is_required: tt.isRequired,
+        }))
+      : undefined,
     estimated_effort_hours: task.estimatedEffortHours,
     expected_duration: task.expectedDuration,
     communication_language: task.communicationLanguage,
@@ -74,6 +84,7 @@ function mapTaskDetailsOutput(task, computed) {
 
 export async function createTaskDraft({ userId, task }) {
   const projectId = task.project_id ?? null;
+  const technologyIds = await validateTechnologyIds(task.technology_ids || []);
 
   if (projectId) {
     const project = await prisma.project.findUnique({
@@ -90,15 +101,34 @@ export async function createTaskDraft({ userId, task }) {
     }
   }
 
-  const created = await prisma.task.create({
-    data: {
-      ownerUserId: userId,
-      projectId,
-      status: 'DRAFT',
-      ...mapTaskInput(task),
-    },
-    select: { id: true, status: true, createdAt: true },
+  const created = await prisma.$transaction(async (tx) => {
+    const createdTask = await tx.task.create({
+      data: {
+        ownerUserId: userId,
+        projectId,
+        status: 'DRAFT',
+        ...mapTaskInput(task),
+      },
+      select: { id: true, status: true, createdAt: true },
+    });
+
+    if (technologyIds.length > 0) {
+      await tx.taskTechnology.createMany({
+        data: technologyIds.map((technologyId) => ({
+          taskId: createdTask.id,
+          technologyId,
+          isRequired: true,
+        })),
+        skipDuplicates: true,
+      });
+    }
+
+    return createdTask;
   });
+
+  if (technologyIds.length > 0) {
+    await incrementTechnologyPopularity(technologyIds);
+  }
 
   return { taskId: created.id, status: created.status, createdAt: created.createdAt };
 }
@@ -138,14 +168,42 @@ export async function updateTaskDraft({ userId, taskId, task }) {
     }
   }
 
-  const updated = await prisma.task.update({
-    where: { id: taskId },
-    data: {
-      projectId,
-      ...mapTaskInput(task),
-    },
-    select: { id: true, updatedAt: true },
+  const hasTechnologyIds = Array.isArray(task.technology_ids);
+  const technologyIds = hasTechnologyIds
+    ? await validateTechnologyIds(task.technology_ids || [])
+    : null;
+
+  const updated = await prisma.$transaction(async (tx) => {
+    const updatedTask = await tx.task.update({
+      where: { id: taskId },
+      data: {
+        projectId,
+        ...mapTaskInput(task),
+      },
+      select: { id: true, updatedAt: true },
+    });
+
+    if (hasTechnologyIds) {
+      await tx.taskTechnology.deleteMany({ where: { taskId } });
+
+      if (technologyIds.length > 0) {
+        await tx.taskTechnology.createMany({
+          data: technologyIds.map((technologyId) => ({
+            taskId,
+            technologyId,
+            isRequired: true,
+          })),
+          skipDuplicates: true,
+        });
+      }
+    }
+
+    return updatedTask;
   });
+
+  if (hasTechnologyIds && technologyIds.length > 0) {
+    await incrementTechnologyPopularity(technologyIds);
+  }
 
   return { taskId: updated.id, updated: true, updatedAt: updated.updatedAt };
 }
@@ -382,6 +440,18 @@ export async function getTaskById({ userId, taskId, persona }) {
       type: true,
       difficulty: true,
       requiredSkills: true,
+      technologies: {
+        include: {
+          technology: {
+            select: {
+              id: true,
+              slug: true,
+              name: true,
+              type: true,
+            },
+          },
+        },
+      },
       estimatedEffortHours: true,
       expectedDuration: true,
       communicationLanguage: true,
@@ -598,7 +668,14 @@ export async function getTasksCatalog(query) {
       category: task.category,
       type: task.type,
       difficulty: task.difficulty,
-      required_skills: task.requiredSkills,
+      required_skills: task.requiredSkills, // deprecated
+      technologies: task.technologies?.map((tt) => ({
+        id: tt.technology.id,
+        slug: tt.technology.slug,
+        name: tt.technology.name,
+        type: tt.technology.type,
+        is_required: tt.isRequired,
+      })),
       published_at: task.publishedAt,
       project: task.projectId ? { project_id: task.project.id, title: task.project.title } : null,
       company: {

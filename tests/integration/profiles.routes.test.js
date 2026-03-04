@@ -360,6 +360,7 @@ describe('profiles routes', () => {
       avatar_url: null,
       skills: ['Java', 'Spring'],
       tech_stack: ['Spring Boot', 'JPA'],
+      technologies: [],
       portfolio_url: 'https://example.com/portfolio',
       github_url: 'https://github.com/example',
       linkedin_url: 'https://linkedin.com/in/example',

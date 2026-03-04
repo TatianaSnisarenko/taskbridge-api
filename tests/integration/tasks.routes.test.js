@@ -4193,4 +4193,155 @@ describe('tasks routes', () => {
       expect(res.body.items[0].project.project_id).toBe(project.id);
     });
   });
+
+  describe('Task technologies (Phase 1)', () => {
+    test('POST /tasks stores technology relations and increments popularity', async () => {
+      const user = await createUser({ companyProfile: { companyName: 'TeamUp' } });
+      const token = buildAccessToken({ userId: user.id, email: user.email });
+
+      const [tech1, tech2] = await Promise.all([
+        prisma.technology.create({
+          data: {
+            slug: 'nodejs',
+            name: 'Node.js',
+            type: 'BACKEND',
+            popularityScore: 10,
+            isActive: true,
+          },
+        }),
+        prisma.technology.create({
+          data: {
+            slug: 'postgresql',
+            name: 'PostgreSQL',
+            type: 'DATA',
+            popularityScore: 20,
+            isActive: true,
+          },
+        }),
+      ]);
+
+      const res = await request(app)
+        .post('/api/v1/tasks')
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'company')
+        .send({
+          ...basePayload,
+          technology_ids: [tech1.id, tech2.id],
+        });
+
+      expect(res.status).toBe(201);
+
+      const links = await prisma.taskTechnology.findMany({
+        where: { taskId: res.body.task_id },
+        orderBy: { technologyId: 'asc' },
+      });
+
+      expect(links).toHaveLength(2);
+      expect(links.map((link) => link.technologyId).sort()).toEqual([tech1.id, tech2.id].sort());
+
+      const [updatedTech1, updatedTech2] = await Promise.all([
+        prisma.technology.findUnique({ where: { id: tech1.id } }),
+        prisma.technology.findUnique({ where: { id: tech2.id } }),
+      ]);
+
+      expect(updatedTech1.popularityScore).toBe(11);
+      expect(updatedTech2.popularityScore).toBe(21);
+    });
+
+    test('POST /tasks rejects unknown technology IDs', async () => {
+      const user = await createUser({ companyProfile: { companyName: 'TeamUp' } });
+      const token = buildAccessToken({ userId: user.id, email: user.email });
+
+      const res = await request(app)
+        .post('/api/v1/tasks')
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'company')
+        .send({
+          ...basePayload,
+          technology_ids: ['3fa85f64-5717-4562-b3fc-2c963f66afa6'],
+        });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('INVALID_TECHNOLOGY_IDS');
+      expect(res.body.error.details).toMatchObject({
+        invalidIds: ['3fa85f64-5717-4562-b3fc-2c963f66afa6'],
+      });
+    });
+
+    test('PUT /tasks/:taskId replaces technology relations and increments new popularity', async () => {
+      const user = await createUser({ companyProfile: { companyName: 'TeamUp' } });
+      const token = buildAccessToken({ userId: user.id, email: user.email });
+
+      const [tech1, tech2] = await Promise.all([
+        prisma.technology.create({
+          data: {
+            slug: 'java',
+            name: 'Java',
+            type: 'BACKEND',
+            popularityScore: 30,
+            isActive: true,
+          },
+        }),
+        prisma.technology.create({
+          data: {
+            slug: 'spring-boot',
+            name: 'Spring Boot',
+            type: 'BACKEND',
+            popularityScore: 40,
+            isActive: true,
+          },
+        }),
+      ]);
+
+      const task = await prisma.task.create({
+        data: {
+          ownerUserId: user.id,
+          status: 'DRAFT',
+          title: basePayload.title,
+          description: basePayload.description,
+          category: basePayload.category,
+          type: basePayload.type,
+          difficulty: basePayload.difficulty,
+          requiredSkills: basePayload.required_skills,
+          estimatedEffortHours: basePayload.estimated_effort_hours,
+          expectedDuration: basePayload.expected_duration,
+          communicationLanguage: basePayload.communication_language,
+          timezonePreference: basePayload.timezone_preference,
+          applicationDeadline: new Date(basePayload.application_deadline),
+          visibility: basePayload.visibility,
+          deliverables: basePayload.deliverables,
+          requirements: basePayload.requirements,
+          niceToHave: basePayload.nice_to_have,
+        },
+      });
+
+      await prisma.taskTechnology.create({
+        data: {
+          taskId: task.id,
+          technologyId: tech1.id,
+          isRequired: true,
+        },
+      });
+
+      const res = await request(app)
+        .put(`/api/v1/tasks/${task.id}`)
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'company')
+        .send({
+          ...basePayload,
+          technology_ids: [tech2.id],
+        });
+
+      expect(res.status).toBe(200);
+
+      const links = await prisma.taskTechnology.findMany({
+        where: { taskId: task.id },
+      });
+      expect(links).toHaveLength(1);
+      expect(links[0].technologyId).toBe(tech2.id);
+
+      const updatedTech2 = await prisma.technology.findUnique({ where: { id: tech2.id } });
+      expect(updatedTech2.popularityScore).toBe(41);
+    });
+  });
 });

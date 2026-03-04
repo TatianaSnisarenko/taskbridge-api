@@ -64,6 +64,19 @@ export const createTaskDraftSchema = Joi.object({
       'array.max': 'Required skills must not exceed 50 items',
       'any.required': 'Required skills are required',
     }),
+  technology_ids: Joi.array()
+    .items(
+      Joi.string().guid({ version: 'uuidv4' }).messages({
+        'string.guid': 'Each technology id must be a valid UUID',
+      })
+    )
+    .unique()
+    .max(20)
+    .optional()
+    .messages({
+      'array.unique': 'Technology ids must be unique',
+      'array.max': 'Technology ids must not exceed 20 items',
+    }),
   estimated_effort_hours: Joi.number().integer().min(1).max(1000).required().messages({
     'number.base': 'Estimated effort must be a number',
     'number.integer': 'Estimated effort must be an integer',
@@ -182,6 +195,19 @@ export const updateTaskDraftSchema = Joi.object({
       'array.min': 'Required skills must include at least 1 item',
       'array.max': 'Required skills must not exceed 50 items',
       'any.required': 'Required skills are required',
+    }),
+  technology_ids: Joi.array()
+    .items(
+      Joi.string().guid({ version: 'uuidv4' }).messages({
+        'string.guid': 'Each technology id must be a valid UUID',
+      })
+    )
+    .unique()
+    .max(20)
+    .optional()
+    .messages({
+      'array.unique': 'Technology ids must be unique',
+      'array.max': 'Technology ids must not exceed 20 items',
     }),
   estimated_effort_hours: Joi.number().integer().min(1).max(1000).required().messages({
     'number.base': 'Estimated effort must be a number',

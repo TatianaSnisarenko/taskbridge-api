@@ -11,6 +11,10 @@ const prismaMock = {
     findUnique: jest.fn(),
     update: jest.fn(),
   },
+  taskTechnology: {
+    createMany: jest.fn(),
+    deleteMany: jest.fn(),
+  },
   user: {
     findUnique: jest.fn(),
   },
@@ -31,10 +35,19 @@ const notificationsServiceMock = {
   createNotification: jest.fn(),
 };
 
+const technologiesServiceMock = {
+  validateTechnologyIds: jest.fn(async (ids) => ids),
+  incrementTechnologyPopularity: jest.fn(async () => {}),
+};
+
 jest.unstable_mockModule('../../src/db/prisma.js', () => ({ prisma: prismaMock }));
 jest.unstable_mockModule(
   '../../src/services/notifications.service.js',
   () => notificationsServiceMock
+);
+jest.unstable_mockModule(
+  '../../src/services/technologies.service.js',
+  () => technologiesServiceMock
 );
 
 const tasksService = await import('../../src/services/tasks.service.js');
@@ -42,6 +55,12 @@ const tasksService = await import('../../src/services/tasks.service.js');
 describe('tasks.service', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // Configure $transaction to actually call the callback function
+    prismaMock.$transaction.mockImplementation(async (callback) => {
+      return await callback(prismaMock);
+    });
+    prismaMock.taskTechnology.createMany.mockResolvedValue({ count: 0 });
+    prismaMock.taskTechnology.deleteMany.mockResolvedValue({ count: 0 });
   });
 
   test('createTaskDraft rejects missing project', async () => {
