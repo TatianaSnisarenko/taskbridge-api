@@ -517,7 +517,7 @@ model TaskTechnology {
 
 model TechnologySuggestion {
   id            String                     @id @default(uuid()) @db.Uuid
-  technologyId  String                     @map("technology_id") @db.Uuid
+  technologyId  String?                    @map("technology_id") @db.Uuid
   suggestedName String                     @map("suggested_name")
   suggestedSlug String                     @map("suggested_slug")
   suggestedType TechnologyType             @map("suggested_type")
@@ -528,7 +528,7 @@ model TechnologySuggestion {
   createdAt     DateTime                   @default(now()) @map("created_at") @db.Timestamptz(6)
   reviewedAt    DateTime?                  @map("reviewed_at") @db.Timestamptz(6)
 
-  technology Technology @relation(fields: [technologyId], references: [id], onDelete: Cascade)
+  technology Technology? @relation(fields: [technologyId], references: [id], onDelete: Cascade)
 
   @@index([status, createdAt(sort: Desc)])
   @@index([technologyId])

@@ -11,6 +11,50 @@ function generateEmail(name) {
   return `${name.toLowerCase().replace(/\s+/g, '.')}@example.com`;
 }
 
+/**
+ * Slugify for technology names
+ * - lowercases
+ * - replaces '+' and '#' for common tech names
+ * - keeps letters, digits, dots and dashes
+ */
+function slugify(input) {
+  return input
+    .trim()
+    .toLowerCase()
+    .replace(/\+/g, 'plus')
+    .replace(/#/g, 'sharp')
+    .replace(/&/g, 'and')
+    .replace(/\./g, '.') // keep dots (node.js, .net)
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9.-]/g, '')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
+/**
+ * Normalize technology list - ensure stable slug + remove duplicates by slug
+ */
+function normalizeTechList(list) {
+  const map = new Map();
+  for (const item of list) {
+    const slug = item.slug ? item.slug : slugify(item.name);
+    const key = slug;
+    const existing = map.get(key);
+    if (!existing) {
+      map.set(key, { ...item, slug });
+    } else {
+      // If duplicate, keep the max popularityScore and prefer explicit type (non-OTHER)
+      map.set(key, {
+        ...existing,
+        popularityScore: Math.max(existing.popularityScore ?? 0, item.popularityScore ?? 0),
+        type: existing.type !== 'OTHER' ? existing.type : item.type,
+        name: existing.name.length >= item.name.length ? existing.name : item.name,
+      });
+    }
+  }
+  return Array.from(map.values());
+}
+
 function buildNotificationPayload({
   taskId,
   applicationId = null,
@@ -109,6 +153,163 @@ async function createUser({
   });
 }
 
+// Technology data with initial popularity scores
+const TECHNOLOGIES = [
+  // ---------------- BACKEND ----------------
+  { name: 'Java', type: 'BACKEND', popularityScore: 95 },
+  { name: 'Spring Boot', type: 'BACKEND', popularityScore: 90 },
+  { name: 'Spring', type: 'BACKEND', popularityScore: 75 },
+  { name: 'Hibernate', type: 'BACKEND', popularityScore: 55 },
+  { name: 'JPA', type: 'BACKEND', popularityScore: 50 },
+  { name: 'Maven', type: 'BACKEND', popularityScore: 40 },
+  { name: 'Gradle', type: 'BACKEND', popularityScore: 35 },
+  { name: 'Node.js', type: 'BACKEND', popularityScore: 92 },
+  { name: 'Express', type: 'BACKEND', popularityScore: 70 },
+  { name: 'NestJS', type: 'BACKEND', popularityScore: 65 },
+  { name: 'Fastify', type: 'BACKEND', popularityScore: 30 },
+  { name: 'Python', type: 'BACKEND', popularityScore: 90 },
+  { name: 'Django', type: 'BACKEND', popularityScore: 55 },
+  { name: 'FastAPI', type: 'BACKEND', popularityScore: 70 },
+  { name: 'Flask', type: 'BACKEND', popularityScore: 35 },
+  { name: 'C#', type: 'BACKEND', popularityScore: 70 },
+  { name: '.NET', type: 'BACKEND', popularityScore: 75 },
+  { name: 'ASP.NET Core', type: 'BACKEND', popularityScore: 60 },
+  { name: 'Go', type: 'BACKEND', popularityScore: 55 },
+  { name: 'Gin', type: 'BACKEND', popularityScore: 20 },
+  { name: 'PHP', type: 'BACKEND', popularityScore: 45 },
+  { name: 'Laravel', type: 'BACKEND', popularityScore: 40 },
+  { name: 'Symfony', type: 'BACKEND', popularityScore: 20 },
+  { name: 'Ruby', type: 'BACKEND', popularityScore: 25 },
+  { name: 'Ruby on Rails', type: 'BACKEND', popularityScore: 30 },
+  { name: 'REST API', type: 'BACKEND', popularityScore: 85 },
+  { name: 'GraphQL', type: 'BACKEND', popularityScore: 45 },
+
+  // ---------------- FRONTEND ----------------
+  { name: 'JavaScript', type: 'FRONTEND', popularityScore: 100 },
+  { name: 'TypeScript', type: 'FRONTEND', popularityScore: 95 },
+  { name: 'React', type: 'FRONTEND', popularityScore: 95 },
+  { name: 'Next.js', type: 'FRONTEND', popularityScore: 70 },
+  { name: 'Redux', type: 'FRONTEND', popularityScore: 45 },
+  { name: 'React Query', type: 'FRONTEND', popularityScore: 30 },
+  { name: 'Vue.js', type: 'FRONTEND', popularityScore: 60 },
+  { name: 'Nuxt', type: 'FRONTEND', popularityScore: 25 },
+  { name: 'Angular', type: 'FRONTEND', popularityScore: 55 },
+  { name: 'Svelte', type: 'FRONTEND', popularityScore: 20 },
+  { name: 'HTML', type: 'FRONTEND', popularityScore: 85 },
+  { name: 'CSS', type: 'FRONTEND', popularityScore: 85 },
+  { name: 'Sass', type: 'FRONTEND', popularityScore: 30 },
+  { name: 'Tailwind CSS', type: 'FRONTEND', popularityScore: 55 },
+  { name: 'Bootstrap', type: 'FRONTEND', popularityScore: 35 },
+  { name: 'Vite', type: 'FRONTEND', popularityScore: 30 },
+  { name: 'Webpack', type: 'FRONTEND', popularityScore: 25 },
+
+  // ---------------- FULLSTACK ----------------
+  { name: 'Fullstack (JS)', type: 'FULLSTACK', popularityScore: 60 },
+  { name: 'Next.js Fullstack', type: 'FULLSTACK', popularityScore: 40 },
+  { name: 'MERN Stack', type: 'FULLSTACK', popularityScore: 35 },
+  { name: 'MEAN Stack', type: 'FULLSTACK', popularityScore: 20 },
+
+  // ---------------- DEVOPS ----------------
+  { name: 'Docker', type: 'DEVOPS', popularityScore: 90 },
+  { name: 'Docker Compose', type: 'DEVOPS', popularityScore: 70 },
+  { name: 'Kubernetes', type: 'DEVOPS', popularityScore: 75 },
+  { name: 'Helm', type: 'DEVOPS', popularityScore: 35 },
+  { name: 'Terraform', type: 'DEVOPS', popularityScore: 55 },
+  { name: 'Ansible', type: 'DEVOPS', popularityScore: 25 },
+  { name: 'AWS', type: 'DEVOPS', popularityScore: 80 },
+  { name: 'GCP', type: 'DEVOPS', popularityScore: 35 },
+  { name: 'Azure', type: 'DEVOPS', popularityScore: 35 },
+  { name: 'GitHub Actions', type: 'DEVOPS', popularityScore: 60 },
+  { name: 'GitLab CI', type: 'DEVOPS', popularityScore: 30 },
+  { name: 'Jenkins', type: 'DEVOPS', popularityScore: 35 },
+  { name: 'Nginx', type: 'DEVOPS', popularityScore: 55 },
+  { name: 'Traefik', type: 'DEVOPS', popularityScore: 20 },
+  { name: 'Linux', type: 'DEVOPS', popularityScore: 70 },
+  { name: 'Bash', type: 'DEVOPS', popularityScore: 45 },
+  { name: 'Prometheus', type: 'DEVOPS', popularityScore: 35 },
+  { name: 'Grafana', type: 'DEVOPS', popularityScore: 40 },
+
+  // ---------------- QA ----------------
+  { name: 'Manual Testing', type: 'QA', popularityScore: 55 },
+  { name: 'Test Automation', type: 'QA', popularityScore: 55 },
+  { name: 'Jest', type: 'QA', popularityScore: 45 },
+  { name: 'Mocha', type: 'QA', popularityScore: 15 },
+  { name: 'Cypress', type: 'QA', popularityScore: 30 },
+  { name: 'Playwright', type: 'QA', popularityScore: 30 },
+  { name: 'Selenium', type: 'QA', popularityScore: 25 },
+  { name: 'JUnit', type: 'QA', popularityScore: 35 },
+  { name: 'Testcontainers', type: 'QA', popularityScore: 25 },
+  { name: 'Postman', type: 'QA', popularityScore: 50 },
+
+  // ---------------- DATA ----------------
+  { name: 'SQL', type: 'DATA', popularityScore: 90 },
+  { name: 'PostgreSQL', type: 'DATA', popularityScore: 85 },
+  { name: 'MySQL', type: 'DATA', popularityScore: 55 },
+  { name: 'MongoDB', type: 'DATA', popularityScore: 60 },
+  { name: 'Redis', type: 'DATA', popularityScore: 55 },
+  { name: 'Kafka', type: 'DATA', popularityScore: 45 },
+  { name: 'RabbitMQ', type: 'DATA', popularityScore: 25 },
+  { name: 'Elasticsearch', type: 'DATA', popularityScore: 25 },
+  { name: 'Prisma', type: 'DATA', popularityScore: 35 },
+
+  // ---------------- MOBILE ----------------
+  { name: 'Android', type: 'MOBILE', popularityScore: 40 },
+  { name: 'Kotlin', type: 'MOBILE', popularityScore: 35 },
+  { name: 'iOS', type: 'MOBILE', popularityScore: 35 },
+  { name: 'Swift', type: 'MOBILE', popularityScore: 30 },
+  { name: 'Flutter', type: 'MOBILE', popularityScore: 45 },
+  { name: 'React Native', type: 'MOBILE', popularityScore: 45 },
+
+  // ---------------- AI / ML ----------------
+  { name: 'Machine Learning', type: 'AI_ML', popularityScore: 60 },
+  { name: 'Deep Learning', type: 'AI_ML', popularityScore: 45 },
+  { name: 'PyTorch', type: 'AI_ML', popularityScore: 45 },
+  { name: 'TensorFlow', type: 'AI_ML', popularityScore: 35 },
+  { name: 'scikit-learn', type: 'AI_ML', popularityScore: 40 },
+  { name: 'LLMs', type: 'AI_ML', popularityScore: 55 },
+  { name: 'RAG', type: 'AI_ML', popularityScore: 35 },
+
+  // ---------------- UI/UX DESIGN ----------------
+  { name: 'Figma', type: 'UI_UX_DESIGN', popularityScore: 80 },
+  { name: 'UI Design', type: 'UI_UX_DESIGN', popularityScore: 55 },
+  { name: 'UX Research', type: 'UI_UX_DESIGN', popularityScore: 35 },
+  { name: 'Design Systems', type: 'UI_UX_DESIGN', popularityScore: 30 },
+  { name: 'Wireframing', type: 'UI_UX_DESIGN', popularityScore: 25 },
+
+  // ---------------- PRODUCT MANAGEMENT ----------------
+  { name: 'Product Discovery', type: 'PRODUCT_MANAGEMENT', popularityScore: 25 },
+  { name: 'Roadmapping', type: 'PRODUCT_MANAGEMENT', popularityScore: 20 },
+  { name: 'Product Analytics', type: 'PRODUCT_MANAGEMENT', popularityScore: 20 },
+
+  // ---------------- BUSINESS ANALYSIS ----------------
+  { name: 'Business Analysis', type: 'BUSINESS_ANALYSIS', popularityScore: 25 },
+  { name: 'Requirements', type: 'BUSINESS_ANALYSIS', popularityScore: 20 },
+  { name: 'User Stories', type: 'BUSINESS_ANALYSIS', popularityScore: 20 },
+
+  // ---------------- CYBERSECURITY ----------------
+  { name: 'OWASP Top 10', type: 'CYBERSECURITY', popularityScore: 25 },
+  { name: 'App Security', type: 'CYBERSECURITY', popularityScore: 20 },
+  { name: 'Penetration Testing', type: 'CYBERSECURITY', popularityScore: 15 },
+
+  // ---------------- GAME DEV ----------------
+  { name: 'Unity', type: 'GAME_DEV', popularityScore: 20 },
+  { name: 'Unreal Engine', type: 'GAME_DEV', popularityScore: 15 },
+
+  // ---------------- EMBEDDED ----------------
+  { name: 'Embedded C', type: 'EMBEDDED', popularityScore: 15 },
+  { name: 'C', type: 'EMBEDDED', popularityScore: 20 },
+  { name: 'C++', type: 'EMBEDDED', popularityScore: 20 },
+
+  // ---------------- TECH WRITING ----------------
+  { name: 'Technical Writing', type: 'TECH_WRITING', popularityScore: 25 },
+  { name: 'API Documentation', type: 'TECH_WRITING', popularityScore: 20 },
+
+  // ---------------- OTHER ----------------
+  { name: 'Git', type: 'OTHER', popularityScore: 75 },
+  { name: 'Agile', type: 'OTHER', popularityScore: 35 },
+  { name: 'Scrum', type: 'OTHER', popularityScore: 30 },
+];
+
 // Data generators
 const companyData = [
   {
@@ -161,8 +362,6 @@ const developerData = [
     bio: 'Passionate about building beautiful, responsive web interfaces. 2+ years experience with React and TypeScript.',
     experienceLevel: 'JUNIOR',
     location: 'London, UK',
-    skills: ['React', 'TypeScript', 'Tailwind CSS', 'REST APIs'],
-    techStack: ['JavaScript', 'React', 'Next.js'],
     availability: 'PART_TIME',
     preferredTaskCategories: ['FRONTEND'],
   },
@@ -172,8 +371,6 @@ const developerData = [
     bio: 'Specialized in modern React patterns and state management. Strong CSS fundamentals.',
     experienceLevel: 'JUNIOR',
     location: 'Toronto, Canada',
-    skills: ['React', 'Redux', 'HTML5', 'CSS3'],
-    techStack: ['JavaScript', 'React', 'Webpack'],
     availability: 'FULL_TIME',
     preferredTaskCategories: ['FRONTEND'],
   },
@@ -183,8 +380,6 @@ const developerData = [
     bio: 'Focus on user experience and clean code. Experience with Vue and React.',
     experienceLevel: 'JUNIOR',
     location: 'Berlin, Germany',
-    skills: ['Vue.js', 'React', 'CSS', 'Figma to Code'],
-    techStack: ['JavaScript', 'Vue', 'SCSS'],
     availability: 'PART_TIME',
     preferredTaskCategories: ['FRONTEND'],
   },
@@ -195,8 +390,6 @@ const developerData = [
     bio: 'Node.js specialist with experience building scalable APIs. Strong database design skills.',
     experienceLevel: 'JUNIOR',
     location: 'Bangalore, India',
-    skills: ['Node.js', 'Express', 'PostgreSQL', 'MongoDB'],
-    techStack: ['JavaScript', 'Node.js', 'PostgreSQL'],
     availability: 'FULL_TIME',
     preferredTaskCategories: ['BACKEND'],
   },
@@ -206,8 +399,6 @@ const developerData = [
     bio: 'Comfortable across the stack. Recent bootcamp graduate focused on web development.',
     experienceLevel: 'STUDENT',
     location: 'Sofia, Bulgaria',
-    skills: ['JavaScript', 'Node.js', 'React', 'MongoDB'],
-    techStack: ['JavaScript', 'Node.js', 'React', 'MongoDB'],
     availability: 'FULL_TIME',
     preferredTaskCategories: ['BACKEND', 'FRONTEND'],
   },
@@ -217,8 +408,6 @@ const developerData = [
     bio: 'Transitioning from Python to Node.js. Data processing and API development experience.',
     experienceLevel: 'JUNIOR',
     location: 'Austin, Texas',
-    skills: ['Python', 'JavaScript', 'Django', 'FastAPI'],
-    techStack: ['Python', 'Node.js', 'PostgreSQL'],
     availability: 'PART_TIME',
     preferredTaskCategories: ['BACKEND'],
   },
@@ -228,8 +417,6 @@ const developerData = [
     bio: 'Experience building microservices. Strong in system design and optimization.',
     experienceLevel: 'MIDDLE',
     location: 'Seattle, Washington',
-    skills: ['Node.js', 'Docker', 'PostgreSQL', 'API Design'],
-    techStack: ['JavaScript', 'Node.js', 'Docker', 'PostgreSQL'],
     availability: 'PART_TIME',
     preferredTaskCategories: ['BACKEND', 'DEVOPS'],
   },
@@ -240,8 +427,6 @@ const developerData = [
     bio: 'Passionate about user-centered design. Proficient in Figma and design systems.',
     experienceLevel: 'JUNIOR',
     location: 'Barcelona, Spain',
-    skills: ['Figma', 'UI Design', 'Wireframing', 'User Research'],
-    techStack: [],
     availability: 'FULL_TIME',
     preferredTaskCategories: ['OTHER'],
   },
@@ -251,8 +436,6 @@ const developerData = [
     bio: 'Focused on designing delightful user experiences. Experience in design sprints.',
     experienceLevel: 'JUNIOR',
     location: 'Dublin, Ireland',
-    skills: ['Figma', 'Prototyping', 'UX Research', 'Design Systems'],
-    techStack: [],
     availability: 'PART_TIME',
     preferredTaskCategories: ['OTHER'],
   },
@@ -263,8 +446,6 @@ const developerData = [
     bio: 'Quality assurance specialist with focus on automated testing.',
     experienceLevel: 'JUNIOR',
     location: 'Singapore',
-    skills: ['Jest', 'Testing', 'Automation', 'Bug Tracking'],
-    techStack: ['JavaScript', 'Jest'],
     availability: 'FULL_TIME',
     preferredTaskCategories: ['QA'],
   },
@@ -274,8 +455,6 @@ const developerData = [
     bio: 'Learning Docker and Kubernetes. Interested in CI/CD pipelines.',
     experienceLevel: 'STUDENT',
     location: 'Mexico City, Mexico',
-    skills: ['Docker', 'Linux', 'Git', 'CI/CD'],
-    techStack: ['Docker', 'Linux', 'Node.js'],
     availability: 'FULL_TIME',
     preferredTaskCategories: ['DEVOPS'],
   },
@@ -285,8 +464,6 @@ const developerData = [
     bio: 'Bootcamp graduate with passion for clean code and modern tech.',
     experienceLevel: 'STUDENT',
     location: 'Chennai, India',
-    skills: ['React', 'Node.js', 'MongoDB', 'JavaScript'],
-    techStack: ['JavaScript', 'React', 'Node.js', 'MongoDB'],
     availability: 'FULL_TIME',
     preferredTaskCategories: ['FRONTEND', 'BACKEND'],
   },
@@ -298,42 +475,36 @@ const projectData = [
     shortDescription: 'Complete UI/UX overhaul of our online learning management system.',
     description:
       'We are rebuilding our educational platform to improve user engagement and learning outcomes. This project includes redesigning the course interface, improving video streaming, and creating a better student dashboard.',
-    technologies: ['React', 'Node.js', 'PostgreSQL', 'Figma'],
   },
   {
     title: 'Mobile App MVP',
     shortDescription: 'Native iOS/Android app for managing team tasks and collaboration.',
     description:
       'Mobile-first application for small teams to track projects, share files, and communicate. This is our initial MVP focusing on core features.',
-    technologies: ['React Native', 'Firebase', 'Redux'],
   },
   {
     title: 'Analytics Dashboard',
     shortDescription: 'Real-time analytics and reporting for SaaS product.',
     description:
       'Building a comprehensive analytics dashboard that visualizes customer data, revenue metrics, and product usage patterns. Real-time updates required.',
-    technologies: ['React', 'D3.js', 'PostgreSQL', 'Node.js'],
   },
   {
     title: 'API Gateway Service',
     shortDescription: 'Central API management and authentication layer.',
     description:
       'Implementing a scalable API gateway for routing requests, managing authentication, and rate limiting across all services.',
-    technologies: ['Node.js', 'Express', 'Docker', 'PostgreSQL'],
   },
   {
     title: 'Customer Portal Enhancement',
     shortDescription: 'Adding new self-service features to existing customer portal.',
     description:
       'Extending our web portal with invoice management, subscription updates, and support ticket creation. Must integrate with existing systems.',
-    technologies: ['Vue.js', 'Node.js', 'Stripe API', 'PostgreSQL'],
   },
   {
     title: 'Internal Admin Dashboard',
     shortDescription: 'Admin panel for managing platform users and content.',
     description:
       'Building comprehensive admin tools for user management, moderation, analytics review, and content publishing workflows.',
-    technologies: ['React', 'Node.js', 'MongoDB', 'JWT Auth'],
   },
 ];
 
@@ -524,6 +695,30 @@ async function main() {
   console.log('🌱 Starting database seed...');
 
   try {
+    // Create/update technologies catalog first
+    console.log('🔧 Creating technologies catalog (if not exists)...');
+    const normalizedTechs = normalizeTechList(TECHNOLOGIES);
+    const createdTechnologies = [];
+
+    for (const tech of normalizedTechs) {
+      const technology = await prisma.technology.upsert({
+        where: { slug: tech.slug },
+        update: {
+          popularityScore: tech.popularityScore,
+          isActive: true,
+        },
+        create: {
+          slug: tech.slug,
+          name: tech.name,
+          type: tech.type,
+          popularityScore: tech.popularityScore || 0,
+          isActive: true,
+        },
+      });
+      createdTechnologies.push(technology);
+    }
+    console.log(`✅ Technologies ready: ${createdTechnologies.length}`);
+
     // Skip clearing existing data - only add new data if not already present
     console.log('📊 Checking existing data...');
 
@@ -563,7 +758,9 @@ async function main() {
     console.log('👨‍💻 Creating developers (if not exists)...');
     const developers = [];
     for (const devInfo of developerData) {
-      const { name, ...devProfile } = devInfo;
+      // Filter out legacy fields (skills, techStack) - using new DeveloperTechnology relations instead
+      // eslint-disable-next-line no-unused-vars
+      const { name, skills, techStack, ...devProfile } = devInfo;
       const email = generateEmail(name);
       const existingUser = await prisma.user.findUnique({
         where: { email },
@@ -586,6 +783,103 @@ async function main() {
       developers.push({ user, name, ...devProfile });
     }
     console.log(`✅ Developers ready: ${developers.length}`);
+
+    // Link developers to technologies based on their job titles
+    console.log('🔗 Linking developers to technologies...');
+    let devTechLinkCount = 0;
+
+    for (const dev of developers) {
+      // Skip if already has tech links
+      const existingLinks = await prisma.developerTechnology.count({
+        where: { developerUserId: dev.user.id },
+      });
+
+      if (existingLinks > 0) {
+        console.log(
+          `⏭️  Developer ${dev.user.email} already has ${existingLinks} tech links, skipping...`
+        );
+        continue;
+      }
+
+      // Determine tech pool based on job title and preferred categories
+      let techPool = [];
+      const jobTitle = dev.jobTitle?.toLowerCase() || '';
+      const preferredCats = dev.preferredCategories || [];
+
+      if (jobTitle.includes('backend') || preferredCats.includes('BACKEND')) {
+        techPool = createdTechnologies.filter((t) => t.type === 'BACKEND');
+      } else if (jobTitle.includes('frontend') || preferredCats.includes('FRONTEND')) {
+        techPool = createdTechnologies.filter((t) => t.type === 'FRONTEND');
+      } else if (
+        jobTitle.includes('fullstack') ||
+        jobTitle.includes('full stack') ||
+        jobTitle.includes('full-stack')
+      ) {
+        const backendTechs = createdTechnologies.filter((t) => t.type === 'BACKEND');
+        const frontendTechs = createdTechnologies.filter((t) => t.type === 'FRONTEND');
+        techPool = [...backendTechs.slice(0, 10), ...frontendTechs.slice(0, 10)];
+      } else if (jobTitle.includes('devops') || preferredCats.includes('DEVOPS')) {
+        techPool = createdTechnologies.filter((t) => t.type === 'DEVOPS');
+      } else if (
+        jobTitle.includes('qa') ||
+        jobTitle.includes('test') ||
+        preferredCats.includes('QA')
+      ) {
+        techPool = createdTechnologies.filter((t) => t.type === 'QA');
+      } else if (jobTitle.includes('mobile') || preferredCats.includes('MOBILE')) {
+        techPool = createdTechnologies.filter((t) => t.type === 'MOBILE');
+      } else if (
+        jobTitle.includes('ui') ||
+        jobTitle.includes('ux') ||
+        jobTitle.includes('design')
+      ) {
+        techPool = createdTechnologies.filter(
+          (t) =>
+            t.type === 'UI_UX_DESIGN' ||
+            (t.type === 'FRONTEND' && (t.name.toLowerCase().includes('css') || t.name === 'Figma'))
+        );
+      } else if (
+        jobTitle.includes('data') ||
+        jobTitle.includes('database') ||
+        preferredCats.includes('DATA')
+      ) {
+        techPool = createdTechnologies.filter((t) => t.type === 'DATA');
+      } else if (
+        jobTitle.includes('ml') ||
+        jobTitle.includes('ai') ||
+        preferredCats.includes('AI_ML')
+      ) {
+        techPool = createdTechnologies.filter((t) => t.type === 'AI_ML');
+      } else {
+        // Fallback: mix of popular technologies
+        techPool = createdTechnologies.filter((t) => t.popularityScore >= 40);
+      }
+
+      // Pick 3-5 random technologies
+      const numTechs = Math.floor(Math.random() * 3) + 3; // 3-5
+      const selectedTechs = techPool.sort(() => Math.random() - 0.5).slice(0, numTechs);
+
+      // Determine proficiency years based on experience
+      const experience = dev.experience || 'MIDDLE';
+      const baseYears =
+        experience === 'JUNIOR' || experience === 'STUDENT' ? 1 : experience === 'SENIOR' ? 5 : 3;
+
+      for (const tech of selectedTechs) {
+        const proficiencyYears =
+          baseYears + Math.floor(Math.random() * (experience === 'SENIOR' ? 5 : 2));
+
+        await prisma.developerTechnology.create({
+          data: {
+            developerUserId: dev.user.id,
+            technologyId: tech.id,
+            proficiencyYears,
+          },
+        });
+
+        devTechLinkCount++;
+      }
+    }
+    console.log(`✅ Developer-technology links created: ${devTechLinkCount}`);
 
     // Create projects (idempotent and without uncontrolled growth)
     console.log('📁 Creating projects (if missing)...');
@@ -630,7 +924,6 @@ async function main() {
             title: projectInfo.title,
             shortDescription: projectInfo.shortDescription,
             description: projectInfo.description,
-            technologies: projectInfo.technologies,
             maxTalents: MIN_PROJECT_MAX_TALENTS,
             visibility: 'PUBLIC',
             status: 'ACTIVE',
@@ -699,6 +992,79 @@ async function main() {
     }
     console.log(`✅ Tasks ready: ${tasks.length}`);
     console.log(`✅ Newly created tasks this run: ${newlyCreatedTasks.length}`);
+
+    // Link newly created tasks to technologies based on category
+    console.log('🔗 Linking tasks to technologies...');
+    let taskTechLinkCount = 0;
+
+    for (const task of newlyCreatedTasks) {
+      // Skip if already has tech links
+      const existingLinks = await prisma.taskTechnology.count({
+        where: { taskId: task.id },
+      });
+
+      if (existingLinks > 0) {
+        console.log(
+          `⏭️  Task "${task.title}" already has ${existingLinks} tech links, skipping...`
+        );
+        continue;
+      }
+
+      // Determine tech pool based on task category
+      let techPool = [];
+      const category = task.category;
+
+      if (category === 'BACKEND') {
+        techPool = createdTechnologies.filter((t) => t.type === 'BACKEND' || t.type === 'DATA');
+      } else if (category === 'FRONTEND') {
+        techPool = createdTechnologies.filter((t) => t.type === 'FRONTEND');
+      } else if (category === 'FULLSTACK') {
+        const backendTechs = createdTechnologies.filter((t) => t.type === 'BACKEND');
+        const frontendTechs = createdTechnologies.filter((t) => t.type === 'FRONTEND');
+        techPool = [...backendTechs.slice(0, 15), ...frontendTechs.slice(0, 10)];
+      } else if (category === 'DEVOPS') {
+        techPool = createdTechnologies.filter((t) => t.type === 'DEVOPS');
+      } else if (category === 'QA') {
+        techPool = createdTechnologies.filter((t) => t.type === 'QA');
+      } else if (category === 'DATA') {
+        techPool = createdTechnologies.filter((t) => t.type === 'DATA');
+      } else if (category === 'MOBILE') {
+        techPool = createdTechnologies.filter((t) => t.type === 'MOBILE');
+      } else if (category === 'AI_ML') {
+        techPool = createdTechnologies.filter(
+          (t) => t.type === 'AI_ML' || (t.type === 'BACKEND' && t.name === 'Python')
+        );
+      } else if (category === 'UI_UX_DESIGN') {
+        techPool = createdTechnologies.filter((t) => t.type === 'UI_UX_DESIGN');
+      } else if (category === 'GAME_DEV') {
+        techPool = createdTechnologies.filter((t) => t.type === 'GAME_DEV');
+      } else if (category === 'EMBEDDED') {
+        techPool = createdTechnologies.filter((t) => t.type === 'EMBEDDED');
+      } else {
+        // Fallback: popular technologies
+        techPool = createdTechnologies.filter((t) => t.popularityScore >= 30 && t.type === 'OTHER');
+      }
+
+      // Pick 2-4 random technologies
+      const numTechs = Math.floor(Math.random() * 3) + 2; // 2-4
+      const selectedTechs = techPool.sort(() => Math.random() - 0.5).slice(0, numTechs);
+
+      for (let i = 0; i < selectedTechs.length; i++) {
+        const tech = selectedTechs[i];
+        const isRequired = Math.random() < 0.7; // 70% marked as required
+
+        await prisma.taskTechnology.create({
+          data: {
+            taskId: task.id,
+            technologyId: tech.id,
+            isRequired,
+          },
+        });
+
+        taskTechLinkCount++;
+      }
+    }
+    console.log(`✅ Task-technology links created: ${taskTechLinkCount}`);
 
     // Create applications and accepted work flows
     console.log('📤 Creating applications and work flows (if not exists)...');
