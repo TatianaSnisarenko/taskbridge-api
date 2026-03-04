@@ -19,7 +19,7 @@ enum Availability {
   FULL_TIME
 }
 
-enum TaskCategory {
+enum TechnologyType {
   BACKEND
   FRONTEND
   DEVOPS
@@ -194,7 +194,7 @@ model DeveloperProfile {
   skills                  String[]         @default([])
   techStack               String[]         @default([]) @map("tech_stack")
   availability            Availability?
-  preferredTaskCategories TaskCategory[]   @default([]) @map("preferred_task_categories")
+  preferredTaskCategories TechnologyType[] @default([]) @map("preferred_task_categories")
   portfolioUrl            String?          @map("portfolio_url")
   githubUrl               String?          @map("github_url")
   linkedinUrl             String?          @map("linkedin_url")
@@ -289,7 +289,7 @@ model Task {
 
   title          String
   description    String
-  category       TaskCategory?
+  category       TechnologyType?
   type           TaskType        @default(EXPERIENCE)
   difficulty     TaskDifficulty?
   requiredSkills String[]        @default([]) @map("required_skills")
