@@ -23,6 +23,7 @@
     "prisma:migrate:status": "prisma migrate status",
     "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
+    "db:clean": "node prisma/clean.js",
     "db:seed": "node prisma/seed.js",
     "db:seed:clean": "node prisma/seed-clean.js"
   },
