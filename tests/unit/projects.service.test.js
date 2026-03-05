@@ -17,16 +17,37 @@ const prismaMock = {
   projectReport: {
     create: jest.fn(),
   },
-  $transaction: jest.fn((ops) => Promise.all(ops)),
+  projectTechnology: {
+    createMany: jest.fn(),
+    deleteMany: jest.fn(),
+  },
+  $transaction: jest.fn((arg) => {
+    if (typeof arg === 'function') {
+      return arg(prismaMock);
+    }
+
+    return Promise.all(arg);
+  }),
+};
+
+const technologiesServiceMock = {
+  validateTechnologyIds: jest.fn(async (ids) => ids),
+  incrementTechnologyPopularity: jest.fn(async () => {}),
 };
 
 jest.unstable_mockModule('../../src/db/prisma.js', () => ({ prisma: prismaMock }));
+jest.unstable_mockModule(
+  '../../src/services/technologies.service.js',
+  () => technologiesServiceMock
+);
 
 const projectsService = await import('../../src/services/projects.service.js');
 
 describe('projects.service', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    prismaMock.projectTechnology.createMany.mockResolvedValue({ count: 0 });
+    prismaMock.projectTechnology.deleteMany.mockResolvedValue({ count: 0 });
   });
 
   test('createProject creates project', async () => {
@@ -38,7 +59,7 @@ describe('projects.service', () => {
       title: 'TeamUp MVP',
       short_description: 'Build MVP for marketplace',
       description: 'Longer description for the marketplace project',
-      technologies: ['Node.js', 'PostgreSQL', 'Prisma'],
+      technology_ids: ['tech-1', 'tech-2'],
       visibility: 'PUBLIC',
       status: 'ACTIVE',
       max_talents: 3,
@@ -56,12 +77,18 @@ describe('projects.service', () => {
         title: 'TeamUp MVP',
         shortDescription: 'Build MVP for marketplace',
         description: 'Longer description for the marketplace project',
-        technologies: ['Node.js', 'PostgreSQL', 'Prisma'],
         visibility: 'PUBLIC',
         status: 'ACTIVE',
         maxTalents: 3,
       },
       select: { id: true, createdAt: true },
+    });
+    expect(prismaMock.projectTechnology.createMany).toHaveBeenCalledWith({
+      data: [
+        { projectId: 'p1', technologyId: 'tech-1', isRequired: false },
+        { projectId: 'p1', technologyId: 'tech-2', isRequired: false },
+      ],
+      skipDuplicates: true,
     });
 
     expect(result).toEqual({ projectId: 'p1', createdAt });
@@ -137,7 +164,7 @@ describe('projects.service', () => {
       title: 'TeamUp MVP',
       short_description: 'Updated short',
       description: 'Updated long description',
-      technologies: ['Node.js', 'PostgreSQL', 'Prisma'],
+      technology_ids: ['tech-1', 'tech-2'],
       visibility: 'PUBLIC',
       status: 'ACTIVE',
       max_talents: 5,
@@ -155,12 +182,21 @@ describe('projects.service', () => {
         title: 'TeamUp MVP',
         shortDescription: 'Updated short',
         description: 'Updated long description',
-        technologies: ['Node.js', 'PostgreSQL', 'Prisma'],
         visibility: 'PUBLIC',
         status: 'ACTIVE',
         maxTalents: 5,
       },
       select: { id: true, updatedAt: true },
+    });
+    expect(prismaMock.projectTechnology.deleteMany).toHaveBeenCalledWith({
+      where: { projectId: 'p1' },
+    });
+    expect(prismaMock.projectTechnology.createMany).toHaveBeenCalledWith({
+      data: [
+        { projectId: 'p1', technologyId: 'tech-1', isRequired: false },
+        { projectId: 'p1', technologyId: 'tech-2', isRequired: false },
+      ],
+      skipDuplicates: true,
     });
 
     expect(result).toEqual({ projectId: 'p1', updated: true, updatedAt });
@@ -213,7 +249,26 @@ describe('projects.service', () => {
       id: 'p1',
       title: 'TeamUp MVP',
       shortDescription: 'Build MVP',
-      technologies: ['Node.js', 'Prisma'],
+      technologies: [
+        {
+          isRequired: false,
+          technology: {
+            id: 'tech-1',
+            slug: 'node-js',
+            name: 'Node.js',
+            type: 'BACKEND',
+          },
+        },
+        {
+          isRequired: false,
+          technology: {
+            id: 'tech-2',
+            slug: 'prisma',
+            name: 'Prisma',
+            type: 'BACKEND',
+          },
+        },
+      ],
       visibility: 'PUBLIC',
       status: 'ACTIVE',
       maxTalents: 3,
@@ -240,6 +295,18 @@ describe('projects.service', () => {
         take: 20,
         orderBy: { createdAt: 'desc' },
         include: {
+          technologies: {
+            include: {
+              technology: {
+                select: {
+                  id: true,
+                  slug: true,
+                  name: true,
+                  type: true,
+                },
+              },
+            },
+          },
           owner: {
             select: {
               id: true,
@@ -264,7 +331,22 @@ describe('projects.service', () => {
             project_id: 'p1',
             title: 'TeamUp MVP',
             short_description: 'Build MVP',
-            technologies: ['Node.js', 'Prisma'],
+            technologies: [
+              {
+                id: 'tech-1',
+                slug: 'node-js',
+                name: 'Node.js',
+                type: 'BACKEND',
+                is_required: false,
+              },
+              {
+                id: 'tech-2',
+                slug: 'prisma',
+                name: 'Prisma',
+                type: 'BACKEND',
+                is_required: false,
+              },
+            ],
             visibility: 'PUBLIC',
             status: 'ACTIVE',
             max_talents: 3,
@@ -301,7 +383,7 @@ describe('projects.service', () => {
       );
     });
 
-    test('filters by technology', async () => {
+    test('ignores deprecated technology filter', async () => {
       prismaMock.$transaction.mockResolvedValue([[], 0]);
 
       await projectsService.getProjects({ userId: null, query: { technology: 'Prisma' } });
@@ -309,7 +391,9 @@ describe('projects.service', () => {
       expect(prismaMock.project.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
-            technologies: { hasSome: ['Prisma'] },
+            deletedAt: null,
+            visibility: 'PUBLIC',
+            status: 'ACTIVE',
           }),
         })
       );
@@ -376,7 +460,26 @@ describe('projects.service', () => {
       title: 'TeamUp MVP',
       shortDescription: 'Build MVP',
       description: 'Longer description',
-      technologies: ['Node.js', 'Prisma'],
+      technologies: [
+        {
+          isRequired: false,
+          technology: {
+            id: 'tech-1',
+            slug: 'node-js',
+            name: 'Node.js',
+            type: 'BACKEND',
+          },
+        },
+        {
+          isRequired: false,
+          technology: {
+            id: 'tech-2',
+            slug: 'prisma',
+            name: 'Prisma',
+            type: 'BACKEND',
+          },
+        },
+      ],
       visibility: 'PUBLIC',
       status: 'ACTIVE',
       maxTalents: 3,
@@ -415,6 +518,18 @@ describe('projects.service', () => {
       expect(prismaMock.project.findUnique).toHaveBeenCalledWith({
         where: { id: 'p1' },
         include: {
+          technologies: {
+            include: {
+              technology: {
+                select: {
+                  id: true,
+                  slug: true,
+                  name: true,
+                  type: true,
+                },
+              },
+            },
+          },
           owner: {
             select: {
               id: true,
@@ -441,7 +556,22 @@ describe('projects.service', () => {
         title: 'TeamUp MVP',
         short_description: 'Build MVP',
         description: 'Longer description',
-        technologies: ['Node.js', 'Prisma'],
+        technologies: [
+          {
+            id: 'tech-1',
+            slug: 'node-js',
+            name: 'Node.js',
+            type: 'BACKEND',
+            is_required: false,
+          },
+          {
+            id: 'tech-2',
+            slug: 'prisma',
+            name: 'Prisma',
+            type: 'BACKEND',
+            is_required: false,
+          },
+        ],
         visibility: 'PUBLIC',
         status: 'ACTIVE',
         max_talents: 3,

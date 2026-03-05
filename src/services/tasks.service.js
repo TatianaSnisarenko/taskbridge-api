@@ -16,7 +16,6 @@ function mapTaskInput(input) {
     category: input.category,
     type: input.type,
     difficulty: input.difficulty,
-    requiredSkills: input.required_skills,
     estimatedEffortHours: input.estimated_effort_hours,
     expectedDuration: input.expected_duration,
     communicationLanguage: input.communication_language,
@@ -43,7 +42,6 @@ function mapTaskDetailsOutput(task, computed) {
     category: task.category,
     type: task.type,
     difficulty: task.difficulty,
-    required_skills: task.requiredSkills, // deprecated, use technologies instead
     technologies: task.technologies
       ? task.technologies.map((tt) => ({
           id: tt.technology.id,
@@ -439,7 +437,6 @@ export async function getTaskById({ userId, taskId, persona }) {
       category: true,
       type: true,
       difficulty: true,
-      requiredSkills: true,
       technologies: {
         include: {
           technology: {
@@ -563,7 +560,8 @@ export async function getTasksCatalog(query) {
     category,
     difficulty,
     type,
-    skills = [],
+    technology_ids = [],
+    tech_match = 'ANY',
     projectId,
     owner = false,
     includeDeleted = false,
@@ -611,8 +609,23 @@ export async function getTasksCatalog(query) {
     where.type = type;
   }
 
-  if (skills.length > 0) {
-    where.requiredSkills = { hasSome: skills };
+  // Technology filter
+  if (technology_ids.length > 0) {
+    if (tech_match === 'ALL') {
+      // Task must have ALL technologies
+      where.technologies = {
+        every: {
+          technologyId: { in: technology_ids },
+        },
+      };
+    } else {
+      // Task must have AT LEAST ONE technology (ANY - default)
+      where.technologies = {
+        some: {
+          technologyId: { in: technology_ids },
+        },
+      };
+    }
   }
 
   if (projectId) {
@@ -630,9 +643,20 @@ export async function getTasksCatalog(query) {
         category: true,
         type: true,
         difficulty: true,
-        requiredSkills: true,
         publishedAt: true,
         projectId: true,
+        technologies: {
+          include: {
+            technology: {
+              select: {
+                id: true,
+                slug: true,
+                name: true,
+                type: true,
+              },
+            },
+          },
+        },
         project: {
           select: {
             id: true,
@@ -668,7 +692,6 @@ export async function getTasksCatalog(query) {
       category: task.category,
       type: task.type,
       difficulty: task.difficulty,
-      required_skills: task.requiredSkills, // deprecated
       technologies: task.technologies?.map((tt) => ({
         id: tt.technology.id,
         slug: tt.technology.slug,
@@ -1553,7 +1576,6 @@ export async function getProjectTasks({
         category: true,
         type: true,
         difficulty: true,
-        requiredSkills: true,
         publishedAt: true,
         projectId: true,
         project: {
@@ -1591,7 +1613,6 @@ export async function getProjectTasks({
       category: task.category,
       type: task.type,
       difficulty: task.difficulty,
-      required_skills: task.requiredSkills,
       published_at: task.publishedAt,
       project: task.projectId ? { project_id: task.project.id, title: task.project.title } : null,
       company: {

@@ -2,6 +2,7 @@ import { prisma } from '../db/prisma.js';
 import { ApiError } from '../utils/ApiError.js';
 import sharp from 'sharp';
 import { uploadImage, deleteImage } from '../utils/cloudinary.js';
+import { validateTechnologyIds, incrementTechnologyPopularity } from './technologies.service.js';
 
 function mapDeveloperProfileInput(input) {
   return {
@@ -11,8 +12,6 @@ function mapDeveloperProfileInput(input) {
     experienceLevel: input.experience_level,
     location: input.location,
     timezone: input.timezone,
-    skills: input.skills,
-    techStack: input.tech_stack,
     availability: input.availability,
     preferredTaskCategories: input.preferred_task_categories,
     portfolioUrl: input.portfolio_url,
@@ -51,8 +50,6 @@ function mapDeveloperProfileOutput(profile) {
     experience_level: profile.experienceLevel,
     location: profile.location,
     timezone: profile.timezone,
-    skills: profile.skills, // deprecated, use technologies instead
-    tech_stack: profile.techStack, // deprecated, use technologies instead
     technologies: profile.technologies
       ? profile.technologies.map((dt) => ({
           id: dt.technology.id,
@@ -95,11 +92,26 @@ export async function createDeveloperProfile({ userId, profile }) {
     throw new ApiError(409, 'PROFILE_ALREADY_EXISTS', 'Developer profile already exists');
   }
 
-  await prisma.developerProfile.create({
-    data: {
-      userId,
-      ...mapDeveloperProfileInput(profile),
-    },
+  const technologyIds = await validateTechnologyIds(profile.technology_ids || []);
+
+  await prisma.$transaction(async (tx) => {
+    await tx.developerProfile.create({
+      data: {
+        userId,
+        ...mapDeveloperProfileInput(profile),
+      },
+    });
+
+    if (technologyIds.length > 0) {
+      await tx.developerTechnology.createMany({
+        data: technologyIds.map((technologyId) => ({
+          developerUserId: userId,
+          technologyId,
+          proficiencyYears: 0,
+        })),
+        skipDuplicates: true,
+      });
+    }
   });
 
   return { userId, created: true };
@@ -111,13 +123,87 @@ export async function updateDeveloperProfile({ userId, profile }) {
     throw new ApiError(404, 'PROFILE_NOT_FOUND', 'Developer profile not found');
   }
 
-  const updated = await prisma.developerProfile.update({
-    where: { userId },
-    data: mapDeveloperProfileInput(profile),
-    select: { userId: true, updatedAt: true },
+  const hasTechnologyIds = Array.isArray(profile.technology_ids);
+  const technologyIds = hasTechnologyIds
+    ? await validateTechnologyIds(profile.technology_ids || [])
+    : null;
+
+  const updated = await prisma.$transaction(async (tx) => {
+    const updatedProfile = await tx.developerProfile.update({
+      where: { userId },
+      data: mapDeveloperProfileInput(profile),
+      include: {
+        technologies: {
+          include: {
+            technology: {
+              select: {
+                id: true,
+                slug: true,
+                name: true,
+                type: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (hasTechnologyIds) {
+      await tx.developerTechnology.deleteMany({ where: { developerUserId: userId } });
+
+      if (technologyIds.length > 0) {
+        await tx.developerTechnology.createMany({
+          data: technologyIds.map((technologyId) => ({
+            developerUserId: userId,
+            technologyId,
+            proficiencyYears: 0,
+          })),
+          skipDuplicates: true,
+        });
+
+        // Fetch the updated technologies for response
+        const updatedTechnologies = await tx.developerTechnology.findMany({
+          where: { developerUserId: userId },
+          include: {
+            technology: {
+              select: {
+                id: true,
+                slug: true,
+                name: true,
+                type: true,
+              },
+            },
+          },
+        });
+
+        updatedProfile.technologies = updatedTechnologies;
+      } else {
+        updatedProfile.technologies = [];
+      }
+    }
+
+    return updatedProfile;
   });
 
-  return { userId: updated.userId, updated: true, updatedAt: updated.updatedAt };
+  // Increment popularity
+  if (hasTechnologyIds && technologyIds.length > 0) {
+    await incrementTechnologyPopularity(technologyIds);
+  }
+
+  return {
+    user_id: updated.userId,
+    updated: true,
+    updated_at: updated.updatedAt.toISOString(),
+    technologies: updated.technologies
+      ? updated.technologies.map((dt) => ({
+          id: dt.technology.id,
+          slug: dt.technology.slug,
+          name: dt.technology.name,
+          type: dt.technology.type,
+          proficiency_years: dt.proficiencyYears,
+        }))
+      : undefined,
+  };
 }
 
 export async function getDeveloperProfileByUserId({ userId }) {

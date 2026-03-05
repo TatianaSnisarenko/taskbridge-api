@@ -20,11 +20,7 @@ export const updateDeveloperProfile = asyncHandler(async (req, res) => {
     profile: req.body,
   });
 
-  return res.status(200).json({
-    user_id: result.userId,
-    updated: result.updated,
-    updated_at: result.updatedAt.toISOString(),
-  });
+  return res.status(200).json(result);
 });
 
 export const getDeveloperProfile = asyncHandler(async (req, res) => {

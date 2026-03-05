@@ -2,6 +2,7 @@ import { jest } from '@jest/globals';
 import { Buffer } from 'node:buffer';
 
 const prismaMock = {
+  $transaction: jest.fn(),
   developerProfile: {
     findUnique: jest.fn(),
     create: jest.fn(),
@@ -26,6 +27,10 @@ const prismaMock = {
   project: {
     count: jest.fn(),
   },
+  developerTechnology: {
+    createMany: jest.fn(),
+    deleteMany: jest.fn(),
+  },
 };
 
 // Mock cloudinary utilities
@@ -37,15 +42,31 @@ const cloudinaryMock = {
 // Mock sharp
 const sharpMock = jest.fn();
 
+// Mock technologies service
+const technologiesServiceMock = {
+  validateTechnologyIds: jest.fn(async (ids) => ids),
+  incrementTechnologyPopularity: jest.fn(async () => {}),
+};
+
 jest.unstable_mockModule('../../src/db/prisma.js', () => ({ prisma: prismaMock }));
 jest.unstable_mockModule('../../src/utils/cloudinary.js', () => cloudinaryMock);
 jest.unstable_mockModule('sharp', () => ({ default: sharpMock }));
+jest.unstable_mockModule(
+  '../../src/services/technologies.service.js',
+  () => technologiesServiceMock
+);
 
 const profilesService = await import('../../src/services/profiles.service.js');
 
 describe('profiles.service', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // Configure $transaction to actually call the callback function
+    prismaMock.$transaction.mockImplementation(async (callback) => {
+      return await callback(prismaMock);
+    });
+    prismaMock.developerTechnology.createMany.mockResolvedValue({ count: 0 });
+    prismaMock.developerTechnology.deleteMany.mockResolvedValue({ count: 0 });
   });
 
   test('createDeveloperProfile rejects existing profile', async () => {
@@ -73,8 +94,6 @@ describe('profiles.service', () => {
       experience_level: 'SENIOR',
       location: 'Ukraine',
       timezone: 'Europe/Zaporozhye',
-      skills: ['Java', 'Spring'],
-      tech_stack: ['Spring Boot', 'JPA'],
       availability: 'FEW_HOURS_WEEK',
       preferred_task_categories: ['BACKEND'],
       portfolio_url: 'https://example.com/portfolio',
@@ -93,8 +112,6 @@ describe('profiles.service', () => {
         experienceLevel: 'SENIOR',
         location: 'Ukraine',
         timezone: 'Europe/Zaporozhye',
-        skills: ['Java', 'Spring'],
-        techStack: ['Spring Boot', 'JPA'],
         availability: 'FEW_HOURS_WEEK',
         preferredTaskCategories: ['BACKEND'],
         portfolioUrl: 'https://example.com/portfolio',
@@ -123,7 +140,11 @@ describe('profiles.service', () => {
   test('updateDeveloperProfile updates profile', async () => {
     prismaMock.developerProfile.findUnique.mockResolvedValue({ userId: 'u1' });
     const updatedAt = new Date('2026-02-14T12:00:00Z');
-    prismaMock.developerProfile.update.mockResolvedValue({ userId: 'u1', updatedAt });
+    prismaMock.developerProfile.update.mockResolvedValue({
+      userId: 'u1',
+      updatedAt,
+      technologies: [],
+    });
 
     const profile = {
       display_name: 'Tetiana',
@@ -132,8 +153,6 @@ describe('profiles.service', () => {
       experience_level: 'SENIOR',
       location: 'Ukraine',
       timezone: 'Europe/Zaporozhye',
-      skills: ['Java', 'Spring'],
-      tech_stack: ['Spring Boot', 'JPA'],
       availability: 'FEW_HOURS_WEEK',
       preferred_task_categories: ['BACKEND'],
       portfolio_url: 'https://example.com/portfolio',
@@ -152,18 +171,34 @@ describe('profiles.service', () => {
         experienceLevel: 'SENIOR',
         location: 'Ukraine',
         timezone: 'Europe/Zaporozhye',
-        skills: ['Java', 'Spring'],
-        techStack: ['Spring Boot', 'JPA'],
         availability: 'FEW_HOURS_WEEK',
         preferredTaskCategories: ['BACKEND'],
         portfolioUrl: 'https://example.com/portfolio',
         githubUrl: 'https://github.com/example',
         linkedinUrl: 'https://linkedin.com/in/example',
       },
-      select: { userId: true, updatedAt: true },
+      include: {
+        technologies: {
+          include: {
+            technology: {
+              select: {
+                id: true,
+                slug: true,
+                name: true,
+                type: true,
+              },
+            },
+          },
+        },
+      },
     });
 
-    expect(result).toEqual({ userId: 'u1', updated: true, updatedAt });
+    expect(result).toEqual({
+      user_id: 'u1',
+      updated: true,
+      updated_at: updatedAt.toISOString(),
+      technologies: [],
+    });
   });
 
   test('getDeveloperProfileByUserId rejects missing profile', async () => {
@@ -186,11 +221,21 @@ describe('profiles.service', () => {
       experienceLevel: 'SENIOR',
       location: 'Ukraine',
       timezone: 'Europe/Zaporozhye',
-      skills: ['Java', 'Spring'],
-      techStack: ['Spring Boot', 'JPA'],
+      technologies: [
+        {
+          technology: {
+            id: 'tech-1',
+            slug: 'java',
+            name: 'Java',
+            type: 'BACKEND',
+          },
+          proficiencyYears: 5,
+        },
+      ],
       portfolioUrl: 'https://example.com/portfolio',
       githubUrl: 'https://github.com/example',
       linkedinUrl: 'https://linkedin.com/in/example',
+      avatarUrl: null,
       avgRating: { toNumber: () => 4.7 },
       reviewsCount: 12,
     });
@@ -210,11 +255,19 @@ describe('profiles.service', () => {
       experience_level: 'SENIOR',
       location: 'Ukraine',
       timezone: 'Europe/Zaporozhye',
-      skills: ['Java', 'Spring'],
-      tech_stack: ['Spring Boot', 'JPA'],
+      technologies: [
+        {
+          id: 'tech-1',
+          slug: 'java',
+          name: 'Java',
+          type: 'BACKEND',
+          proficiency_years: 5,
+        },
+      ],
       portfolio_url: 'https://example.com/portfolio',
       github_url: 'https://github.com/example',
       linkedin_url: 'https://linkedin.com/in/example',
+      avatar_url: null,
       avg_rating: 4.7,
       reviews_count: 12,
       projects_completed: 5,

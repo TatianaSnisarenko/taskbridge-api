@@ -1,12 +1,12 @@
 import { prisma } from '../db/prisma.js';
 import { ApiError } from '../utils/ApiError.js';
+import { validateTechnologyIds, incrementTechnologyPopularity } from './technologies.service.js';
 
 function mapProjectInput(input) {
   return {
     title: input.title,
     shortDescription: input.short_description,
     description: input.description,
-    technologies: input.technologies,
     visibility: input.visibility,
     status: input.status,
     maxTalents: input.max_talents,
@@ -22,13 +22,35 @@ export async function createProject({ userId, project }) {
     throw new ApiError(409, 'PROJECT_TITLE_EXISTS', 'Project title already exists');
   }
 
-  const created = await prisma.project.create({
-    data: {
-      ownerUserId: userId,
-      ...mapProjectInput(project),
-    },
-    select: { id: true, createdAt: true },
+  const technologyIds = await validateTechnologyIds(project.technology_ids || []);
+
+  const created = await prisma.$transaction(async (tx) => {
+    const createdProject = await tx.project.create({
+      data: {
+        ownerUserId: userId,
+        ...mapProjectInput(project),
+      },
+      select: { id: true, createdAt: true },
+    });
+
+    if (technologyIds.length > 0) {
+      await tx.projectTechnology.createMany({
+        data: technologyIds.map((technologyId) => ({
+          projectId: createdProject.id,
+          technologyId,
+          isRequired: false,
+        })),
+        skipDuplicates: true,
+      });
+    }
+
+    return createdProject;
   });
+
+  // Increment popularity
+  if (technologyIds.length > 0) {
+    await incrementTechnologyPopularity(technologyIds);
+  }
 
   return { projectId: created.id, createdAt: created.createdAt };
 }
@@ -57,11 +79,40 @@ export async function updateProject({ userId, projectId, project }) {
     throw new ApiError(409, 'PROJECT_TITLE_EXISTS', 'Project title already exists');
   }
 
-  const updated = await prisma.project.update({
-    where: { id: projectId },
-    data: mapProjectInput(project),
-    select: { id: true, updatedAt: true },
+  const hasTechnologyIds = Array.isArray(project.technology_ids);
+  const technologyIds = hasTechnologyIds
+    ? await validateTechnologyIds(project.technology_ids || [])
+    : null;
+
+  const updated = await prisma.$transaction(async (tx) => {
+    const updatedProject = await tx.project.update({
+      where: { id: projectId },
+      data: mapProjectInput(project),
+      select: { id: true, updatedAt: true },
+    });
+
+    if (hasTechnologyIds) {
+      await tx.projectTechnology.deleteMany({ where: { projectId } });
+
+      if (technologyIds.length > 0) {
+        await tx.projectTechnology.createMany({
+          data: technologyIds.map((technologyId) => ({
+            projectId,
+            technologyId,
+            isRequired: false,
+          })),
+          skipDuplicates: true,
+        });
+      }
+    }
+
+    return updatedProject;
   });
+
+  // Increment popularity
+  if (hasTechnologyIds && technologyIds.length > 0) {
+    await incrementTechnologyPopularity(technologyIds);
+  }
 
   return { projectId: updated.id, updated: true, updatedAt: updated.updatedAt };
 }
@@ -99,7 +150,15 @@ function mapProjectOutput(project) {
     project_id: project.id,
     title: project.title,
     short_description: project.shortDescription,
-    technologies: project.technologies,
+    technologies: project.technologies
+      ? project.technologies.map((pt) => ({
+          id: pt.technology.id,
+          slug: pt.technology.slug,
+          name: pt.technology.name,
+          type: pt.technology.type,
+          is_required: pt.isRequired,
+        }))
+      : undefined,
     visibility: project.visibility,
     status: project.status,
     max_talents: project.maxTalents,
@@ -159,7 +218,15 @@ function mapProjectDetailsOutput(project, taskSummary, tasksPreview) {
     title: project.title,
     short_description: project.shortDescription,
     description: project.description,
-    technologies: project.technologies,
+    technologies: project.technologies
+      ? project.technologies.map((pt) => ({
+          id: pt.technology.id,
+          slug: pt.technology.slug,
+          name: pt.technology.name,
+          type: pt.technology.type,
+          is_required: pt.isRequired,
+        }))
+      : undefined,
     visibility: project.visibility,
     status: project.status,
     max_talents: project.maxTalents,
@@ -179,6 +246,7 @@ function mapProjectDetailsOutput(project, taskSummary, tasksPreview) {
 }
 
 export async function getProjects({ userId, query }) {
+  // eslint-disable-next-line no-unused-vars
   const { page = 1, size = 20, search, technology, visibility, owner, include_deleted } = query;
 
   const isOwnerQuery = owner === true || owner === 'true';
@@ -217,12 +285,6 @@ export async function getProjects({ userId, query }) {
     ];
   }
 
-  // Technology filter
-  if (technology) {
-    const techs = Array.isArray(technology) ? technology : [technology];
-    where.technologies = { hasSome: techs };
-  }
-
   // Status filter: public catalog shows only ACTIVE projects
   // Owner queries show all projects regardless of status
   if (!isOwnerQuery) {
@@ -238,6 +300,18 @@ export async function getProjects({ userId, query }) {
       take: size,
       orderBy: { createdAt: 'desc' },
       include: {
+        technologies: {
+          include: {
+            technology: {
+              select: {
+                id: true,
+                slug: true,
+                name: true,
+                type: true,
+              },
+            },
+          },
+        },
         owner: {
           select: {
             id: true,
@@ -268,6 +342,18 @@ export async function getProjectById({ userId, projectId, includeDeleted, previe
   const project = await prisma.project.findUnique({
     where: { id: projectId },
     include: {
+      technologies: {
+        include: {
+          technology: {
+            select: {
+              id: true,
+              slug: true,
+              name: true,
+              type: true,
+            },
+          },
+        },
+      },
       owner: {
         select: {
           id: true,

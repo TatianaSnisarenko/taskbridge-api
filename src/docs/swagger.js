@@ -1,3 +1,22 @@
+const TECHNOLOGY_TYPE_ENUM = [
+  'BACKEND',
+  'FRONTEND',
+  'DEVOPS',
+  'QA',
+  'DATA',
+  'MOBILE',
+  'OTHER',
+  'FULLSTACK',
+  'AI_ML',
+  'UI_UX_DESIGN',
+  'PRODUCT_MANAGEMENT',
+  'BUSINESS_ANALYSIS',
+  'CYBERSECURITY',
+  'GAME_DEV',
+  'EMBEDDED',
+  'TECH_WRITING',
+];
+
 export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
   openapi: '3.0.0',
   info: {
@@ -93,6 +112,47 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
           status: { type: 'string', example: 'ok' },
         },
       },
+      TechnologyObject: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid', example: '6c8e4a2a-d1b4-4de8-b7d2-f4b9f7fddf61' },
+          slug: { type: 'string', example: 'node-js' },
+          name: { type: 'string', example: 'Node.js' },
+          type: {
+            type: 'string',
+            enum: TECHNOLOGY_TYPE_ENUM,
+            example: 'BACKEND',
+          },
+        },
+      },
+      TechnologyWithProficiency: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid', example: '6c8e4a2a-d1b4-4de8-b7d2-f4b9f7fddf61' },
+          slug: { type: 'string', example: 'node-js' },
+          name: { type: 'string', example: 'Node.js' },
+          type: {
+            type: 'string',
+            enum: TECHNOLOGY_TYPE_ENUM,
+            example: 'BACKEND',
+          },
+          proficiency_years: { type: 'integer', example: 3, minimum: 0 },
+        },
+      },
+      TechnologyWithRequirement: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid', example: '6c8e4a2a-d1b4-4de8-b7d2-f4b9f7fddf61' },
+          slug: { type: 'string', example: 'node-js' },
+          name: { type: 'string', example: 'Node.js' },
+          type: {
+            type: 'string',
+            enum: TECHNOLOGY_TYPE_ENUM,
+            example: 'BACKEND',
+          },
+          is_required: { type: 'boolean', example: true },
+        },
+      },
       CreateDeveloperProfileRequest: {
         type: 'object',
         required: ['display_name'],
@@ -106,15 +166,12 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
           },
           location: { type: 'string', minLength: 1 },
           timezone: { type: 'string', minLength: 1 },
-          skills: {
+          technology_ids: {
             type: 'array',
-            items: { type: 'string' },
+            items: { type: 'string', format: 'uuid' },
             uniqueItems: true,
-          },
-          tech_stack: {
-            type: 'array',
-            items: { type: 'string' },
-            uniqueItems: true,
+            maxItems: 50,
+            description: 'Array of technology IDs from the catalog',
           },
           availability: {
             type: 'string',
@@ -124,7 +181,7 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
             type: 'array',
             items: {
               type: 'string',
-              enum: ['BACKEND', 'FRONTEND', 'DEVOPS', 'QA', 'DATA', 'MOBILE', 'OTHER'],
+              enum: TECHNOLOGY_TYPE_ENUM,
             },
             uniqueItems: true,
           },
@@ -153,17 +210,13 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
           },
           location: { type: 'string', minLength: 2, maxLength: 100 },
           timezone: { type: 'string', minLength: 3, maxLength: 50 },
-          skills: {
+          technology_ids: {
             type: 'array',
-            items: { type: 'string', minLength: 1, maxLength: 50 },
+            items: { type: 'string', format: 'uuid' },
             uniqueItems: true,
             maxItems: 50,
-          },
-          tech_stack: {
-            type: 'array',
-            items: { type: 'string', minLength: 1, maxLength: 50 },
-            uniqueItems: true,
-            maxItems: 50,
+            description:
+              'Array of technology IDs from the catalog. If provided, replaces all existing technologies.',
           },
           availability: {
             type: 'string',
@@ -173,7 +226,7 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
             type: 'array',
             items: {
               type: 'string',
-              enum: ['BACKEND', 'FRONTEND', 'DEVOPS', 'QA', 'DATA', 'MOBILE', 'OTHER'],
+              enum: TECHNOLOGY_TYPE_ENUM,
             },
             uniqueItems: true,
             maxItems: 10,
@@ -189,6 +242,10 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
           user_id: { type: 'string', format: 'uuid' },
           updated: { type: 'boolean', example: true },
           updated_at: { type: 'string', format: 'date-time' },
+          technologies: {
+            type: 'array',
+            items: { $ref: '#/components/schemas/TechnologyWithProficiency' },
+          },
         },
       },
       CreateCompanyProfileRequest: {
@@ -294,12 +351,12 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
           title: { type: 'string', minLength: 3, maxLength: 120 },
           short_description: { type: 'string', minLength: 10, maxLength: 200 },
           description: { type: 'string', minLength: 10, maxLength: 2000 },
-          technologies: {
+          technology_ids: {
             type: 'array',
-            items: { type: 'string', minLength: 1, maxLength: 50 },
+            items: { type: 'string', format: 'uuid' },
             uniqueItems: true,
-            minItems: 1,
-            maxItems: 50,
+            maxItems: 20,
+            description: 'Array of technology IDs from the catalog',
           },
           visibility: { type: 'string', enum: ['PUBLIC', 'UNLISTED'] },
           status: { type: 'string', enum: ['ACTIVE', 'ARCHIVED'] },
@@ -320,12 +377,13 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
           title: { type: 'string', minLength: 3, maxLength: 120 },
           short_description: { type: 'string', minLength: 10, maxLength: 200 },
           description: { type: 'string', minLength: 10, maxLength: 2000 },
-          technologies: {
+          technology_ids: {
             type: 'array',
-            items: { type: 'string', minLength: 1, maxLength: 50 },
+            items: { type: 'string', format: 'uuid' },
             uniqueItems: true,
-            minItems: 1,
-            maxItems: 50,
+            maxItems: 20,
+            description:
+              'Array of technology IDs from the catalog. If provided, replaces all existing technologies.',
           },
           visibility: { type: 'string', enum: ['PUBLIC', 'UNLISTED'] },
           status: { type: 'string', enum: ['ACTIVE', 'ARCHIVED'] },
@@ -353,7 +411,11 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
           project_id: { type: 'string', format: 'uuid' },
           title: { type: 'string' },
           short_description: { type: 'string' },
-          technologies: { type: 'array', items: { type: 'string' } },
+          technologies: {
+            type: 'array',
+            items: { $ref: '#/components/schemas/TechnologyWithRequirement' },
+            description: 'Array of technology objects with is_required flag',
+          },
           visibility: { type: 'string', enum: ['PUBLIC', 'UNLISTED'] },
           status: { type: 'string', enum: ['ACTIVE', 'ARCHIVED'] },
           max_talents: { type: 'integer' },
@@ -485,17 +547,9 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
             nullable: true,
             description: 'Avatar image URL from Cloudinary, null if not uploaded',
           },
-          skills: {
+          technologies: {
             type: 'array',
-            items: { type: 'string', minLength: 1, maxLength: 50 },
-            uniqueItems: true,
-            maxItems: 50,
-          },
-          tech_stack: {
-            type: 'array',
-            items: { type: 'string', minLength: 1, maxLength: 50 },
-            uniqueItems: true,
-            maxItems: 50,
+            items: { $ref: '#/components/schemas/TechnologyWithProficiency' },
           },
           portfolio_url: { type: 'string', format: 'uri' },
           github_url: { type: 'string', format: 'uri' },
@@ -528,7 +582,6 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
           'category',
           'type',
           'difficulty',
-          'required_skills',
           'estimated_effort_hours',
           'expected_duration',
           'communication_language',
@@ -545,7 +598,7 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
           description: { type: 'string', minLength: 10, maxLength: 2000 },
           category: {
             type: 'string',
-            enum: ['BACKEND', 'FRONTEND', 'DEVOPS', 'QA', 'DATA', 'MOBILE', 'OTHER'],
+            enum: TECHNOLOGY_TYPE_ENUM,
           },
           type: {
             type: 'string',
@@ -555,12 +608,12 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
             type: 'string',
             enum: ['JUNIOR', 'MIDDLE', 'SENIOR', 'ANY'],
           },
-          required_skills: {
+          technology_ids: {
             type: 'array',
-            items: { type: 'string', minLength: 1, maxLength: 50 },
+            items: { type: 'string', format: 'uuid' },
             uniqueItems: true,
-            minItems: 1,
-            maxItems: 50,
+            maxItems: 20,
+            description: 'Array of technology IDs from the catalog',
           },
           estimated_effort_hours: { type: 'integer', minimum: 1, maximum: 1000 },
           expected_duration: {
@@ -592,7 +645,6 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
           'category',
           'type',
           'difficulty',
-          'required_skills',
           'estimated_effort_hours',
           'expected_duration',
           'communication_language',
@@ -609,7 +661,7 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
           description: { type: 'string', minLength: 10, maxLength: 2000 },
           category: {
             type: 'string',
-            enum: ['BACKEND', 'FRONTEND', 'DEVOPS', 'QA', 'DATA', 'MOBILE', 'OTHER'],
+            enum: TECHNOLOGY_TYPE_ENUM,
           },
           type: {
             type: 'string',
@@ -619,12 +671,13 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
             type: 'string',
             enum: ['JUNIOR', 'MIDDLE', 'SENIOR', 'ANY'],
           },
-          required_skills: {
+          technology_ids: {
             type: 'array',
-            items: { type: 'string', minLength: 1, maxLength: 50 },
+            items: { type: 'string', format: 'uuid' },
             uniqueItems: true,
-            minItems: 1,
-            maxItems: 50,
+            maxItems: 20,
+            description:
+              'Array of technology IDs from the catalog. If provided, replaces all existing technologies.',
           },
           estimated_effort_hours: { type: 'integer', minimum: 1, maximum: 1000 },
           expected_duration: {
@@ -876,11 +929,14 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
           },
           category: {
             type: 'string',
-            enum: ['BACKEND', 'FRONTEND', 'DEVOPS', 'QA', 'DATA', 'MOBILE', 'OTHER'],
+            enum: TECHNOLOGY_TYPE_ENUM,
           },
           type: { type: 'string', enum: ['PAID', 'UNPAID', 'VOLUNTEER', 'EXPERIENCE'] },
           difficulty: { type: 'string', enum: ['JUNIOR', 'MIDDLE', 'SENIOR', 'ANY'] },
-          required_skills: { type: 'array', items: { type: 'string' } },
+          technologies: {
+            type: 'array',
+            items: { $ref: '#/components/schemas/TechnologyWithRequirement' },
+          },
           published_at: { type: 'string', format: 'date-time', nullable: true },
           project: { $ref: '#/components/schemas/TaskProject', nullable: true },
           company: { $ref: '#/components/schemas/TaskCompany' },
@@ -908,16 +964,14 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
           description: { type: 'string', minLength: 10, maxLength: 2000 },
           category: {
             type: 'string',
-            enum: ['BACKEND', 'FRONTEND', 'DEVOPS', 'QA', 'DATA', 'MOBILE', 'OTHER'],
+            enum: TECHNOLOGY_TYPE_ENUM,
           },
           type: { type: 'string', enum: ['PAID', 'UNPAID', 'VOLUNTEER', 'EXPERIENCE'] },
           difficulty: { type: 'string', enum: ['JUNIOR', 'MIDDLE', 'SENIOR', 'ANY'] },
-          required_skills: {
+          technologies: {
             type: 'array',
-            items: { type: 'string', minLength: 1, maxLength: 50 },
-            minItems: 1,
-            maxItems: 50,
-            uniqueItems: true,
+            items: { $ref: '#/components/schemas/TechnologyWithRequirement' },
+            description: 'Array of technology objects with is_required flag',
           },
           estimated_effort_hours: { type: 'integer', minimum: 1, maximum: 1000 },
           expected_duration: {
@@ -1914,8 +1968,10 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
                 experience_level: 'MIDDLE',
                 location: 'EU',
                 timezone: 'Europe/UTC',
-                skills: ['Node.js', 'PostgreSQL'],
-                tech_stack: ['Express', 'Prisma'],
+                technology_ids: [
+                  '6c8e4a2a-d1b4-4de8-b7d2-f4b9f7fddf61',
+                  '8a311c84-7d56-4d1e-96c4-9ca2f83e7082',
+                ],
                 availability: 'FEW_HOURS_WEEK',
                 preferred_task_categories: ['BACKEND'],
                 portfolio_url: 'https://example.com/portfolio',
@@ -1955,8 +2011,10 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
                 experience_level: 'MIDDLE',
                 location: 'EU',
                 timezone: 'Europe/UTC',
-                skills: ['Node.js', 'PostgreSQL'],
-                tech_stack: ['Express', 'Prisma'],
+                technology_ids: [
+                  '6c8e4a2a-d1b4-4de8-b7d2-f4b9f7fddf61',
+                  '8a311c84-7d56-4d1e-96c4-9ca2f83e7082',
+                ],
                 availability: 'PART_TIME',
                 preferred_task_categories: ['BACKEND', 'DEVOPS'],
                 portfolio_url: 'https://example.com/portfolio',
@@ -2388,7 +2446,11 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
                 title: 'Example Project',
                 short_description: 'Build MVP for product',
                 description: 'Longer description for the project',
-                technologies: ['Node.js', 'PostgreSQL', 'Prisma'],
+                technology_ids: [
+                  '6c8e4a2a-d1b4-4de8-b7d2-f4b9f7fddf61',
+                  '8a311c84-7d56-4d1e-96c4-9ca2f83e7082',
+                  '0f8e1e98-9768-4a35-bcf0-356ad0575e2d',
+                ],
                 visibility: 'PUBLIC',
                 status: 'ACTIVE',
                 max_talents: 3,
@@ -2546,7 +2608,10 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
                 title: 'Example Project',
                 short_description: 'Updated short',
                 description: 'Updated long',
-                technologies: ['Node.js', 'PostgreSQL', 'Prisma'],
+                technology_ids: [
+                  '6c8e4a2a-d1b4-4de8-b7d2-f4b9f7fddf61',
+                  '8a311c84-7d56-4d1e-96c4-9ca2f83e7082',
+                ],
                 visibility: 'PUBLIC',
                 status: 'ACTIVE',
                 max_talents: 5,
@@ -2740,7 +2805,7 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
             in: 'query',
             schema: {
               type: 'string',
-              enum: ['BACKEND', 'FRONTEND', 'DEVOPS', 'QA', 'DATA', 'MOBILE', 'OTHER'],
+              enum: TECHNOLOGY_TYPE_ENUM,
             },
             description: 'Filter by category',
           },
@@ -2757,10 +2822,16 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
             description: 'Filter by type',
           },
           {
-            name: 'skill',
+            name: 'technology_ids',
             in: 'query',
-            schema: { type: 'string', maxLength: 50 },
-            description: 'Filter by required skills (repeatable)',
+            schema: { type: 'string', format: 'uuid' },
+            description: 'Filter by technology ID (repeatable query parameter)',
+          },
+          {
+            name: 'tech_match',
+            in: 'query',
+            schema: { type: 'string', enum: ['ANY', 'ALL'], default: 'ANY' },
+            description: 'ANY = at least one tech match, ALL = every provided tech must match',
           },
           {
             name: 'project_id',
@@ -2827,7 +2898,10 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
                 category: 'BACKEND',
                 type: 'EXPERIENCE',
                 difficulty: 'JUNIOR',
-                required_skills: ['Java', 'Spring'],
+                technology_ids: [
+                  '6c8e4a2a-d1b4-4de8-b7d2-f4b9f7fddf61',
+                  '0f8e1e98-9768-4a35-bcf0-356ad0575e2d',
+                ],
                 estimated_effort_hours: 6,
                 expected_duration: 'DAYS_8_14',
                 communication_language: 'EN',
@@ -2922,7 +2996,10 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
                 category: 'BACKEND',
                 type: 'EXPERIENCE',
                 difficulty: 'JUNIOR',
-                required_skills: ['Java', 'Spring'],
+                technology_ids: [
+                  '6c8e4a2a-d1b4-4de8-b7d2-f4b9f7fddf61',
+                  '0f8e1e98-9768-4a35-bcf0-356ad0575e2d',
+                ],
                 estimated_effort_hours: 8,
                 expected_duration: 'DAYS_15_30',
                 communication_language: 'EN',

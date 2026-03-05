@@ -102,11 +102,12 @@ export const getTasksCatalog = asyncHandler(async (req, res) => {
     category: req.query.category,
     difficulty: req.query.difficulty,
     type: req.query.type,
-    skills: Array.isArray(req.query.skill)
-      ? req.query.skill
-      : req.query.skill
-        ? [req.query.skill]
+    technology_ids: Array.isArray(req.query.technology_ids)
+      ? req.query.technology_ids
+      : req.query.technology_ids
+        ? [req.query.technology_ids]
         : [],
+    tech_match: req.query.tech_match || 'ANY',
     projectId: req.query.project_id,
     owner: req.query.owner === 'true',
     includeDeleted: req.query.include_deleted === 'true',

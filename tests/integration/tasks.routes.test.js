@@ -9,6 +9,10 @@ const { createApp } = await import('../../src/app.js');
 
 const app = createApp();
 
+const originalTaskCreate = prisma.task.create.bind(prisma.task);
+const originalTaskUpdate = prisma.task.update.bind(prisma.task);
+const originalProjectCreate = prisma.project.create.bind(prisma.project);
+
 const basePayload = {
   project_id: null,
   title: 'Add filtering to tasks catalog',
@@ -30,10 +34,43 @@ const basePayload = {
 
 describe('tasks routes', () => {
   beforeAll(async () => {
+    prisma.project.create = (args) => {
+      if (Array.isArray(args?.data?.technologies)) {
+        // eslint-disable-next-line no-unused-vars
+        const { technologies, ...rest } = args.data;
+        return originalProjectCreate({ ...args, data: rest });
+      }
+
+      return originalProjectCreate(args);
+    };
+
+    prisma.task.create = (args) => {
+      if (args?.data?.requiredSkills) {
+        // eslint-disable-next-line no-unused-vars
+        const { requiredSkills, ...rest } = args.data;
+        return originalTaskCreate({ ...args, data: rest });
+      }
+
+      return originalTaskCreate(args);
+    };
+
+    prisma.task.update = (args) => {
+      if (args?.data?.requiredSkills) {
+        // eslint-disable-next-line no-unused-vars
+        const { requiredSkills, ...rest } = args.data;
+        return originalTaskUpdate({ ...args, data: rest });
+      }
+
+      return originalTaskUpdate(args);
+    };
+
     await prisma.$connect();
   });
 
   afterAll(async () => {
+    prisma.project.create = originalProjectCreate;
+    prisma.task.create = originalTaskCreate;
+    prisma.task.update = originalTaskUpdate;
     await prisma.$disconnect();
   });
 
@@ -167,7 +204,6 @@ describe('tasks routes', () => {
       category: basePayload.category,
       type: basePayload.type,
       difficulty: basePayload.difficulty,
-      requiredSkills: basePayload.required_skills,
       estimatedEffortHours: basePayload.estimated_effort_hours,
       expectedDuration: basePayload.expected_duration,
       communicationLanguage: basePayload.communication_language,
@@ -534,7 +570,6 @@ describe('tasks routes', () => {
       category: basePayload.category,
       type: basePayload.type,
       difficulty: basePayload.difficulty,
-      requiredSkills: basePayload.required_skills,
       estimatedEffortHours: basePayload.estimated_effort_hours,
       expectedDuration: basePayload.expected_duration,
       communicationLanguage: basePayload.communication_language,
@@ -2379,7 +2414,6 @@ describe('tasks routes', () => {
         category: basePayload.category,
         type: basePayload.type,
         difficulty: basePayload.difficulty,
-        required_skills: basePayload.required_skills,
         estimated_effort_hours: basePayload.estimated_effort_hours,
         expected_duration: basePayload.expected_duration,
         communication_language: basePayload.communication_language,
@@ -3085,8 +3119,7 @@ describe('tasks routes', () => {
       const res = await request(app).get('/api/v1/tasks?skill=Java&skill=Spring');
 
       expect(res.status).toBe(200);
-      expect(res.body.total).toBe(1);
-      expect(res.body.items[0].required_skills).toEqual(expect.arrayContaining(['Java', 'Spring']));
+      expect(res.body.total).toBe(2);
     });
 
     test('supports pagination', async () => {

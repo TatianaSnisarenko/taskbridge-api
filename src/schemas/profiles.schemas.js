@@ -3,7 +3,24 @@ import { emailRegexp } from './auth.schemas.js';
 
 const EXPERIENCE_LEVELS = ['STUDENT', 'JUNIOR', 'MIDDLE', 'SENIOR'];
 const AVAILABILITY_LEVELS = ['FEW_HOURS_WEEK', 'PART_TIME', 'FULL_TIME'];
-const TASK_CATEGORIES = ['BACKEND', 'FRONTEND', 'DEVOPS', 'QA', 'DATA', 'MOBILE', 'OTHER'];
+const TASK_CATEGORIES = [
+  'BACKEND',
+  'FRONTEND',
+  'DEVOPS',
+  'QA',
+  'DATA',
+  'MOBILE',
+  'OTHER',
+  'FULLSTACK',
+  'AI_ML',
+  'UI_UX_DESIGN',
+  'PRODUCT_MANAGEMENT',
+  'BUSINESS_ANALYSIS',
+  'CYBERSECURITY',
+  'GAME_DEV',
+  'EMBEDDED',
+  'TECH_WRITING',
+];
 const COMPANY_TYPES = ['STARTUP', 'SMB', 'ENTERPRISE', 'INDIVIDUAL'];
 
 const developerProfileFields = {
@@ -34,32 +51,6 @@ const developerProfileFields = {
     'string.min': 'Timezone must be at least 3 characters',
     'string.max': 'Timezone must not exceed 50 characters',
   }),
-  skills: Joi.array()
-    .items(
-      Joi.string().trim().min(1).max(50).messages({
-        'string.min': 'Each skill must be at least 1 character',
-        'string.max': 'Each skill must not exceed 50 characters',
-      })
-    )
-    .unique()
-    .max(50)
-    .messages({
-      'array.unique': 'Skills must be unique',
-      'array.max': 'Skills list must not exceed 50 items',
-    }),
-  tech_stack: Joi.array()
-    .items(
-      Joi.string().trim().min(1).max(50).messages({
-        'string.min': 'Each technology must be at least 1 character',
-        'string.max': 'Each technology must not exceed 50 characters',
-      })
-    )
-    .unique()
-    .max(50)
-    .messages({
-      'array.unique': 'Tech stack items must be unique',
-      'array.max': 'Tech stack list must not exceed 50 items',
-    }),
   availability: Joi.string()
     .valid(...AVAILABILITY_LEVELS)
     .messages({
@@ -71,7 +62,7 @@ const developerProfileFields = {
         .valid(...TASK_CATEGORIES)
         .messages({
           'any.only':
-            'Each task category must be one of: BACKEND, FRONTEND, DEVOPS, QA, DATA, MOBILE, OTHER',
+            'Each task category must be one of: BACKEND, FRONTEND, DEVOPS, QA, DATA, MOBILE, OTHER, FULLSTACK, AI_ML, UI_UX_DESIGN, PRODUCT_MANAGEMENT, BUSINESS_ANALYSIS, CYBERSECURITY, GAME_DEV, EMBEDDED, TECH_WRITING',
         })
     )
     .unique()
@@ -89,6 +80,18 @@ const developerProfileFields = {
   linkedin_url: Joi.string().uri().messages({
     'string.uri': 'LinkedIn URL must be a valid URI',
   }),
+  technology_ids: Joi.array()
+    .items(
+      Joi.string().guid({ version: 'uuidv4' }).messages({
+        'string.guid': 'Each technology ID must be a valid UUID',
+      })
+    )
+    .unique()
+    .max(50)
+    .messages({
+      'array.unique': 'Technology IDs must be unique',
+      'array.max': 'Technology list must not exceed 50 items',
+    }),
 };
 
 export const createDeveloperProfileSchema = Joi.object(developerProfileFields);

@@ -1,6 +1,23 @@
 import Joi from 'joi';
 
-const TASK_CATEGORIES = ['BACKEND', 'FRONTEND', 'DEVOPS', 'QA', 'DATA', 'MOBILE', 'OTHER'];
+const TASK_CATEGORIES = [
+  'BACKEND',
+  'FRONTEND',
+  'DEVOPS',
+  'QA',
+  'DATA',
+  'MOBILE',
+  'OTHER',
+  'FULLSTACK',
+  'AI_ML',
+  'UI_UX_DESIGN',
+  'PRODUCT_MANAGEMENT',
+  'BUSINESS_ANALYSIS',
+  'CYBERSECURITY',
+  'GAME_DEV',
+  'EMBEDDED',
+  'TECH_WRITING',
+];
 const TASK_TYPES = ['PAID', 'UNPAID', 'VOLUNTEER', 'EXPERIENCE'];
 const TASK_DIFFICULTY = ['JUNIOR', 'MIDDLE', 'SENIOR', 'ANY'];
 const TASK_DURATION = ['DAYS_1_7', 'DAYS_8_14', 'DAYS_15_30', 'DAYS_30_PLUS'];
@@ -27,7 +44,8 @@ export const createTaskDraftSchema = Joi.object({
     .valid(...TASK_CATEGORIES)
     .required()
     .messages({
-      'any.only': 'Category must be one of: BACKEND, FRONTEND, DEVOPS, QA, DATA, MOBILE, OTHER',
+      'any.only':
+        'Category must be one of: BACKEND, FRONTEND, DEVOPS, QA, DATA, MOBILE, OTHER, FULLSTACK, AI_ML, UI_UX_DESIGN, PRODUCT_MANAGEMENT, BUSINESS_ANALYSIS, CYBERSECURITY, GAME_DEV, EMBEDDED, TECH_WRITING',
       'any.required': 'Category is required',
       'string.empty': 'Category is required',
     }),
@@ -46,23 +64,6 @@ export const createTaskDraftSchema = Joi.object({
       'any.only': 'Difficulty must be one of: JUNIOR, MIDDLE, SENIOR, ANY',
       'any.required': 'Difficulty is required',
       'string.empty': 'Difficulty is required',
-    }),
-  required_skills: Joi.array()
-    .items(
-      Joi.string().trim().min(1).max(50).messages({
-        'string.min': 'Each required skill must be at least 1 character',
-        'string.max': 'Each required skill must not exceed 50 characters',
-      })
-    )
-    .unique()
-    .min(1)
-    .max(50)
-    .required()
-    .messages({
-      'array.unique': 'Required skills must be unique',
-      'array.min': 'Required skills must include at least 1 item',
-      'array.max': 'Required skills must not exceed 50 items',
-      'any.required': 'Required skills are required',
     }),
   technology_ids: Joi.array()
     .items(
@@ -159,7 +160,8 @@ export const updateTaskDraftSchema = Joi.object({
     .valid(...TASK_CATEGORIES)
     .required()
     .messages({
-      'any.only': 'Category must be one of: BACKEND, FRONTEND, DEVOPS, QA, DATA, MOBILE, OTHER',
+      'any.only':
+        'Category must be one of: BACKEND, FRONTEND, DEVOPS, QA, DATA, MOBILE, OTHER, FULLSTACK, AI_ML, UI_UX_DESIGN, PRODUCT_MANAGEMENT, BUSINESS_ANALYSIS, CYBERSECURITY, GAME_DEV, EMBEDDED, TECH_WRITING',
       'any.required': 'Category is required',
       'string.empty': 'Category is required',
     }),
@@ -179,23 +181,6 @@ export const updateTaskDraftSchema = Joi.object({
       'any.required': 'Difficulty is required',
       'string.empty': 'Difficulty is required',
     }),
-  required_skills: Joi.array()
-    .items(
-      Joi.string().trim().min(1).max(50).messages({
-        'string.min': 'Each required skill must be at least 1 character',
-        'string.max': 'Each required skill must not exceed 50 characters',
-      })
-    )
-    .unique()
-    .min(1)
-    .max(50)
-    .required()
-    .messages({
-      'array.unique': 'Required skills must be unique',
-      'array.min': 'Required skills must include at least 1 item',
-      'array.max': 'Required skills must not exceed 50 items',
-      'any.required': 'Required skills are required',
-    }),
   technology_ids: Joi.array()
     .items(
       Joi.string().guid({ version: 'uuidv4' }).messages({
@@ -209,64 +194,46 @@ export const updateTaskDraftSchema = Joi.object({
       'array.unique': 'Technology ids must be unique',
       'array.max': 'Technology ids must not exceed 20 items',
     }),
-  estimated_effort_hours: Joi.number().integer().min(1).max(1000).required().messages({
+  estimated_effort_hours: Joi.number().integer().min(1).max(1000).messages({
     'number.base': 'Estimated effort must be a number',
     'number.integer': 'Estimated effort must be an integer',
     'number.min': 'Estimated effort must be at least 1 hour',
     'number.max': 'Estimated effort must not exceed 1000 hours',
-    'any.required': 'Estimated effort is required',
   }),
   expected_duration: Joi.string()
     .valid(...TASK_DURATION)
-    .required()
     .messages({
       'any.only': 'Expected duration must be one of: DAYS_1_7, DAYS_8_14, DAYS_15_30, DAYS_30_PLUS',
-      'any.required': 'Expected duration is required',
-      'string.empty': 'Expected duration is required',
     }),
-  communication_language: Joi.string().trim().min(2).max(50).required().messages({
-    'string.empty': 'Communication language is required',
+  communication_language: Joi.string().trim().min(2).max(50).messages({
     'string.min': 'Communication language must be at least 2 characters',
     'string.max': 'Communication language must not exceed 50 characters',
-    'any.required': 'Communication language is required',
   }),
-  timezone_preference: Joi.string().trim().min(3).max(60).required().messages({
-    'string.empty': 'Timezone preference is required',
+  timezone_preference: Joi.string().trim().min(3).max(60).messages({
     'string.min': 'Timezone preference must be at least 3 characters',
     'string.max': 'Timezone preference must not exceed 60 characters',
-    'any.required': 'Timezone preference is required',
   }),
-  application_deadline: Joi.date().iso().required().messages({
+  application_deadline: Joi.date().iso().messages({
     'date.base': 'Application deadline must be a valid date',
     'date.format': 'Application deadline must be a valid ISO date',
     'date.iso': 'Application deadline must be a valid ISO date',
-    'any.required': 'Application deadline is required',
   }),
   visibility: Joi.string()
     .valid(...TASK_VISIBILITY)
-    .required()
     .messages({
       'any.only': 'Visibility must be one of: PUBLIC, UNLISTED',
-      'any.required': 'Visibility is required',
-      'string.empty': 'Visibility is required',
     }),
-  deliverables: Joi.string().trim().min(3).max(2000).required().messages({
-    'string.empty': 'Deliverables are required',
+  deliverables: Joi.string().trim().min(3).max(2000).messages({
     'string.min': 'Deliverables must be at least 3 characters',
     'string.max': 'Deliverables must not exceed 2000 characters',
-    'any.required': 'Deliverables are required',
   }),
-  requirements: Joi.string().trim().min(3).max(2000).required().messages({
-    'string.empty': 'Requirements are required',
+  requirements: Joi.string().trim().min(3).max(2000).messages({
     'string.min': 'Requirements must be at least 3 characters',
     'string.max': 'Requirements must not exceed 2000 characters',
-    'any.required': 'Requirements are required',
   }),
-  nice_to_have: Joi.string().trim().min(3).max(2000).required().messages({
-    'string.empty': 'Nice to have is required',
+  nice_to_have: Joi.string().trim().min(3).max(2000).messages({
     'string.min': 'Nice to have must be at least 3 characters',
     'string.max': 'Nice to have must not exceed 2000 characters',
-    'any.required': 'Nice to have is required',
   }),
 });
 
@@ -312,7 +279,8 @@ export const getTasksCatalogSchema = Joi.object({
     .valid(...TASK_CATEGORIES)
     .optional()
     .messages({
-      'any.only': 'Category must be one of: BACKEND, FRONTEND, DEVOPS, QA, DATA, MOBILE, OTHER',
+      'any.only':
+        'Category must be one of: BACKEND, FRONTEND, DEVOPS, QA, DATA, MOBILE, OTHER, FULLSTACK, AI_ML, UI_UX_DESIGN, PRODUCT_MANAGEMENT, BUSINESS_ANALYSIS, CYBERSECURITY, GAME_DEV, EMBEDDED, TECH_WRITING',
     }),
   difficulty: Joi.string()
     .valid(...TASK_DIFFICULTY)
@@ -326,12 +294,18 @@ export const getTasksCatalogSchema = Joi.object({
     .messages({
       'any.only': 'Type must be one of: PAID, UNPAID, VOLUNTEER, EXPERIENCE',
     }),
-  skill: Joi.alternatives()
-    .try(Joi.string().max(50), Joi.array().items(Joi.string().max(50)))
+  technology_ids: Joi.alternatives()
+    .try(
+      Joi.string().guid({ version: 'uuidv4' }),
+      Joi.array().items(Joi.string().guid({ version: 'uuidv4' }))
+    )
     .optional()
     .messages({
-      'string.max': 'Skill must not exceed 50 characters',
+      'string.guid': 'Each technology ID must be a valid UUID',
     }),
+  tech_match: Joi.string().valid('ANY', 'ALL').default('ANY').optional().messages({
+    'any.only': 'tech_match must be ANY or ALL',
+  }),
   project_id: Joi.string().guid({ version: 'uuidv4' }).optional().messages({
     'string.guid': 'Project id must be a valid UUID',
   }),

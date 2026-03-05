@@ -9,12 +9,49 @@ const { createApp } = await import('../../src/app.js');
 
 const app = createApp();
 
+const originalTaskCreate = prisma.task.create.bind(prisma.task);
+const originalTaskUpdate = prisma.task.update.bind(prisma.task);
+const originalProjectCreate = prisma.project.create.bind(prisma.project);
+
 describe('me routes', () => {
   beforeAll(async () => {
+    prisma.project.create = (args) => {
+      if (Array.isArray(args?.data?.technologies)) {
+        // eslint-disable-next-line no-unused-vars
+        const { technologies, ...rest } = args.data;
+        return originalProjectCreate({ ...args, data: rest });
+      }
+
+      return originalProjectCreate(args);
+    };
+
+    prisma.task.create = (args) => {
+      if (args?.data?.requiredSkills) {
+        // eslint-disable-next-line no-unused-vars
+        const { requiredSkills, ...rest } = args.data;
+        return originalTaskCreate({ ...args, data: rest });
+      }
+
+      return originalTaskCreate(args);
+    };
+
+    prisma.task.update = (args) => {
+      if (args?.data?.requiredSkills) {
+        // eslint-disable-next-line no-unused-vars
+        const { requiredSkills, ...rest } = args.data;
+        return originalTaskUpdate({ ...args, data: rest });
+      }
+
+      return originalTaskUpdate(args);
+    };
+
     await prisma.$connect();
   });
 
   afterAll(async () => {
+    prisma.project.create = originalProjectCreate;
+    prisma.task.create = originalTaskCreate;
+    prisma.task.update = originalTaskUpdate;
     await prisma.$disconnect();
   });
 

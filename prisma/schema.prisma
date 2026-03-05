@@ -206,8 +206,6 @@ model DeveloperProfile {
   experienceLevel         ExperienceLevel? @map("experience_level")
   location                String?
   timezone                String?
-  skills                  String[]         @default([])
-  techStack               String[]         @default([]) @map("tech_stack")
   availability            Availability?
   preferredTaskCategories TechnologyType[] @default([]) @map("preferred_task_categories")
   portfolioUrl            String?          @map("portfolio_url")
@@ -258,16 +256,16 @@ model Project {
   title               String
   shortDescription    String            @default("") @map("short_description")
   description         String            @default("")
-  technologies        String[]          @default([])
   maxTalents          Int               @default(1) @map("max_talents")
   publishedTasksCount Int               @default(0) @map("published_tasks_count")
   createdAt           DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt           DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt           DateTime?         @map("deleted_at") @db.Timestamptz(6)
 
-  owner   User            @relation("ProjectOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
-  tasks   Task[]
-  reports ProjectReport[]
+  owner        User                @relation("ProjectOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  tasks        Task[]
+  technologies ProjectTechnology[]
+  reports      ProjectReport[]
 
   notifications Notification[]
 
@@ -303,12 +301,11 @@ model Task {
 
   projectId String? @map("project_id") @db.Uuid
 
-  title          String
-  description    String
-  category       TechnologyType?
-  type           TaskType        @default(EXPERIENCE)
-  difficulty     TaskDifficulty?
-  requiredSkills String[]        @default([]) @map("required_skills")
+  title       String
+  description String
+  category    TechnologyType?
+  type        TaskType        @default(EXPERIENCE)
+  difficulty  TaskDifficulty?
 
   estimatedEffortHours  Int?           @map("estimated_effort_hours")
   expectedDuration      TaskDuration?  @map("expected_duration")
@@ -477,6 +474,7 @@ model Technology {
 
   developers  DeveloperTechnology[]
   tasks       TaskTechnology[]
+  projects    ProjectTechnology[]
   suggestions TechnologySuggestion[]
 
   @@index([type, popularityScore(sort: Desc)])
@@ -513,6 +511,19 @@ model TaskTechnology {
   @@unique([taskId, technologyId])
   @@index([taskId])
   @@map("task_technologies")
+}
+
+model ProjectTechnology {
+  projectId    String   @map("project_id") @db.Uuid
+  technologyId String   @map("technology_id") @db.Uuid
+  isRequired   Boolean  @default(false) @map("is_required")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  project    Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  technology Technology @relation(fields: [technologyId], references: [id], onDelete: Cascade)
+
+  @@id([projectId, technologyId])
+  @@map("project_technologies")
 }
 
 model TechnologySuggestion {

@@ -23,20 +23,18 @@ export const createProjectSchema = Joi.object({
     'string.max': 'Description must not exceed 2000 characters',
     'any.required': 'Description is required',
   }),
-  technologies: Joi.array()
+  technology_ids: Joi.array()
     .items(
-      Joi.string().trim().min(1).max(50).messages({
-        'string.min': 'Each technology must be at least 1 character',
-        'string.max': 'Each technology must not exceed 50 characters',
+      Joi.string().guid({ version: 'uuidv4' }).messages({
+        'string.guid': 'Each technology id must be a valid UUID',
       })
     )
     .unique()
-    .min(1)
-    .max(50)
+    .max(20)
+    .optional()
     .messages({
-      'array.unique': 'Technologies must be unique',
-      'array.min': 'Technologies must include at least 1 item',
-      'array.max': 'Technologies must not exceed 50 items',
+      'array.unique': 'Technology ids must be unique',
+      'array.max': 'Technology ids must not exceed 20 items',
     }),
   visibility: Joi.string()
     .valid(...PROJECT_VISIBILITY)
@@ -75,20 +73,18 @@ export const updateProjectSchema = Joi.object({
     'string.max': 'Description must not exceed 2000 characters',
     'any.required': 'Description is required',
   }),
-  technologies: Joi.array()
+  technology_ids: Joi.array()
     .items(
-      Joi.string().trim().min(1).max(50).messages({
-        'string.min': 'Each technology must be at least 1 character',
-        'string.max': 'Each technology must not exceed 50 characters',
+      Joi.string().guid({ version: 'uuidv4' }).messages({
+        'string.guid': 'Each technology id must be a valid UUID',
       })
     )
     .unique()
-    .min(1)
-    .max(50)
+    .max(20)
+    .optional()
     .messages({
-      'array.unique': 'Technologies must be unique',
-      'array.min': 'Technologies must include at least 1 item',
-      'array.max': 'Technologies must not exceed 50 items',
+      'array.unique': 'Technology ids must be unique',
+      'array.max': 'Technology ids must not exceed 20 items',
     }),
   visibility: Joi.string()
     .valid(...PROJECT_VISIBILITY)
