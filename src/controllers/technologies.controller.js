@@ -1,4 +1,4 @@
-import { searchTechnologies } from '../services/technologies.service.js';
+import { getTechnologyTypes, searchTechnologies } from '../services/technologies.service.js';
 
 /**
  * GET /technologies
@@ -20,6 +20,18 @@ export async function getTechnologies(req, res, next) {
     });
 
     res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * GET /technologies/types
+ * Returns the list of available TechnologyType enum values
+ */
+export async function getTechnologyTypesList(req, res, next) {
+  try {
+    res.status(200).json({ items: getTechnologyTypes() });
   } catch (error) {
     next(error);
   }

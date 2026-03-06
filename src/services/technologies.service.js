@@ -1,6 +1,29 @@
 import { prisma } from '../db/prisma.js';
 import { ApiError } from '../utils/ApiError.js';
 
+const TECHNOLOGY_TYPES = [
+  'BACKEND',
+  'FRONTEND',
+  'DEVOPS',
+  'QA',
+  'DATA',
+  'MOBILE',
+  'OTHER',
+  'FULLSTACK',
+  'AI_ML',
+  'UI_UX_DESIGN',
+  'PRODUCT_MANAGEMENT',
+  'BUSINESS_ANALYSIS',
+  'CYBERSECURITY',
+  'GAME_DEV',
+  'EMBEDDED',
+  'TECH_WRITING',
+];
+
+export function getTechnologyTypes() {
+  return [...TECHNOLOGY_TYPES];
+}
+
 /**
  * Search technologies with autocomplete support
  * - Empty query or < 2 chars: return popular technologies

@@ -209,7 +209,6 @@ model DeveloperProfile {
   availability            Availability?
   preferredTaskCategories TechnologyType[] @default([]) @map("preferred_task_categories")
   portfolioUrl            String?          @map("portfolio_url")
-  githubUrl               String?          @map("github_url")
   linkedinUrl             String?          @map("linkedin_url")
   avatarUrl               String?          @map("avatar_url")
   avatarPublicId          String?          @map("avatar_public_id")

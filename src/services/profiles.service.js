@@ -15,7 +15,6 @@ function mapDeveloperProfileInput(input) {
     availability: input.availability,
     preferredTaskCategories: input.preferred_task_categories,
     portfolioUrl: input.portfolio_url,
-    githubUrl: input.github_url,
     linkedinUrl: input.linkedin_url,
   };
 }
@@ -60,7 +59,6 @@ function mapDeveloperProfileOutput(profile) {
         }))
       : undefined,
     portfolio_url: profile.portfolioUrl,
-    github_url: profile.githubUrl,
     linkedin_url: profile.linkedinUrl,
     avatar_url: profile.avatarUrl,
     avg_rating: toNumber(profile.avgRating),

@@ -78,6 +78,32 @@ describe('technologies routes', () => {
     expect(res.body.items.every((item) => item.slug !== 'legacy-reactive-lib')).toBe(true);
   });
 
+  test('GET /technologies/types returns full TechnologyType list', async () => {
+    const res = await request(app).get('/api/v1/technologies/types');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      items: [
+        'BACKEND',
+        'FRONTEND',
+        'DEVOPS',
+        'QA',
+        'DATA',
+        'MOBILE',
+        'OTHER',
+        'FULLSTACK',
+        'AI_ML',
+        'UI_UX_DESIGN',
+        'PRODUCT_MANAGEMENT',
+        'BUSINESS_ANALYSIS',
+        'CYBERSECURITY',
+        'GAME_DEV',
+        'EMBEDDED',
+        'TECH_WRITING',
+      ],
+    });
+  });
+
   test('GET /technologies uses popular mode for trimmed query length < 2', async () => {
     const res = await request(app).get('/api/v1/technologies?q= r ');
 

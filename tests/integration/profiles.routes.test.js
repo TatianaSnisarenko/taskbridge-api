@@ -21,7 +21,6 @@ const basePayload = {
   availability: 'FEW_HOURS_WEEK',
   preferred_task_categories: ['BACKEND'],
   portfolio_url: 'https://example.com/portfolio',
-  github_url: 'https://github.com/example',
   linkedin_url: 'https://linkedin.com/in/example',
 };
 
@@ -216,7 +215,6 @@ describe('profiles routes', () => {
       availability: basePayload.availability,
       preferredTaskCategories: basePayload.preferred_task_categories,
       portfolioUrl: basePayload.portfolio_url,
-      githubUrl: basePayload.github_url,
       linkedinUrl: basePayload.linkedin_url,
     });
   });
@@ -292,7 +290,6 @@ describe('profiles routes', () => {
       availability: basePayload.availability,
       preferredTaskCategories: basePayload.preferred_task_categories,
       portfolioUrl: basePayload.portfolio_url,
-      githubUrl: basePayload.github_url,
       linkedinUrl: basePayload.linkedin_url,
     });
   });
@@ -331,7 +328,6 @@ describe('profiles routes', () => {
         location: 'Ukraine',
         timezone: 'Europe/Zaporozhye',
         portfolioUrl: 'https://example.com/portfolio',
-        githubUrl: 'https://github.com/example',
         linkedinUrl: 'https://linkedin.com/in/example',
         avgRating: 4.7,
         reviewsCount: 12,
@@ -352,7 +348,6 @@ describe('profiles routes', () => {
       avatar_url: null,
       technologies: [],
       portfolio_url: 'https://example.com/portfolio',
-      github_url: 'https://github.com/example',
       linkedin_url: 'https://linkedin.com/in/example',
       avg_rating: 4.7,
       reviews_count: 12,

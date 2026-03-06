@@ -97,7 +97,6 @@ describe('profiles.service', () => {
       availability: 'FEW_HOURS_WEEK',
       preferred_task_categories: ['BACKEND'],
       portfolio_url: 'https://example.com/portfolio',
-      github_url: 'https://github.com/example',
       linkedin_url: 'https://linkedin.com/in/example',
     };
 
@@ -115,7 +114,6 @@ describe('profiles.service', () => {
         availability: 'FEW_HOURS_WEEK',
         preferredTaskCategories: ['BACKEND'],
         portfolioUrl: 'https://example.com/portfolio',
-        githubUrl: 'https://github.com/example',
         linkedinUrl: 'https://linkedin.com/in/example',
       },
     });
@@ -156,7 +154,6 @@ describe('profiles.service', () => {
       availability: 'FEW_HOURS_WEEK',
       preferred_task_categories: ['BACKEND'],
       portfolio_url: 'https://example.com/portfolio',
-      github_url: 'https://github.com/example',
       linkedin_url: 'https://linkedin.com/in/example',
     };
 
@@ -174,7 +171,6 @@ describe('profiles.service', () => {
         availability: 'FEW_HOURS_WEEK',
         preferredTaskCategories: ['BACKEND'],
         portfolioUrl: 'https://example.com/portfolio',
-        githubUrl: 'https://github.com/example',
         linkedinUrl: 'https://linkedin.com/in/example',
       },
       include: {
@@ -233,7 +229,6 @@ describe('profiles.service', () => {
         },
       ],
       portfolioUrl: 'https://example.com/portfolio',
-      githubUrl: 'https://github.com/example',
       linkedinUrl: 'https://linkedin.com/in/example',
       avatarUrl: null,
       avgRating: { toNumber: () => 4.7 },
@@ -265,7 +260,6 @@ describe('profiles.service', () => {
         },
       ],
       portfolio_url: 'https://example.com/portfolio',
-      github_url: 'https://github.com/example',
       linkedin_url: 'https://linkedin.com/in/example',
       avatar_url: null,
       avg_rating: 4.7,

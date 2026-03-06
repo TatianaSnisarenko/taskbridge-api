@@ -186,7 +186,6 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
             uniqueItems: true,
           },
           portfolio_url: { type: 'string', format: 'uri' },
-          github_url: { type: 'string', format: 'uri' },
           linkedin_url: { type: 'string', format: 'uri' },
         },
       },
@@ -232,7 +231,6 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
             maxItems: 10,
           },
           portfolio_url: { type: 'string', format: 'uri' },
-          github_url: { type: 'string', format: 'uri' },
           linkedin_url: { type: 'string', format: 'uri' },
         },
       },
@@ -552,7 +550,6 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
             items: { $ref: '#/components/schemas/TechnologyWithProficiency' },
           },
           portfolio_url: { type: 'string', format: 'uri' },
-          github_url: { type: 'string', format: 'uri' },
           linkedin_url: { type: 'string', format: 'uri' },
           avg_rating: { type: 'number', format: 'float', example: 4.7 },
           reviews_count: { type: 'integer', example: 12 },
@@ -1975,7 +1972,6 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
                 availability: 'FEW_HOURS_WEEK',
                 preferred_task_categories: ['BACKEND'],
                 portfolio_url: 'https://example.com/portfolio',
-                github_url: 'https://github.com/example',
                 linkedin_url: 'https://linkedin.com/in/example',
               },
             },
@@ -2018,7 +2014,6 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
                 availability: 'PART_TIME',
                 preferred_task_categories: ['BACKEND', 'DEVOPS'],
                 portfolio_url: 'https://example.com/portfolio',
-                github_url: 'https://github.com/example',
                 linkedin_url: 'https://linkedin.com/in/example',
               },
             },
@@ -3576,6 +3571,37 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
             },
           },
           400: { description: 'Validation error' },
+        },
+      },
+    },
+    '/api/v1/technologies/types': {
+      get: {
+        tags: ['Technologies'],
+        summary: 'Get TechnologyType enum values',
+        description: 'Returns all available technology categories for frontend filters/forms.',
+        responses: {
+          200: {
+            description: 'List of TechnologyType values',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    items: {
+                      type: 'array',
+                      items: {
+                        type: 'string',
+                        enum: TECHNOLOGY_TYPE_ENUM,
+                      },
+                    },
+                  },
+                },
+                example: {
+                  items: TECHNOLOGY_TYPE_ENUM,
+                },
+              },
+            },
+          },
         },
       },
     },

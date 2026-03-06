@@ -240,7 +240,7 @@ export async function getMyProjects({ userId, persona, page = 1, size = 20 }) {
       },
       skip,
       take: size,
-      orderBy: { createdAt: 'desc' },
+      orderBy: { updatedAt: 'desc' },
     }),
     prisma.project.count({ where }),
   ]);

@@ -74,9 +74,6 @@ const developerProfileFields = {
   portfolio_url: Joi.string().uri().messages({
     'string.uri': 'Portfolio URL must be a valid URI',
   }),
-  github_url: Joi.string().uri().messages({
-    'string.uri': 'GitHub URL must be a valid URI',
-  }),
   linkedin_url: Joi.string().uri().messages({
     'string.uri': 'LinkedIn URL must be a valid URI',
   }),

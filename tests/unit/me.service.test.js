@@ -174,6 +174,7 @@ describe('me.service', () => {
             },
           },
         }),
+        orderBy: { updatedAt: 'desc' },
       })
     );
 
