@@ -10,7 +10,7 @@ import {
   createVerificationToken,
   createRefreshToken,
 } from '../helpers/factories.js';
-import { hashToken } from '../helpers/auth.js';
+import { buildAccessToken, hashToken } from '../helpers/auth.js';
 
 const sendVerificationEmailMock = jest.fn().mockResolvedValue(undefined);
 
@@ -234,6 +234,66 @@ describe('auth routes', () => {
 
     expect(first.status).toBe(200);
     expect(second.status).toBe(200);
+  });
+
+  test('POST /auth/password sets password for authenticated user', async () => {
+    const oldPassword = buildPassword();
+    const user = await createUser({ emailVerified: true, password: oldPassword });
+    const token = buildAccessToken({ userId: user.id, email: user.email });
+    const newPassword = 'NewStrongPassword123!';
+
+    const res = await request(app)
+      .post('/api/v1/auth/password')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ password: newPassword });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      user_id: user.id,
+      password_set: true,
+    });
+    expect(res.body.updated_at).toBeTruthy();
+
+    const oldLogin = await request(app)
+      .post('/api/v1/auth/login')
+      .send({ email: user.email, password: oldPassword });
+    expect(oldLogin.status).toBe(401);
+    expect(oldLogin.body.error.code).toBe('INVALID_CREDENTIALS');
+
+    const newLogin = await request(app)
+      .post('/api/v1/auth/login')
+      .send({ email: user.email, password: newPassword });
+    expect(newLogin.status).toBe(200);
+    expect(newLogin.body.access_token).toBeTruthy();
+  });
+
+  test('POST /auth/password rejects invalid payload with field-level details', async () => {
+    const user = await createUser({ emailVerified: true });
+    const token = buildAccessToken({ userId: user.id, email: user.email });
+
+    const res = await request(app)
+      .post('/api/v1/auth/password')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ password: 'weak' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    expect(res.body.error.details).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          field: 'password',
+        }),
+      ])
+    );
+  });
+
+  test('POST /auth/password rejects unauthorized request', async () => {
+    const res = await request(app)
+      .post('/api/v1/auth/password')
+      .send({ password: 'NewStrongPassword123!' });
+
+    expect(res.status).toBe(401);
+    expect(res.body.error.code).toBe('AUTH_REQUIRED');
   });
 
   test('GET /auth/verify-email verifies token', async () => {

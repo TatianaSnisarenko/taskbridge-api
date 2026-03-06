@@ -21,6 +21,7 @@ const prismaMock = {
 const findUserByEmailMock = jest.fn();
 const createUserMock = jest.fn();
 const verifyPasswordMock = jest.fn();
+const hashPasswordMock = jest.fn();
 const generateRefreshTokenMock = jest.fn();
 const signAccessTokenMock = jest.fn();
 const sendVerificationEmailMock = jest.fn();
@@ -32,7 +33,7 @@ jest.unstable_mockModule('../../src/services/user.service.js', () => ({
 }));
 jest.unstable_mockModule('../../src/utils/password.js', () => ({
   verifyPassword: verifyPasswordMock,
-  hashPassword: jest.fn(),
+  hashPassword: hashPasswordMock,
 }));
 jest.unstable_mockModule('../../src/services/token.service.js', () => ({
   generateRefreshToken: generateRefreshTokenMock,
@@ -342,5 +343,33 @@ describe('auth.service', () => {
 
     expect(prismaMock.verificationToken.create).toHaveBeenCalled();
     expect(sendVerificationEmailMock).toHaveBeenCalled();
+  });
+
+  test('setPassword updates user password hash', async () => {
+    hashPasswordMock.mockResolvedValue('next-password-hash');
+    prismaMock.user.update.mockResolvedValue({
+      id: 'u1',
+      updatedAt: new Date('2026-03-06T10:00:00Z'),
+    });
+
+    const result = await authService.setPassword({
+      userId: 'u1',
+      password: 'NewStrongPassword123!',
+    });
+
+    expect(hashPasswordMock).toHaveBeenCalledWith('NewStrongPassword123!');
+    expect(prismaMock.user.update).toHaveBeenCalledWith({
+      where: { id: 'u1' },
+      data: { passwordHash: 'next-password-hash' },
+      select: {
+        id: true,
+        updatedAt: true,
+      },
+    });
+    expect(result).toEqual({
+      userId: 'u1',
+      passwordSet: true,
+      updatedAt: new Date('2026-03-06T10:00:00Z'),
+    });
   });
 });

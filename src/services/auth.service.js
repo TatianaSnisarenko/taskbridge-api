@@ -3,7 +3,7 @@ import { prisma } from '../db/prisma.js';
 import { env } from '../config/env.js';
 import { ApiError } from '../utils/ApiError.js';
 import { createUser, findUserByEmail } from './user.service.js';
-import { verifyPassword } from '../utils/password.js';
+import { hashPassword, verifyPassword } from '../utils/password.js';
 import { generateRefreshToken, signAccessToken } from './token.service.js';
 import { sendVerificationEmail } from './email.service.js';
 
@@ -220,4 +220,22 @@ export async function resendVerificationEmail({ email }) {
   await sendVerificationEmail({ to: user.email, token: verification.token });
 
   return { email: user.email };
+}
+
+export async function setPassword({ userId, password }) {
+  const passwordHash = await hashPassword(password);
+  const user = await prisma.user.update({
+    where: { id: userId },
+    data: { passwordHash },
+    select: {
+      id: true,
+      updatedAt: true,
+    },
+  });
+
+  return {
+    userId: user.id,
+    passwordSet: true,
+    updatedAt: user.updatedAt,
+  };
 }

@@ -1,9 +1,11 @@
 import { Router } from 'express';
 import * as authController from '../controllers/auth.controller.js';
+import { requireAuth } from '../middleware/auth.middleware.js';
 import { validate } from '../middleware/validate.middleware.js';
 import {
   loginSchema,
   resendVerificationSchema,
+  setPasswordSchema,
   signupSchema,
   verifyEmailSchema,
 } from '../schemas/auth.schemas.js';
@@ -20,3 +22,4 @@ authRouter.post(
 );
 authRouter.post('/refresh', authController.refresh);
 authRouter.post('/logout', authController.logout);
+authRouter.post('/password', requireAuth, validate(setPasswordSchema), authController.setPassword);

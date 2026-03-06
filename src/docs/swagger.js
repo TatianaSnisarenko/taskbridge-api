@@ -57,6 +57,20 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
           email: { type: 'string', format: 'email' },
         },
       },
+      SetPasswordRequest: {
+        type: 'object',
+        required: ['password'],
+        properties: {
+          password: {
+            type: 'string',
+            minLength: 6,
+            maxLength: 64,
+            pattern: '^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z0-9])[ -~]{6,64}$',
+            description:
+              'Password must include uppercase, lowercase, number, and symbol characters',
+          },
+        },
+      },
       SignupRequest: {
         type: 'object',
         required: ['email', 'password'],
@@ -104,6 +118,15 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
         properties: {
           status: { type: 'string', example: 'ok' },
           email: { type: 'string', format: 'email' },
+        },
+      },
+      SetPasswordResponse: {
+        type: 'object',
+        required: ['user_id', 'password_set', 'updated_at'],
+        properties: {
+          user_id: { type: 'string', format: 'uuid' },
+          password_set: { type: 'boolean', example: true },
+          updated_at: { type: 'string', format: 'date-time' },
         },
       },
       HealthResponse: {
@@ -1468,6 +1491,71 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
         summary: 'Logout user',
         responses: {
           204: { description: 'Logged out' },
+        },
+      },
+    },
+    '/api/v1/auth/password': {
+      post: {
+        tags: ['Auth'],
+        summary: 'Set password for authenticated user',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/SetPasswordRequest' },
+              example: {
+                password: 'NewStrongPassword123!',
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'Password has been set successfully',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/SetPasswordResponse' },
+              },
+            },
+          },
+          400: {
+            description: 'Validation error',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+                example: {
+                  error: {
+                    code: 'VALIDATION_ERROR',
+                    message: 'Validation failed',
+                    details: [
+                      {
+                        field: 'password',
+                        issue:
+                          'Password must be 6-64 chars, with upper/lowercase, number, and symbol',
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+          },
+          401: {
+            description: 'Unauthorized',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+              },
+            },
+          },
+          500: {
+            description: 'Internal server error',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+              },
+            },
+          },
         },
       },
     },

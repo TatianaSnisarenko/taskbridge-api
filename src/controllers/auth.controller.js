@@ -69,3 +69,16 @@ export const resendVerification = asyncHandler(async (req, res) => {
   const { email } = await authService.resendVerificationEmail({ email: req.body.email });
   return res.status(200).json({ status: 'ok', email });
 });
+
+export const setPassword = asyncHandler(async (req, res) => {
+  const result = await authService.setPassword({
+    userId: req.user.id,
+    password: req.body.password,
+  });
+
+  return res.status(200).json({
+    user_id: result.userId,
+    password_set: result.passwordSet,
+    updated_at: result.updatedAt,
+  });
+});

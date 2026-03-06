@@ -49,3 +49,11 @@ export const resendVerificationSchema = Joi.object({
     'any.required': 'Email is required',
   }),
 });
+
+export const setPasswordSchema = Joi.object({
+  password: Joi.string().pattern(passRegexp).required().messages({
+    'string.pattern.base': 'Password must be 6-64 chars, with upper/lowercase, number, and symbol',
+    'string.empty': 'Password is required',
+    'any.required': 'Password is required',
+  }),
+});
