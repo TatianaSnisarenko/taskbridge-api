@@ -129,6 +129,40 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
           updated_at: { type: 'string', format: 'date-time' },
         },
       },
+      ForgotPasswordRequest: {
+        type: 'object',
+        required: ['email'],
+        properties: {
+          email: { type: 'string', format: 'email' },
+        },
+      },
+      ForgotPasswordResponse: {
+        type: 'object',
+        properties: {
+          ok: { type: 'boolean', example: true },
+        },
+      },
+      ResetPasswordRequest: {
+        type: 'object',
+        required: ['token', 'new_password'],
+        properties: {
+          token: { type: 'string', description: 'Password reset token from email' },
+          new_password: {
+            type: 'string',
+            minLength: 6,
+            maxLength: 64,
+            pattern: '^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z0-9])[ -~]{6,64}$',
+            description:
+              'Password must include uppercase, lowercase, number, and symbol characters',
+          },
+        },
+      },
+      ResetPasswordResponse: {
+        type: 'object',
+        properties: {
+          password_reset: { type: 'boolean', example: true },
+        },
+      },
       HealthResponse: {
         type: 'object',
         properties: {
@@ -1545,6 +1579,136 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
             content: {
               'application/json': {
                 schema: { $ref: '#/components/schemas/ErrorResponse' },
+              },
+            },
+          },
+          500: {
+            description: 'Internal server error',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/api/v1/auth/forgot-password': {
+      post: {
+        tags: ['Auth'],
+        summary: 'Request password reset link',
+        description:
+          'Sends a password reset email if the account exists and is verified. Always returns 200 OK to prevent email enumeration.',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/ForgotPasswordRequest' },
+              example: {
+                email: 'user@gmail.com',
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description:
+              'Request processed successfully (does not reveal if email exists or is verified)',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ForgotPasswordResponse' },
+              },
+            },
+          },
+          400: {
+            description: 'Validation error',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+                example: {
+                  error: {
+                    code: 'VALIDATION_ERROR',
+                    message: 'Validation failed',
+                    details: [
+                      {
+                        field: 'email',
+                        issue: 'Email format is invalid',
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+          },
+          500: {
+            description: 'Internal server error',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/api/v1/auth/reset-password': {
+      post: {
+        tags: ['Auth'],
+        summary: 'Reset password with token',
+        description: 'Resets the user password using a valid reset token from the email.',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/ResetPasswordRequest' },
+              example: {
+                token: 'abc123xyz...',
+                new_password: 'NewStrongPassword123!',
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'Password has been reset successfully. All refresh tokens are revoked.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ResetPasswordResponse' },
+              },
+            },
+          },
+          400: {
+            description: 'Validation error',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+                example: {
+                  error: {
+                    code: 'VALIDATION_ERROR',
+                    message: 'Validation failed',
+                    details: [
+                      {
+                        field: 'new_password',
+                        issue:
+                          'Password must be 6-64 chars, with upper/lowercase, number, and symbol',
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+          },
+          401: {
+            description: 'Invalid or expired token',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+                example: {
+                  error: {
+                    code: 'INVALID_OR_EXPIRED_TOKEN',
+                    message: 'Reset token is invalid or expired',
+                  },
+                },
               },
             },
           },

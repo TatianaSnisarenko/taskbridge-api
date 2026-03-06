@@ -20,22 +20,40 @@ async function loadEmailService() {
       emailPassword: 'test-password',
       appBaseUrl: 'http://localhost:3000',
       emailVerificationTtlHours: 24,
+      frontendBaseUrl: 'http://localhost:5173',
+      passwordResetTokenTtlMinutes: 30,
     },
   }));
 
-  const buildTemplateMock = jest.fn(() => ({
+  const buildVerifyTemplateMock = jest.fn(() => ({
     subject: 'Verify',
     text: 'Verify text',
     html: '<p>Verify</p>',
   }));
 
+  const buildResetTemplateMock = jest.fn(() => ({
+    subject: 'Reset',
+    text: 'Reset text',
+    html: '<p>Reset</p>',
+  }));
+
   jest.unstable_mockModule('../../src/templates/email/verify-email.js', () => ({
-    buildVerifyEmailTemplate: buildTemplateMock,
+    buildVerifyEmailTemplate: buildVerifyTemplateMock,
+  }));
+
+  jest.unstable_mockModule('../../src/templates/email/reset-password.js', () => ({
+    buildResetPasswordTemplate: buildResetTemplateMock,
   }));
 
   const emailService = await import('../../src/services/email.service.js');
 
-  return { emailService, createTransportMock, sendMailMock, buildTemplateMock };
+  return {
+    emailService,
+    createTransportMock,
+    sendMailMock,
+    buildVerifyTemplateMock,
+    buildResetTemplateMock,
+  };
 }
 
 describe('email.service', () => {
@@ -65,11 +83,11 @@ describe('email.service', () => {
   });
 
   test('sendVerificationEmail builds template and sends', async () => {
-    const { emailService, sendMailMock, buildTemplateMock } = await loadEmailService();
+    const { emailService, sendMailMock, buildVerifyTemplateMock } = await loadEmailService();
 
     await emailService.sendVerificationEmail({ to: 'user@example.com', token: 'token-123' });
 
-    expect(buildTemplateMock).toHaveBeenCalledWith({
+    expect(buildVerifyTemplateMock).toHaveBeenCalledWith({
       link: 'http://localhost:3000/api/v1/auth/verify-email?token=token-123',
       ttlHours: 24,
       contactEmail: 'test@example.com',
@@ -80,6 +98,25 @@ describe('email.service', () => {
       subject: 'Verify',
       text: 'Verify text',
       html: '<p>Verify</p>',
+    });
+  });
+
+  test('sendResetPasswordEmail builds template and sends', async () => {
+    const { emailService, sendMailMock, buildResetTemplateMock } = await loadEmailService();
+
+    await emailService.sendResetPasswordEmail({ to: 'user@example.com', token: 'reset-abc' });
+
+    expect(buildResetTemplateMock).toHaveBeenCalledWith({
+      link: 'http://localhost:5173/reset-password?token=reset-abc',
+      ttlMinutes: 30,
+      contactEmail: 'test@example.com',
+    });
+    expect(sendMailMock).toHaveBeenCalledWith({
+      from: 'TeamUp IT <test@example.com>',
+      to: 'user@example.com',
+      subject: 'Reset',
+      text: 'Reset text',
+      html: '<p>Reset</p>',
     });
   });
 });

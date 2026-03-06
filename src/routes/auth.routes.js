@@ -8,6 +8,8 @@ import {
   setPasswordSchema,
   signupSchema,
   verifyEmailSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
 } from '../schemas/auth.schemas.js';
 
 export const authRouter = Router();
@@ -20,6 +22,8 @@ authRouter.post(
   validate(resendVerificationSchema),
   authController.resendVerification
 );
+authRouter.post('/forgot-password', validate(forgotPasswordSchema), authController.forgotPassword);
+authRouter.post('/reset-password', validate(resetPasswordSchema), authController.resetPassword);
 authRouter.post('/refresh', authController.refresh);
 authRouter.post('/logout', authController.logout);
 authRouter.post('/password', requireAuth, validate(setPasswordSchema), authController.setPassword);

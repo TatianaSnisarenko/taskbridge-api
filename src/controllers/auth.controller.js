@@ -82,3 +82,21 @@ export const setPassword = asyncHandler(async (req, res) => {
     updated_at: result.updatedAt,
   });
 });
+
+export const forgotPassword = asyncHandler(async (req, res) => {
+  await authService.forgotPassword({
+    email: req.body.email,
+  });
+
+  // Always return 200 OK (do not reveal if email exists)
+  return res.status(200).json({ ok: true });
+});
+
+export const resetPassword = asyncHandler(async (req, res) => {
+  await authService.resetPassword({
+    token: req.body.token,
+    newPassword: req.body.new_password,
+  });
+
+  return res.status(200).json({ password_reset: true });
+});

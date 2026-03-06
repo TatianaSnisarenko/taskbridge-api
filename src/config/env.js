@@ -25,6 +25,7 @@ export const env = {
   emailSecure: String(process.env.EMAIL_SECURE ?? 'true').toLowerCase() === 'true',
   appBaseUrl: process.env.APP_BASE_URL ?? 'http://localhost:3000',
   emailVerificationTtlHours: Number(process.env.EMAIL_VERIFICATION_TTL_HOURS ?? 24),
+  passwordResetTokenTtlMinutes: Number(process.env.PASSWORD_RESET_TOKEN_TTL_MINUTES ?? 30),
   verificationTokenRetentionDays: Number(process.env.VERIFICATION_TOKEN_RETENTION_DAYS ?? 7),
   emailNotificationsEnabled:
     String(process.env.EMAIL_NOTIFICATIONS_ENABLED ?? 'false').toLowerCase() === 'true',

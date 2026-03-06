@@ -17,6 +17,7 @@ const sendVerificationEmailMock = jest.fn().mockResolvedValue(undefined);
 jest.unstable_mockModule('../../src/services/email.service.js', () => ({
   sendVerificationEmail: sendVerificationEmailMock,
   sendEmail: jest.fn(),
+  sendResetPasswordEmail: jest.fn().mockResolvedValue(undefined),
 }));
 
 const { createApp } = await import('../../src/app.js');
@@ -428,5 +429,206 @@ describe('auth routes', () => {
     expect(user).toBeTruthy();
 
     errorSpy.mockRestore();
+  });
+
+  test('POST /auth/forgot-password returns 200 OK for existing verified user', async () => {
+    const { sendResetPasswordEmail } = await import('../../src/services/email.service.js');
+    const password = buildPassword();
+    const user = await createUser({ emailVerified: true, password });
+
+    const res = await request(app).post('/api/v1/auth/forgot-password').send({ email: user.email });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ ok: true });
+
+    expect(sendResetPasswordEmail).toHaveBeenCalledWith({
+      to: user.email,
+      token: expect.any(String),
+    });
+
+    const resetToken = await prisma.verificationToken.findFirst({
+      where: { userId: user.id, type: 'PASSWORD_RESET' },
+    });
+    expect(resetToken).toBeTruthy();
+  });
+
+  test('POST /auth/forgot-password returns 200 OK for non-existent user (no reveal)', async () => {
+    const { sendResetPasswordEmail } = await import('../../src/services/email.service.js');
+    sendResetPasswordEmail.mockClear();
+
+    const res = await request(app)
+      .post('/api/v1/auth/forgot-password')
+      .send({ email: 'nonexistent@example.com' });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ ok: true });
+    expect(sendResetPasswordEmail).not.toHaveBeenCalled();
+  });
+
+  test('POST /auth/forgot-password returns 200 OK for unverified user (no reveal)', async () => {
+    const { sendResetPasswordEmail } = await import('../../src/services/email.service.js');
+    sendResetPasswordEmail.mockClear();
+
+    const user = await createUser({ emailVerified: false });
+
+    const res = await request(app).post('/api/v1/auth/forgot-password').send({ email: user.email });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ ok: true });
+    expect(sendResetPasswordEmail).not.toHaveBeenCalled();
+  });
+
+  test('POST /auth/forgot-password rejects invalid email format', async () => {
+    const res = await request(app).post('/api/v1/auth/forgot-password').send({ email: 'bad' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    expect(res.body.error.details).toContainEqual({
+      field: 'email',
+      issue: 'Email format is invalid',
+    });
+  });
+
+  test('POST /auth/reset-password resets password with valid token', async () => {
+    const oldPassword = buildPassword();
+    const user = await createUser({ emailVerified: true, password: oldPassword });
+
+    const token = crypto.randomBytes(32).toString('base64url');
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+    await prisma.verificationToken.create({
+      data: {
+        userId: user.id,
+        type: 'PASSWORD_RESET',
+        tokenHash,
+        expiresAt: new Date(Date.now() + 30 * 60 * 1000),
+      },
+    });
+
+    const newPassword = 'NewPassword123!';
+    const res = await request(app)
+      .post('/api/v1/auth/reset-password')
+      .send({ token, new_password: newPassword });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ password_reset: true });
+
+    // Verify token is marked as used
+    const usedToken = await prisma.verificationToken.findFirst({
+      where: { tokenHash },
+    });
+    expect(usedToken.usedAt).toBeTruthy();
+
+    // Verify password was changed
+    const loginRes = await request(app)
+      .post('/api/v1/auth/login')
+      .send({ email: user.email, password: newPassword });
+    expect(loginRes.status).toBe(200);
+  });
+
+  test('POST /auth/reset-password rejects expired token', async () => {
+    const user = await createUser({ emailVerified: true });
+
+    const token = crypto.randomBytes(32).toString('base64url');
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+    await prisma.verificationToken.create({
+      data: {
+        userId: user.id,
+        type: 'PASSWORD_RESET',
+        tokenHash,
+        expiresAt: new Date(Date.now() - 5 * 60 * 1000), // 5 minutes ago
+      },
+    });
+
+    const res = await request(app)
+      .post('/api/v1/auth/reset-password')
+      .send({ token, new_password: 'NewPassword123!' });
+
+    expect(res.status).toBe(401);
+    expect(res.body.error.code).toBe('INVALID_OR_EXPIRED_TOKEN');
+  });
+
+  test('POST /auth/reset-password rejects already used token', async () => {
+    const user = await createUser({ emailVerified: true });
+
+    const token = crypto.randomBytes(32).toString('base64url');
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+    await prisma.verificationToken.create({
+      data: {
+        userId: user.id,
+        type: 'PASSWORD_RESET',
+        tokenHash,
+        expiresAt: new Date(Date.now() + 30 * 60 * 1000),
+        usedAt: new Date(),
+      },
+    });
+
+    const res = await request(app)
+      .post('/api/v1/auth/reset-password')
+      .send({ token, new_password: 'NewPassword123!' });
+
+    expect(res.status).toBe(401);
+    expect(res.body.error.code).toBe('INVALID_OR_EXPIRED_TOKEN');
+  });
+
+  test('POST /auth/reset-password rejects invalid token', async () => {
+    const res = await request(app)
+      .post('/api/v1/auth/reset-password')
+      .send({ token: 'invalid-token', new_password: 'NewPassword123!' });
+
+    expect(res.status).toBe(401);
+    expect(res.body.error.code).toBe('INVALID_OR_EXPIRED_TOKEN');
+  });
+
+  test('POST /auth/reset-password rejects weak password', async () => {
+    const user = await createUser({ emailVerified: true });
+
+    const token = crypto.randomBytes(32).toString('base64url');
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+    await prisma.verificationToken.create({
+      data: {
+        userId: user.id,
+        type: 'PASSWORD_RESET',
+        tokenHash,
+        expiresAt: new Date(Date.now() + 30 * 60 * 1000),
+      },
+    });
+
+    const res = await request(app)
+      .post('/api/v1/auth/reset-password')
+      .send({ token, new_password: 'weak' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+  });
+
+  test('POST /auth/reset-password revokes all refresh tokens', async () => {
+    const password = buildPassword();
+    const user = await createUser({ emailVerified: true, password });
+
+    // Create some refresh tokens
+    await createRefreshToken({ userId: user.id });
+    await createRefreshToken({ userId: user.id });
+
+    const token = crypto.randomBytes(32).toString('base64url');
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+    await prisma.verificationToken.create({
+      data: {
+        userId: user.id,
+        type: 'PASSWORD_RESET',
+        tokenHash,
+        expiresAt: new Date(Date.now() + 30 * 60 * 1000),
+      },
+    });
+
+    const newPassword = 'NewPassword123!';
+    await request(app)
+      .post('/api/v1/auth/reset-password')
+      .send({ token, new_password: newPassword });
+
+    // Verify all refresh tokens are revoked
+    const tokens = await prisma.refreshToken.findMany({
+      where: { userId: user.id, revokedAt: null },
+    });
+    expect(tokens).toHaveLength(0);
   });
 });

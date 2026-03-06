@@ -57,3 +57,23 @@ export const setPasswordSchema = Joi.object({
     'any.required': 'Password is required',
   }),
 });
+
+export const forgotPasswordSchema = Joi.object({
+  email: Joi.string().pattern(emailRegexp).required().messages({
+    'string.pattern.base': 'Email format is invalid',
+    'string.empty': 'Email is required',
+    'any.required': 'Email is required',
+  }),
+});
+
+export const resetPasswordSchema = Joi.object({
+  token: Joi.string().trim().required().messages({
+    'string.empty': 'Reset token is required',
+    'any.required': 'Reset token is required',
+  }),
+  new_password: Joi.string().pattern(passRegexp).required().messages({
+    'string.pattern.base': 'Password must be 6-64 chars, with upper/lowercase, number, and symbol',
+    'string.empty': 'Password is required',
+    'any.required': 'Password is required',
+  }),
+});
