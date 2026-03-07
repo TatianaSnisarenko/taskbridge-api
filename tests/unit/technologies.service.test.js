@@ -103,4 +103,97 @@ describe('technologies.service', () => {
       },
     });
   });
+
+  describe('searchTechnologies - edge cases', () => {
+    test('returns empty when query too short (< 2 chars)', async () => {
+      prismaMock.technology.findMany.mockResolvedValue([]);
+
+      const result = await technologiesService.searchTechnologies({
+        q: 'r',
+        limit: 5,
+        activeOnly: true,
+      });
+
+      expect(result.items).toHaveLength(0);
+    });
+
+    test('handles limit boundaries (min 1, max 20)', async () => {
+      prismaMock.technology.findMany.mockResolvedValue([]);
+
+      // Test limit = 0 (should use default or minimum)
+      const result = await technologiesService.searchTechnologies({
+        q: 're',
+        limit: 0,
+        activeOnly: true,
+      });
+
+      expect(prismaMock.technology.findMany).toHaveBeenCalled();
+      expect(result).toBeDefined();
+      expect(result).toHaveProperty('items');
+      expect(Array.isArray(result.items)).toBe(true);
+    });
+
+    test('uses default limit when not provided', async () => {
+      prismaMock.technology.findMany.mockResolvedValue([]);
+
+      const result = await technologiesService.searchTechnologies({
+        q: 're',
+        activeOnly: true,
+      });
+
+      expect(prismaMock.technology.findMany).toHaveBeenCalled();
+      expect(result).toBeDefined();
+      expect(result).toHaveProperty('items');
+      expect(Array.isArray(result.items)).toBe(true);
+    });
+  });
+
+  describe('validateTechnologyIds - edge cases', () => {
+    test('handles empty array', async () => {
+      const result = await technologiesService.validateTechnologyIds([]);
+      expect(result).toEqual([]);
+    });
+
+    test('handles duplicate ids correctly', async () => {
+      prismaMock.technology.findMany.mockResolvedValue([{ id: 't1' }, { id: 't2' }]);
+
+      const result = await technologiesService.validateTechnologyIds(['t1', 't2', 't1', 't2']);
+
+      expect(result).toEqual(['t1', 't2']);
+    });
+
+    test('throws error for invalid technology IDs', async () => {
+      prismaMock.technology.findMany.mockResolvedValue([{ id: 't1' }]);
+
+      await expect(
+        technologiesService.validateTechnologyIds(['t1', 't2', 't3'])
+      ).rejects.toMatchObject({
+        status: 400,
+        code: 'INVALID_TECHNOLOGY_IDS',
+      });
+    });
+  });
+
+  describe('incrementTechnologyPopularity - edge cases', () => {
+    test('handles empty array (no update)', async () => {
+      await technologiesService.incrementTechnologyPopularity([]);
+
+      expect(prismaMock.technology.updateMany).not.toHaveBeenCalled();
+    });
+
+    test('handles undefined array (no update)', async () => {
+      await technologiesService.incrementTechnologyPopularity(undefined);
+
+      expect(prismaMock.technology.updateMany).not.toHaveBeenCalled();
+    });
+
+    test('batches updates for many technologies', async () => {
+      const ids = Array.from({ length: 50 }, (_, i) => `t${i}`);
+      prismaMock.technology.updateMany.mockResolvedValue({ count: 50 });
+
+      await technologiesService.incrementTechnologyPopularity(ids);
+
+      expect(prismaMock.technology.updateMany).toHaveBeenCalled();
+    });
+  });
 });

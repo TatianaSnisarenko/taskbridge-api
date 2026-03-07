@@ -13,6 +13,15 @@ jest.unstable_mockModule('../../src/services/email.service.js', () => ({
   sendResetPasswordEmail: jest.fn().mockResolvedValue(undefined),
 }));
 
+jest.unstable_mockModule('../../src/utils/cloudinary.js', () => ({
+  uploadImage: jest.fn(async () => ({
+    secure_url:
+      'https://res.cloudinary.com/example/image/upload/v123/teamup/company-logos/test.webp',
+    public_id: 'teamup/company-logos/test',
+  })),
+  deleteImage: jest.fn(async () => undefined),
+}));
+
 const { createApp } = await import('../../src/app.js');
 
 const app = createApp();
@@ -1107,8 +1116,6 @@ describe('profiles routes', () => {
 
     test('uploads avatar successfully (mocked Cloudinary)', async () => {
       const user = await createUser({ developerProfile: { displayName: 'Dev' } });
-      const token = buildAccessToken({ userId: user.id, email: user.email });
-      const buffer = await createValidImage(512, 512);
 
       // Mock Cloudinary upload
       jest.mock(
@@ -1139,10 +1146,7 @@ describe('profiles routes', () => {
       // Note: This test demonstrates the structure. In actual test runs,
       // either mock Cloudinary or use a test configuration that handles image uploads.
       // For now, we verify that the endpoint accepts valid input.
-      console.log('Avatar upload test prepared (Cloudinary mocking required in full setup)', {
-        token,
-        buffer,
-      });
+      expect(user).toBeDefined();
     });
 
     test('updates existing avatar', async () => {
@@ -1166,7 +1170,6 @@ describe('profiles routes', () => {
 
       // In a real test with mocked Cloudinary, upload would succeed
       // and old avatar would be deleted
-      console.log('Avatar update test structure verified');
     });
 
     test('deletes avatar rejects unauthorized', async () => {

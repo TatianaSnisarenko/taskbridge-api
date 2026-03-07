@@ -1,0 +1,167 @@
+name: Tests & Coverage
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Docker (for testcontainers)
+        uses: docker/setup-buildx-action@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Setup environment variables
+        run: |
+          echo "NODE_ENV=test" >> $GITHUB_ENV
+          echo "JWT_SECRET=test-secret-key-for-testing-only" >> $GITHUB_ENV
+          echo "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/test_db?schema=public" >> $GITHUB_ENV
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Run all tests with coverage
+        run: npm run test:coverage
+        timeout-minutes: 30
+
+      - name: Enforce coverage thresholds
+        run: |
+          node -e "
+          const fs = require('fs');
+          const path = require('path');
+
+          const summaryPath = path.join(process.cwd(), 'coverage', 'coverage-summary.json');
+
+          if (!fs.existsSync(summaryPath)) {
+            console.error('❌ Coverage summary not found!');
+            process.exit(1);
+          }
+
+          const summary = JSON.parse(fs.readFileSync(summaryPath, 'utf8'));
+          const { statements, branches, functions, lines } = summary.total;
+
+          const thresholds = {
+            statements: 85,
+            branches: 70,
+            functions: 90,
+            lines: 85
+          };
+
+          let failed = false;
+
+          console.log('\\n📊 Coverage Thresholds Check:\\n');
+
+          for (const [key, threshold] of Object.entries(thresholds)) {
+            const actual = summary.total[key].pct;
+            const status = actual >= threshold ? '✅' : '❌';
+            console.log(\`\${status} \${key.padEnd(12)}: \${actual.toFixed(2)}% (threshold: \${threshold}%)\`);
+
+            if (actual < threshold) {
+              failed = true;
+            }
+          }
+
+          console.log('');
+
+          if (failed) {
+            console.error('❌ Coverage thresholds not met! PR cannot be merged.');
+            process.exit(1);
+          } else {
+            console.log('✅ All coverage thresholds passed!');
+          }
+          "
+
+      - name: Upload coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+          if-no-files-found: ignore
+
+      - name: Comment PR with coverage
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            // Read coverage summary JSON
+            let coverage = {
+              statements: 'N/A',
+              branches: 'N/A',
+              functions: 'N/A',
+              lines: 'N/A'
+            };
+
+            try {
+              const coveragePath = path.join(process.cwd(), 'coverage', 'coverage-summary.json');
+              if (fs.existsSync(coveragePath)) {
+                const data = JSON.parse(fs.readFileSync(coveragePath, 'utf8'));
+                const total = data.total;
+                coverage.statements = total.statements.pct + '%';
+                coverage.branches = total.branches.pct + '%';
+                coverage.functions = total.functions.pct + '%';
+                coverage.lines = total.lines.pct + '%';
+              }
+            } catch (e) {
+              console.log('Could not read coverage summary:', e.message);
+            }
+
+            const getStatus = (value, threshold) => {
+              const pct = parseFloat(value);
+              return isNaN(pct) ? '⚠️' : (pct >= threshold ? '✅' : '❌');
+            };
+
+            const canMerge =
+              parseFloat(coverage.statements) >= 85 &&
+              parseFloat(coverage.branches) >= 70 &&
+              parseFloat(coverage.functions) >= 90 &&
+              parseFloat(coverage.lines) >= 85;
+
+            const mergeStatus = canMerge
+              ? '**can be merged** - all thresholds met ✅'
+              : '**cannot be merged** until coverage thresholds are met ❌';
+
+            const table = [
+              '## 📊 Test Coverage Report',
+              '',
+              '| Metric | Coverage | Threshold | Status |',
+              '|--------|----------|-----------|--------|',
+              `| Statements | ${coverage.statements} | 85% | ${getStatus(coverage.statements, 85)} |`,
+              `| Branches | ${coverage.branches} | 70% | ${getStatus(coverage.branches, 70)} |`,
+              `| Functions | ${coverage.functions} | 90% | ${getStatus(coverage.functions, 90)} |`,
+              `| Lines | ${coverage.lines} | 85% | ${getStatus(coverage.lines, 85)} |`,
+              '',
+              '> **Note:** Tests run with testcontainers (PostgreSQL 16 in Docker)',
+              '>',
+              `> ⚠️ **Important:** This PR ${mergeStatus}`
+            ].join('\n');
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: table
+            });

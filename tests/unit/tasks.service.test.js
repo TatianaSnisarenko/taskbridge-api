@@ -20,6 +20,11 @@ const prismaMock = {
   },
   developerProfile: {
     findUnique: jest.fn(),
+    findMany: jest.fn(),
+    count: jest.fn(),
+  },
+  taskInvite: {
+    findMany: jest.fn(),
   },
   application: {
     findFirst: jest.fn(),
@@ -2113,6 +2118,95 @@ describe('tasks.service', () => {
           task_id: 't1',
           rating: 4,
         },
+      });
+    });
+  });
+
+  describe('optional chaining and null handling', () => {
+    test('handles company profile with null rating', async () => {
+      prismaMock.task.findUnique.mockResolvedValue({
+        id: 't1',
+        ownerUserId: 'u1',
+        status: 'PUBLISHED',
+        visibility: 'PUBLIC',
+        project: null,
+        title: 'Task',
+        description: 'Description',
+        category: 'BACKEND',
+        type: 'EXPERIENCE',
+        difficulty: 'JUNIOR',
+        requiredSkills: [],
+        estimatedEffortHours: 5,
+        expectedDuration: 'DAYS_1_7',
+        communicationLanguage: 'EN',
+        timezonePreference: 'Europe/Any',
+        applicationDeadline: new Date('2026-03-01'),
+        deliverables: 'Code',
+        requirements: 'Tests',
+        niceToHave: null,
+        acceptedApplicationId: null,
+        acceptedApplication: null,
+        createdAt: new Date(),
+        publishedAt: new Date(),
+        deletedAt: null,
+        owner: {
+          companyProfile: {
+            companyName: 'Company',
+            verified: false,
+            avgRating: null,
+            reviewsCount: 0,
+          },
+        },
+      });
+
+      prismaMock.application.count.mockResolvedValue(0);
+
+      const result = await tasksService.getTaskById({ taskId: 't1' });
+
+      expect(result.company.avg_rating).toBeNull();
+    });
+
+    test('handles missing company profile gracefully', async () => {
+      prismaMock.task.findUnique.mockResolvedValue({
+        id: 't1',
+        ownerUserId: 'u1',
+        status: 'PUBLISHED',
+        visibility: 'PUBLIC',
+        project: null,
+        title: 'Task',
+        description: 'Description',
+        category: 'BACKEND',
+        type: 'EXPERIENCE',
+        difficulty: 'JUNIOR',
+        requiredSkills: [],
+        estimatedEffortHours: 5,
+        expectedDuration: 'DAYS_1_7',
+        communicationLanguage: 'EN',
+        timezonePreference: 'Europe/Any',
+        applicationDeadline: new Date('2026-03-01'),
+        deliverables: 'Code',
+        requirements: 'Tests',
+        niceToHave: null,
+        acceptedApplicationId: null,
+        acceptedApplication: null,
+        createdAt: new Date(),
+        publishedAt: new Date(),
+        deletedAt: null,
+        owner: {
+          companyProfile: null,
+        },
+      });
+
+      prismaMock.application.count.mockResolvedValue(0);
+
+      const result = await tasksService.getTaskById({ taskId: 't1' });
+
+      expect(result.company).toEqual({
+        user_id: 'u1',
+        company_name: undefined,
+        verified: undefined,
+        avg_rating: null,
+        reviews_count: undefined,
       });
     });
   });
