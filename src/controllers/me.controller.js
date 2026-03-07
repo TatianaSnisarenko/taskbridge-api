@@ -32,6 +32,23 @@ export const getMyApplications = asyncHandler(async (req, res) => {
   });
 });
 
+export const getMyInvites = asyncHandler(async (req, res) => {
+  const { getMyInvites: getMyInvitesService } = await import('../services/invites.service.js');
+  const result = await getMyInvitesService({
+    userId: req.user.id,
+    page: parseInt(req.query.page) || 1,
+    size: parseInt(req.query.size) || 20,
+    status: req.query.status,
+  });
+
+  return res.status(200).json({
+    items: result.items,
+    page: result.page,
+    size: result.size,
+    total: result.total,
+  });
+});
+
 export const getMyTasks = asyncHandler(async (req, res) => {
   const result = await meService.getMyTasks({
     userId: req.user.id,

@@ -81,6 +81,14 @@ enum ApplicationStatus {
   REJECTED
 }
 
+enum TaskInviteStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  CANCELLED
+  EXPIRED
+}
+
 enum Persona {
   developer
   company
@@ -101,6 +109,10 @@ enum NotificationType {
   TASK_COMPLETED
   REVIEW_CREATED
   CHAT_MESSAGE
+  TASK_INVITE_CREATED
+  TASK_INVITE_ACCEPTED
+  TASK_INVITE_DECLINED
+  TASK_INVITE_CANCELLED
 }
 
 enum VerificationType {
@@ -150,6 +162,9 @@ model User {
   ownedTasks    Task[]    @relation("TaskOwner")
 
   applications Application[] @relation("ApplicationDeveloper")
+
+  sentTaskInvites     TaskInvite[] @relation("TaskInviteCompany")
+  receivedTaskInvites TaskInvite[] @relation("TaskInviteDeveloper")
 
   sentMessages ChatMessage[]
 
@@ -336,6 +351,7 @@ model Task {
   chatThread          ChatThread?
   reviews             Review[]
   technologies        TaskTechnology[]
+  invites             TaskInvite[]
 
   notifications Notification[]
 
@@ -366,6 +382,31 @@ model Application {
   @@index([taskId, createdAt(sort: Desc)])
   @@index([developerUserId, createdAt(sort: Desc)])
   @@map("applications")
+}
+
+model TaskInvite {
+  id              String           @id @default(uuid()) @db.Uuid
+  taskId          String           @map("task_id") @db.Uuid
+  companyUserId   String           @map("company_user_id") @db.Uuid
+  developerUserId String           @map("developer_user_id") @db.Uuid
+  status          TaskInviteStatus
+  message         String?
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+  respondedAt     DateTime?        @map("responded_at") @db.Timestamptz(6)
+  cancelledAt     DateTime?        @map("cancelled_at") @db.Timestamptz(6)
+  expiresAt       DateTime?        @map("expires_at") @db.Timestamptz(6)
+
+  task      Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  company   User @relation("TaskInviteCompany", fields: [companyUserId], references: [id], onDelete: Cascade)
+  developer User @relation("TaskInviteDeveloper", fields: [developerUserId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, developerUserId])
+  @@index([taskId, createdAt(sort: Desc)])
+  @@index([developerUserId, createdAt(sort: Desc)])
+  @@index([companyUserId, createdAt(sort: Desc)])
+  @@index([status, createdAt(sort: Desc)])
+  @@map("task_invites")
 }
 
 model ChatThread {

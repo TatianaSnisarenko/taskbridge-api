@@ -3,6 +3,7 @@ import { requireAuth, requireAuthIfOwner } from '../middleware/auth.middleware.j
 import { requirePersona } from '../middleware/persona.middleware.js';
 import { validate } from '../middleware/validate.middleware.js';
 import * as tasksController from '../controllers/tasks.controller.js';
+import * as invitesController from '../controllers/invites.controller.js';
 import {
   createTaskDraftSchema,
   createTaskApplicationSchema,
@@ -12,6 +13,7 @@ import {
   createReviewSchema,
   rejectTaskCompletionSchema,
 } from '../schemas/tasks.schemas.js';
+import { createTaskInviteSchema, getTaskInvitesQuerySchema } from '../schemas/invites.schemas.js';
 
 export const tasksRouter = Router();
 
@@ -82,6 +84,24 @@ tasksRouter.get(
   validate(taskIdParamSchema, 'params'),
   validate(getTasksCatalogSchema, 'query'),
   tasksController.getTaskApplications
+);
+
+tasksRouter.post(
+  '/:taskId/invites',
+  requireAuth,
+  requirePersona('company'),
+  validate(taskIdParamSchema, 'params'),
+  validate(createTaskInviteSchema),
+  invitesController.createTaskInvite
+);
+
+tasksRouter.get(
+  '/:taskId/invites',
+  requireAuth,
+  requirePersona('company'),
+  validate(taskIdParamSchema, 'params'),
+  validate(getTaskInvitesQuerySchema, 'query'),
+  invitesController.getTaskInvites
 );
 
 tasksRouter.post(

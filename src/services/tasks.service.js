@@ -798,6 +798,194 @@ export async function getTaskApplications({ userId, taskId, page = 1, size = 20 
   };
 }
 
+/**
+ * Shared helper to start a task with a developer (via application or invite).
+ * Handles task state transition, application acceptance, rejection of other applications,
+ * and notification creation within a transaction.
+ *
+ * @param {Object} params
+ * @param {Object} params.tx - Prisma transaction client
+ * @param {string} params.taskId - Task UUID
+ * @param {string} params.developerUserId - Developer user UUID
+ * @param {string} params.companyUserId - Company user UUID
+ * @param {'application' | 'invite'} params.source - Source of acceptance
+ * @param {string|null} params.applicationId - Application UUID (if source is 'application')
+ * @returns {Promise<Object>} Result with task_id, accepted_application_id, task_status, etc.
+ */
+export async function startTaskWithDeveloper({
+  tx,
+  taskId,
+  developerUserId,
+  companyUserId,
+  source,
+  applicationId = null,
+}) {
+  // Fetch task with current state
+  const task = await tx.task.findUnique({
+    where: { id: taskId },
+    select: {
+      id: true,
+      status: true,
+      ownerUserId: true,
+      acceptedApplicationId: true,
+    },
+  });
+
+  if (!task) {
+    throw new ApiError(404, 'TASK_NOT_FOUND', 'Task not found');
+  }
+
+  // Verify task is in PUBLISHED status
+  if (task.status !== 'PUBLISHED') {
+    throw new ApiError(409, 'INVALID_STATE', 'Task is not in PUBLISHED status');
+  }
+
+  // Verify task doesn't have an accepted application already
+  if (task.acceptedApplicationId) {
+    throw new ApiError(409, 'INVALID_STATE', 'Task already has an accepted application');
+  }
+
+  // Find or create application
+  let finalApplicationId = applicationId;
+  let application = null;
+
+  if (source === 'application' && applicationId) {
+    // Use existing application
+    application = await tx.application.findUnique({
+      where: { id: applicationId },
+      select: {
+        id: true,
+        taskId: true,
+        developerUserId: true,
+        status: true,
+      },
+    });
+
+    if (!application) {
+      throw new ApiError(404, 'APPLICATION_NOT_FOUND', 'Application not found');
+    }
+
+    if (application.status !== 'APPLIED') {
+      throw new ApiError(409, 'INVALID_STATE', 'Application is not in APPLIED status');
+    }
+
+    finalApplicationId = application.id;
+  } else if (source === 'invite') {
+    // Find existing application or create synthetic one
+    application = await tx.application.findUnique({
+      where: {
+        taskId_developerUserId: {
+          taskId,
+          developerUserId,
+        },
+      },
+      select: {
+        id: true,
+        taskId: true,
+        developerUserId: true,
+        status: true,
+      },
+    });
+
+    if (application) {
+      finalApplicationId = application.id;
+    } else {
+      // Create synthetic application for invite acceptance
+      const newApplication = await tx.application.create({
+        data: {
+          taskId,
+          developerUserId,
+          status: 'ACCEPTED',
+        },
+        select: {
+          id: true,
+        },
+      });
+      finalApplicationId = newApplication.id;
+    }
+  }
+
+  // Update application to ACCEPTED if it exists and isn't already
+  if (application && application.status !== 'ACCEPTED') {
+    await tx.application.update({
+      where: { id: finalApplicationId },
+      data: { status: 'ACCEPTED' },
+    });
+  }
+
+  // Update task: set accepted application and status to IN_PROGRESS
+  await tx.task.update({
+    where: { id: taskId },
+    data: {
+      acceptedApplicationId: finalApplicationId,
+      status: 'IN_PROGRESS',
+    },
+  });
+
+  // Get all other applications for this task that are in APPLIED status
+  const otherApplications = await tx.application.findMany({
+    where: {
+      taskId,
+      id: { not: finalApplicationId },
+      status: 'APPLIED',
+    },
+    select: {
+      id: true,
+      developerUserId: true,
+    },
+  });
+
+  // Update other applications to REJECTED
+  if (otherApplications.length > 0) {
+    await tx.application.updateMany({
+      where: {
+        taskId,
+        id: { not: finalApplicationId },
+        status: 'APPLIED',
+      },
+      data: {
+        status: 'REJECTED',
+      },
+    });
+  }
+
+  // Create APPLICATION_ACCEPTED notification for accepted developer
+  await createNotification({
+    client: tx,
+    userId: developerUserId,
+    actorUserId: companyUserId,
+    taskId,
+    type: 'APPLICATION_ACCEPTED',
+    payload: buildTaskNotificationPayload({
+      taskId,
+      applicationId: finalApplicationId,
+    }),
+  });
+
+  // Create APPLICATION_REJECTED notifications for other developers
+  for (const otherApp of otherApplications) {
+    await createNotification({
+      client: tx,
+      userId: otherApp.developerUserId,
+      actorUserId: companyUserId,
+      taskId,
+      type: 'APPLICATION_REJECTED',
+      payload: buildTaskNotificationPayload({
+        taskId,
+        applicationId: otherApp.id,
+      }),
+    });
+  }
+
+  return {
+    task_id: taskId,
+    accepted_application_id: finalApplicationId,
+    task_status: 'IN_PROGRESS',
+    accepted_developer_user_id: developerUserId,
+    company_user_id: companyUserId,
+  };
+}
+
 export async function acceptApplication({ userId, applicationId }) {
   // Use transaction for atomicity
   const result = await prisma.$transaction(async (tx) => {
@@ -827,99 +1015,15 @@ export async function acceptApplication({ userId, applicationId }) {
       throw new ApiError(403, 'NOT_OWNER', 'User is not the task owner');
     }
 
-    // Verify task is in PUBLISHED status and doesn't have an accepted application
-    if (task.status !== 'PUBLISHED') {
-      throw new ApiError(409, 'INVALID_STATE', 'Task is not in PUBLISHED status');
-    }
-
-    if (task.acceptedApplicationId) {
-      throw new ApiError(409, 'INVALID_STATE', 'Task already has an accepted application');
-    }
-
-    // Verify application is in APPLIED status
-    if (application.status !== 'APPLIED') {
-      throw new ApiError(409, 'INVALID_STATE', 'Application is not in APPLIED status');
-    }
-
-    // Update the accepted application
-    await tx.application.update({
-      where: { id: applicationId },
-      data: {
-        status: 'ACCEPTED',
-      },
-    });
-
-    // Update task: set accepted application and status to IN_PROGRESS
-    await tx.task.update({
-      where: { id: task.id },
-      data: {
-        acceptedApplicationId: applicationId,
-        status: 'IN_PROGRESS',
-      },
-    });
-
-    // Get all other applications for this task that are in APPLIED status
-    const otherApplications = await tx.application.findMany({
-      where: {
-        taskId: task.id,
-        id: { not: applicationId },
-        status: 'APPLIED',
-      },
-      select: {
-        id: true,
-        developerUserId: true,
-      },
-    });
-
-    // Update other applications to REJECTED
-    if (otherApplications.length > 0) {
-      await tx.application.updateMany({
-        where: {
-          taskId: task.id,
-          id: { not: applicationId },
-          status: 'APPLIED',
-        },
-        data: {
-          status: 'REJECTED',
-        },
-      });
-    }
-
-    // Create APPLICATION_ACCEPTED notification for accepted developer
-    await createNotification({
-      client: tx,
-      userId: application.developerUserId,
-      actorUserId: userId,
+    // Use shared helper to start task with developer
+    return await startTaskWithDeveloper({
+      tx,
       taskId: task.id,
-      type: 'APPLICATION_ACCEPTED',
-      payload: buildTaskNotificationPayload({
-        taskId: task.id,
-        applicationId: applicationId,
-      }),
+      developerUserId: application.developerUserId,
+      companyUserId: userId,
+      source: 'application',
+      applicationId,
     });
-
-    // Create APPLICATION_REJECTED notifications for other developers
-    for (const otherApp of otherApplications) {
-      await createNotification({
-        client: tx,
-        userId: otherApp.developerUserId,
-        actorUserId: userId,
-        taskId: task.id,
-        type: 'APPLICATION_REJECTED',
-        payload: buildTaskNotificationPayload({
-          taskId: task.id,
-          applicationId: otherApp.id,
-        }),
-      });
-    }
-
-    return {
-      task_id: task.id,
-      accepted_application_id: applicationId,
-      task_status: 'IN_PROGRESS',
-      accepted_developer_user_id: application.developerUserId,
-      company_user_id: task.ownerUserId,
-    };
   });
 
   // Create chat thread after transaction (outside transaction scope)

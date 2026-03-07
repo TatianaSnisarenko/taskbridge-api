@@ -5,6 +5,7 @@ import { validate } from '../middleware/validate.middleware.js';
 import * as meController from '../controllers/me.controller.js';
 import {
   getMyApplicationsQuerySchema,
+  getMyInvitesQuerySchema,
   getMyProjectsQuerySchema,
   getMyTasksQuerySchema,
   getMyNotificationsQuerySchema,
@@ -24,6 +25,14 @@ meRouter.get(
   requirePersona('developer'),
   validate(getMyApplicationsQuerySchema, 'query'),
   meController.getMyApplications
+);
+
+meRouter.get(
+  '/invites',
+  requireAuth,
+  requirePersona('developer'),
+  validate(getMyInvitesQuerySchema, 'query'),
+  meController.getMyInvites
 );
 
 meRouter.get(

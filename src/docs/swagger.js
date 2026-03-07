@@ -31,6 +31,7 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
     { name: 'Profiles' },
     { name: 'Projects' },
     { name: 'Tasks' },
+    { name: 'Invites' },
     { name: 'Technologies' },
   ],
   components: {
@@ -772,6 +773,131 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
           developer_user_id: { type: 'string', format: 'uuid' },
           status: { type: 'string', enum: ['APPLIED'] },
           created_at: { type: 'string', format: 'date-time' },
+        },
+      },
+      CreateTaskInviteRequest: {
+        type: 'object',
+        required: ['developer_id'],
+        properties: {
+          developer_id: { type: 'string', format: 'uuid' },
+          message: { type: 'string', minLength: 1, maxLength: 2000 },
+        },
+      },
+      CreateTaskInviteResponse: {
+        type: 'object',
+        properties: {
+          invite_id: { type: 'string', format: 'uuid' },
+          task_id: { type: 'string', format: 'uuid' },
+          developer_user_id: { type: 'string', format: 'uuid' },
+          status: { type: 'string', enum: ['PENDING'] },
+          created_at: { type: 'string', format: 'date-time' },
+        },
+      },
+      TaskInviteDeveloper: {
+        type: 'object',
+        properties: {
+          user_id: { type: 'string', format: 'uuid' },
+          display_name: { type: 'string', nullable: true },
+          primary_role: { type: 'string', nullable: true },
+          avatar_url: { type: 'string', format: 'uri', nullable: true },
+        },
+      },
+      TaskInviteItem: {
+        type: 'object',
+        properties: {
+          invite_id: { type: 'string', format: 'uuid' },
+          status: {
+            type: 'string',
+            enum: ['PENDING', 'ACCEPTED', 'DECLINED', 'CANCELLED', 'EXPIRED'],
+          },
+          message: { type: 'string', nullable: true },
+          created_at: { type: 'string', format: 'date-time' },
+          responded_at: { type: 'string', format: 'date-time', nullable: true },
+          developer: { $ref: '#/components/schemas/TaskInviteDeveloper' },
+        },
+      },
+      GetTaskInvitesResponse: {
+        type: 'object',
+        properties: {
+          items: { type: 'array', items: { $ref: '#/components/schemas/TaskInviteItem' } },
+          page: { type: 'integer', example: 1 },
+          size: { type: 'integer', example: 20 },
+          total: { type: 'integer', example: 5 },
+        },
+      },
+      InviteTaskInfo: {
+        type: 'object',
+        properties: {
+          task_id: { type: 'string', format: 'uuid' },
+          title: { type: 'string' },
+          category: { type: 'string', enum: TECHNOLOGY_TYPE_ENUM, nullable: true },
+          difficulty: {
+            type: 'string',
+            enum: ['JUNIOR', 'MIDDLE', 'SENIOR', 'ANY'],
+            nullable: true,
+          },
+          type: { type: 'string', enum: ['PAID', 'UNPAID', 'VOLUNTEER', 'EXPERIENCE'] },
+        },
+      },
+      InviteCompanyInfo: {
+        type: 'object',
+        properties: {
+          user_id: { type: 'string', format: 'uuid' },
+          company_name: { type: 'string', nullable: true },
+          verified: { type: 'boolean', nullable: true },
+          avg_rating: { type: 'number', format: 'float', nullable: true },
+          reviews_count: { type: 'integer', nullable: true },
+        },
+      },
+      MyInviteItem: {
+        type: 'object',
+        properties: {
+          invite_id: { type: 'string', format: 'uuid' },
+          status: {
+            type: 'string',
+            enum: ['PENDING', 'ACCEPTED', 'DECLINED', 'CANCELLED', 'EXPIRED'],
+          },
+          message: { type: 'string', nullable: true },
+          created_at: { type: 'string', format: 'date-time' },
+          responded_at: { type: 'string', format: 'date-time', nullable: true },
+          task: { $ref: '#/components/schemas/InviteTaskInfo' },
+          company: { $ref: '#/components/schemas/InviteCompanyInfo' },
+        },
+      },
+      GetMyInvitesResponse: {
+        type: 'object',
+        properties: {
+          items: { type: 'array', items: { $ref: '#/components/schemas/MyInviteItem' } },
+          page: { type: 'integer', example: 1 },
+          size: { type: 'integer', example: 20 },
+          total: { type: 'integer', example: 5 },
+        },
+      },
+      AcceptInviteResponse: {
+        type: 'object',
+        properties: {
+          invite_id: { type: 'string', format: 'uuid' },
+          task_id: { type: 'string', format: 'uuid' },
+          task_status: { type: 'string', enum: ['IN_PROGRESS'] },
+          application_id: { type: 'string', format: 'uuid' },
+          accepted_developer_user_id: { type: 'string', format: 'uuid' },
+          thread_id: { type: 'string', format: 'uuid', nullable: true },
+        },
+      },
+      DeclineInviteResponse: {
+        type: 'object',
+        properties: {
+          invite_id: { type: 'string', format: 'uuid' },
+          status: { type: 'string', enum: ['DECLINED'] },
+          responded_at: { type: 'string', format: 'date-time' },
+        },
+      },
+      CancelInviteResponse: {
+        type: 'object',
+        properties: {
+          invite_id: { type: 'string', format: 'uuid' },
+          status: { type: 'string', enum: ['CANCELLED'] },
+          cancelled_at: { type: 'string', format: 'date-time' },
         },
       },
       PublishTaskResponse: {
@@ -1766,6 +1892,56 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
             content: {
               'application/json': {
                 schema: { $ref: '#/components/schemas/GetMyApplicationsResponse' },
+              },
+            },
+          },
+          400: { description: 'Validation error' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Developer profile does not exist' },
+        },
+      },
+    },
+    '/api/v1/me/invites': {
+      get: {
+        tags: ['Me'],
+        summary: 'Get my invites as developer',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'X-Persona',
+            in: 'header',
+            required: true,
+            schema: { type: 'string', enum: ['developer'] },
+            description: 'Must be developer persona',
+          },
+          {
+            name: 'page',
+            in: 'query',
+            schema: { type: 'integer', minimum: 1, default: 1 },
+            description: 'Page number (starting from 1)',
+          },
+          {
+            name: 'size',
+            in: 'query',
+            schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
+            description: 'Number of items per page',
+          },
+          {
+            name: 'status',
+            in: 'query',
+            schema: {
+              type: 'string',
+              enum: ['PENDING', 'ACCEPTED', 'DECLINED', 'CANCELLED', 'EXPIRED'],
+            },
+            description: 'Optional invite status filter',
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Paginated list of invites for current developer',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/GetMyInvitesResponse' },
               },
             },
           },
@@ -3682,6 +3858,109 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
         ],
       },
     },
+    '/api/v1/tasks/{taskId}/invites': {
+      get: {
+        tags: ['Tasks'],
+        summary: 'Get invites for a task (company owner view)',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'taskId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+          {
+            name: 'X-Persona',
+            in: 'header',
+            required: true,
+            schema: { type: 'string', enum: ['company'] },
+            description: 'Must be company persona',
+          },
+          {
+            name: 'page',
+            in: 'query',
+            schema: { type: 'integer', minimum: 1, default: 1 },
+            description: 'Page number (starting from 1)',
+          },
+          {
+            name: 'size',
+            in: 'query',
+            schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
+            description: 'Number of items per page',
+          },
+          {
+            name: 'status',
+            in: 'query',
+            schema: {
+              type: 'string',
+              enum: ['PENDING', 'ACCEPTED', 'DECLINED', 'CANCELLED', 'EXPIRED'],
+            },
+            description: 'Optional invite status filter',
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Paginated list of invites for the task',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/GetTaskInvitesResponse' },
+              },
+            },
+          },
+          400: { description: 'Validation error' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Not task owner or company persona required' },
+          404: { description: 'Task not found' },
+        },
+      },
+      post: {
+        tags: ['Tasks'],
+        summary: 'Invite a developer to a published task',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'taskId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+          {
+            name: 'X-Persona',
+            in: 'header',
+            required: true,
+            schema: { type: 'string', enum: ['company'] },
+            description: 'Must be company persona',
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/CreateTaskInviteRequest' },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: 'Invite created',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/CreateTaskInviteResponse' },
+              },
+            },
+          },
+          400: { description: 'Validation error' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Not task owner or company persona required' },
+          404: { description: 'Task or developer not found' },
+          409: {
+            description:
+              'Task is not published, already matched, invite exists, or developer already applied',
+          },
+        },
+      },
+    },
     '/api/v1/tasks/{taskId}/close': {
       post: {
         tags: ['Tasks'],
@@ -3894,6 +4173,120 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
           409: {
             description: 'Invalid state - task must be PUBLISHED and application must be APPLIED',
           },
+        },
+      },
+    },
+    '/api/v1/invites/{inviteId}/accept': {
+      post: {
+        tags: ['Invites'],
+        summary: 'Accept an invite for a task',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'inviteId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+            description: 'Invite UUID',
+          },
+          {
+            name: 'X-Persona',
+            in: 'header',
+            required: true,
+            schema: { type: 'string', enum: ['developer'] },
+            description: 'Must be developer persona',
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Invite accepted and task moved to IN_PROGRESS',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/AcceptInviteResponse' },
+              },
+            },
+          },
+          400: { description: 'Validation error' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Not invite recipient or developer persona required' },
+          404: { description: 'Invite not found' },
+          409: { description: 'Invalid state - invite not pending or task not publishable' },
+        },
+      },
+    },
+    '/api/v1/invites/{inviteId}/decline': {
+      post: {
+        tags: ['Invites'],
+        summary: 'Decline an invite for a task',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'inviteId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+            description: 'Invite UUID',
+          },
+          {
+            name: 'X-Persona',
+            in: 'header',
+            required: true,
+            schema: { type: 'string', enum: ['developer'] },
+            description: 'Must be developer persona',
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Invite declined',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/DeclineInviteResponse' },
+              },
+            },
+          },
+          400: { description: 'Validation error' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Not invite recipient or developer persona required' },
+          404: { description: 'Invite not found' },
+          409: { description: 'Invalid state - invite already processed' },
+        },
+      },
+    },
+    '/api/v1/invites/{inviteId}/cancel': {
+      post: {
+        tags: ['Invites'],
+        summary: 'Cancel a pending invite',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'inviteId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+            description: 'Invite UUID',
+          },
+          {
+            name: 'X-Persona',
+            in: 'header',
+            required: true,
+            schema: { type: 'string', enum: ['company'] },
+            description: 'Must be company persona',
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Invite cancelled',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/CancelInviteResponse' },
+              },
+            },
+          },
+          400: { description: 'Validation error' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Not task owner or company persona required' },
+          404: { description: 'Invite not found' },
+          409: { description: 'Invalid state - invite is not pending' },
         },
       },
     },
