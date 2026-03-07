@@ -1,4 +1,4 @@
-export function buildVerifyEmailTemplate({ link, ttlHours, contactEmail }) {
+export function buildVerifyEmailTemplate({ link, ttlHours }) {
   const subject = 'Verify your email for TeamUp IT';
   const text = `Hi,
 
@@ -13,7 +13,6 @@ If you did not create an account, please, ignore this email.
 
 Thanks,
 TeamUp IT
-Contact: ${contactEmail}
 `;
   const html = `
     <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #1a1a1a;">
@@ -31,7 +30,6 @@ Contact: ${contactEmail}
       <p style="font-size: 13px; color: #4b5563;">This link expires in ${ttlHours} hours.</p>
       <p>If you did not create an account, you can ignore this email.</p>
       <p>Thanks,<br />TeamUp IT</p>
-      <p style="font-size: 12px; color: #6b7280;">Contact: ${contactEmail}</p>
     </div>
   `.trim();
 

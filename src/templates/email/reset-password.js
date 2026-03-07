@@ -1,4 +1,4 @@
-export function buildResetPasswordTemplate({ link, ttlMinutes, contactEmail }) {
+export function buildResetPasswordTemplate({ link, ttlMinutes }) {
   const subject = 'Reset your password for TeamUp IT';
   const text = `Hi,
 
@@ -13,7 +13,6 @@ If you did not request a password reset, please ignore this email and your passw
 
 Thanks,
 TeamUp IT
-Contact: ${contactEmail}
 `;
   const html = `
     <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #1a1a1a;">
@@ -31,7 +30,6 @@ Contact: ${contactEmail}
       <p style="font-size: 13px; color: #4b5563;">This link expires in ${ttlMinutes} minutes.</p>
       <p>If you did not request a password reset, you can ignore this email and your password will remain unchanged.</p>
       <p>Thanks,<br />TeamUp IT</p>
-      <p style="font-size: 12px; color: #6b7280;">Contact: ${contactEmail}</p>
     </div>
   `.trim();
 

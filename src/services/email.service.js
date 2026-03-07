@@ -32,7 +32,6 @@ export async function sendVerificationEmail({ to, token }) {
   const { subject, text, html } = buildVerifyEmailTemplate({
     link,
     ttlHours: env.emailVerificationTtlHours,
-    contactEmail: env.emailAddress,
   });
 
   return sendEmail({ to, subject, text, html });
@@ -46,7 +45,6 @@ export async function sendResetPasswordEmail({ to, token }) {
   const { subject, text, html } = buildResetPasswordTemplate({
     link,
     ttlMinutes: env.passwordResetTokenTtlMinutes,
-    contactEmail: env.emailAddress,
   });
 
   return sendEmail({ to, subject, text, html });

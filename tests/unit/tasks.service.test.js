@@ -40,6 +40,10 @@ const technologiesServiceMock = {
   incrementTechnologyPopularity: jest.fn(async () => {}),
 };
 
+const notificationEmailServiceMock = {
+  sendImportantNotificationEmail: jest.fn(async () => {}),
+};
+
 jest.unstable_mockModule('../../src/db/prisma.js', () => ({ prisma: prismaMock }));
 jest.unstable_mockModule(
   '../../src/services/notifications.service.js',
@@ -48,6 +52,10 @@ jest.unstable_mockModule(
 jest.unstable_mockModule(
   '../../src/services/technologies.service.js',
   () => technologiesServiceMock
+);
+jest.unstable_mockModule(
+  '../../src/services/notification-email.service.js',
+  () => notificationEmailServiceMock
 );
 
 const tasksService = await import('../../src/services/tasks.service.js');

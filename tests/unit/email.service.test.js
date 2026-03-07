@@ -90,7 +90,6 @@ describe('email.service', () => {
     expect(buildVerifyTemplateMock).toHaveBeenCalledWith({
       link: 'http://localhost:3000/api/v1/auth/verify-email?token=token-123',
       ttlHours: 24,
-      contactEmail: 'test@example.com',
     });
     expect(sendMailMock).toHaveBeenCalledWith({
       from: 'TeamUp IT <test@example.com>',
@@ -109,7 +108,6 @@ describe('email.service', () => {
     expect(buildResetTemplateMock).toHaveBeenCalledWith({
       link: 'http://localhost:5173/reset-password?token=reset-abc',
       ttlMinutes: 30,
-      contactEmail: 'test@example.com',
     });
     expect(sendMailMock).toHaveBeenCalledWith({
       from: 'TeamUp IT <test@example.com>',
