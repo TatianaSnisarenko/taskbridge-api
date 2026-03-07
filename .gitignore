@@ -40,5 +40,4 @@ prisma/dev.db-journal
 # IDE
 .idea
 .vscode
-docs
-docs
+dev-notes

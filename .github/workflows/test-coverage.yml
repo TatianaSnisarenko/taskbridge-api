@@ -156,7 +156,7 @@ jobs:
               '',
               '> **Note:** Tests run with testcontainers (PostgreSQL 16 in Docker)',
               '>',
-              `> ⚠️ **Important:** This PR ${mergeStatus}`
+              `> **Important:** This PR ${mergeStatus}`
             ].join('\n');
 
             github.rest.issues.createComment({
