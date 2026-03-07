@@ -8,7 +8,7 @@ import { sendImportantNotificationEmail } from './notification-email.service.js'
  * Create a task invite for a developer
  */
 export async function createTaskInvite({ userId, taskId, developerId, message }) {
-  return await prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     // Fetch task with owner and status
     const task = await tx.task.findUnique({
       where: { id: taskId },
@@ -152,6 +152,41 @@ export async function createTaskInvite({ userId, taskId, developerId, message })
       created_at: invite.createdAt.toISOString(),
     };
   });
+
+  // Send email notification to developer after transaction
+  const developerUser = await prisma.user.findUnique({
+    where: { id: result.developer_user_id },
+    select: {
+      id: true,
+      email: true,
+      emailVerified: true,
+      developerProfile: {
+        select: { displayName: true },
+      },
+    },
+  });
+
+  const task = await prisma.task.findUnique({
+    where: { id: result.task_id },
+    select: { id: true, title: true },
+  });
+
+  if (developerUser && task) {
+    await sendImportantNotificationEmail({
+      type: 'TASK_INVITE_CREATED',
+      recipient: {
+        email: developerUser.email,
+        name: developerUser.developerProfile?.displayName || 'Developer',
+        email_verified: developerUser.emailVerified,
+      },
+      task: {
+        id: task.id,
+        title: task.title,
+      },
+    });
+  }
+
+  return result;
 }
 
 /**
@@ -466,7 +501,7 @@ export async function acceptInvite({ userId, inviteId }) {
  * Decline an invite (developer action)
  */
 export async function declineInvite({ userId, inviteId }) {
-  return await prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const invite = await tx.taskInvite.findUnique({
       where: { id: inviteId },
       select: {
@@ -520,15 +555,56 @@ export async function declineInvite({ userId, inviteId }) {
       invite_id: updatedInvite.id,
       status: updatedInvite.status,
       responded_at: updatedInvite.respondedAt.toISOString(),
+      company_user_id: invite.companyUserId,
+      task_id: invite.taskId,
     };
   });
+
+  // Send email notification to company after transaction
+  const companyUser = await prisma.user.findUnique({
+    where: { id: result.company_user_id },
+    select: {
+      id: true,
+      email: true,
+      emailVerified: true,
+      companyProfile: {
+        select: { companyName: true },
+      },
+    },
+  });
+
+  const task = await prisma.task.findUnique({
+    where: { id: result.task_id },
+    select: { id: true, title: true },
+  });
+
+  if (companyUser && task) {
+    await sendImportantNotificationEmail({
+      type: 'TASK_INVITE_DECLINED',
+      recipient: {
+        email: companyUser.email,
+        name: companyUser.companyProfile?.companyName || 'Company',
+        email_verified: companyUser.emailVerified,
+      },
+      task: {
+        id: task.id,
+        title: task.title,
+      },
+    });
+  }
+
+  return {
+    invite_id: result.invite_id,
+    status: result.status,
+    responded_at: result.responded_at,
+  };
 }
 
 /**
  * Cancel an invite (company action)
  */
 export async function cancelInvite({ userId, inviteId }) {
-  return await prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const invite = await tx.taskInvite.findUnique({
       where: { id: inviteId },
       include: {
@@ -584,6 +660,47 @@ export async function cancelInvite({ userId, inviteId }) {
       invite_id: updatedInvite.id,
       status: updatedInvite.status,
       cancelled_at: updatedInvite.cancelledAt.toISOString(),
+      developer_user_id: invite.developerUserId,
+      task_id: invite.taskId,
     };
   });
+
+  // Send email notification to developer after transaction
+  const developerUser = await prisma.user.findUnique({
+    where: { id: result.developer_user_id },
+    select: {
+      id: true,
+      email: true,
+      emailVerified: true,
+      developerProfile: {
+        select: { displayName: true },
+      },
+    },
+  });
+
+  const task = await prisma.task.findUnique({
+    where: { id: result.task_id },
+    select: { id: true, title: true },
+  });
+
+  if (developerUser && task) {
+    await sendImportantNotificationEmail({
+      type: 'TASK_INVITE_CANCELLED',
+      recipient: {
+        email: developerUser.email,
+        name: developerUser.developerProfile?.displayName || 'Developer',
+        email_verified: developerUser.emailVerified,
+      },
+      task: {
+        id: task.id,
+        title: task.title,
+      },
+    });
+  }
+
+  return {
+    invite_id: result.invite_id,
+    status: result.status,
+    cancelled_at: result.cancelled_at,
+  };
 }

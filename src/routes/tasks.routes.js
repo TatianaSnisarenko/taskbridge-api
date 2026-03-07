@@ -12,6 +12,8 @@ import {
   getTasksCatalogSchema,
   createReviewSchema,
   rejectTaskCompletionSchema,
+  getRecommendedDevelopersQuerySchema,
+  getTaskCandidatesQuerySchema,
 } from '../schemas/tasks.schemas.js';
 import { createTaskInviteSchema, getTaskInvitesQuerySchema } from '../schemas/invites.schemas.js';
 
@@ -84,6 +86,24 @@ tasksRouter.get(
   validate(taskIdParamSchema, 'params'),
   validate(getTasksCatalogSchema, 'query'),
   tasksController.getTaskApplications
+);
+
+tasksRouter.get(
+  '/:taskId/recommended-developers',
+  requireAuth,
+  requirePersona('company'),
+  validate(taskIdParamSchema, 'params'),
+  validate(getRecommendedDevelopersQuerySchema, 'query'),
+  tasksController.getRecommendedDevelopers
+);
+
+tasksRouter.get(
+  '/:taskId/candidates',
+  requireAuth,
+  requirePersona('company'),
+  validate(taskIdParamSchema, 'params'),
+  validate(getTaskCandidatesQuerySchema, 'query'),
+  tasksController.getTaskCandidates
 );
 
 tasksRouter.post(

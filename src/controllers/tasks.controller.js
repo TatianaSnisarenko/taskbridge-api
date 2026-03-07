@@ -136,6 +136,48 @@ export const getTaskApplications = asyncHandler(async (req, res) => {
     total: result.total,
   });
 });
+
+export const getRecommendedDevelopers = asyncHandler(async (req, res) => {
+  const result = await tasksService.getRecommendedDevelopers({
+    userId: req.user.id,
+    taskId: req.params.taskId,
+    limit: parseInt(req.query.limit) || 3,
+  });
+
+  return res.status(200).json({
+    items: result.items,
+    total: result.total,
+  });
+});
+
+export const getTaskCandidates = asyncHandler(async (req, res) => {
+  const result = await tasksService.getTaskCandidates({
+    userId: req.user.id,
+    taskId: req.params.taskId,
+    page: parseInt(req.query.page) || 1,
+    size: parseInt(req.query.size) || 20,
+    search: req.query.search,
+    availability: req.query.availability,
+    experienceLevel: req.query.experience_level,
+    minRating: req.query.min_rating !== undefined ? Number(req.query.min_rating) : undefined,
+    excludeInvited:
+      req.query.exclude_invited === true ||
+      req.query.exclude_invited === 'true' ||
+      req.query.exclude_invited === '1',
+    excludeApplied:
+      req.query.exclude_applied === true ||
+      req.query.exclude_applied === 'true' ||
+      req.query.exclude_applied === '1',
+  });
+
+  return res.status(200).json({
+    items: result.items,
+    page: result.page,
+    size: result.size,
+    total: result.total,
+  });
+});
+
 export const acceptApplication = asyncHandler(async (req, res) => {
   const result = await tasksService.acceptApplication({
     userId: req.user.id,

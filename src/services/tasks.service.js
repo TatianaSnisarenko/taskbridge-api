@@ -80,6 +80,207 @@ function mapTaskDetailsOutput(task, computed) {
   };
 }
 
+function toNumber(value) {
+  if (value === null || value === undefined) return null;
+  if (typeof value === 'number') return value;
+  if (typeof value?.toNumber === 'function') return value.toNumber();
+  return Number(value);
+}
+
+function calculateCandidateScore({ matchCount, avgRating, reviewsCount }) {
+  return matchCount * 10 + (avgRating || 0) * 2 + Math.min(reviewsCount || 0, 20) * 0.2;
+}
+
+function sortCandidates(a, b) {
+  if (b.score !== a.score) return b.score - a.score;
+  if ((b.avg_rating || 0) !== (a.avg_rating || 0)) return (b.avg_rating || 0) - (a.avg_rating || 0);
+  if ((b.reviews_count || 0) !== (a.reviews_count || 0)) {
+    return (b.reviews_count || 0) - (a.reviews_count || 0);
+  }
+  return (a.display_name || '').localeCompare(b.display_name || '');
+}
+
+async function getTaskForCandidates({ userId, taskId }) {
+  const task = await prisma.task.findUnique({
+    where: { id: taskId },
+    select: {
+      id: true,
+      ownerUserId: true,
+      status: true,
+      deletedAt: true,
+      technologies: {
+        select: {
+          technologyId: true,
+        },
+      },
+      acceptedApplication: {
+        select: {
+          developerUserId: true,
+        },
+      },
+    },
+  });
+
+  if (!task || task.deletedAt) {
+    throw new ApiError(404, 'NOT_FOUND', 'Task not found');
+  }
+
+  if (task.ownerUserId !== userId) {
+    throw new ApiError(403, 'NOT_OWNER', 'Task does not belong to user');
+  }
+
+  if (task.status !== 'PUBLISHED') {
+    throw new ApiError(409, 'INVALID_STATE', 'Task must be in PUBLISHED status');
+  }
+
+  return task;
+}
+
+function buildCandidateOutput({ profile, taskTechnologyIdSet, appliedSet, invitedSet }) {
+  const profileTechnologies = profile.technologies.map((dt) => dt.technology);
+  const matchedTechnologies = profileTechnologies.filter((tech) =>
+    taskTechnologyIdSet.has(tech.id)
+  );
+  const matchCount = matchedTechnologies.length;
+
+  const avgRating = toNumber(profile.avgRating) || 0;
+  const reviewsCount = profile.reviewsCount || 0;
+  const alreadyApplied = appliedSet.has(profile.userId);
+  const alreadyInvited = invitedSet.has(profile.userId);
+
+  return {
+    user_id: profile.userId,
+    display_name: profile.displayName,
+    primary_role: profile.jobTitle,
+    avatar_url: profile.avatarUrl,
+    experience_level: profile.experienceLevel,
+    availability: profile.availability,
+    avg_rating: avgRating,
+    reviews_count: reviewsCount,
+    technologies: profileTechnologies.map((tech) => ({
+      id: tech.id,
+      slug: tech.slug,
+      name: tech.name,
+      type: tech.type,
+    })),
+    matched_technologies: matchedTechnologies.map((tech) => ({
+      id: tech.id,
+      slug: tech.slug,
+      name: tech.name,
+      type: tech.type,
+    })),
+    score: Number(calculateCandidateScore({ matchCount, avgRating, reviewsCount }).toFixed(2)),
+    already_applied: alreadyApplied,
+    already_invited: alreadyInvited,
+    can_invite: !alreadyApplied && !alreadyInvited,
+  };
+}
+
+async function getRankedCandidates({
+  userId,
+  taskId,
+  search,
+  availability,
+  experienceLevel,
+  minRating,
+}) {
+  const task = await getTaskForCandidates({ userId, taskId });
+  const taskTechnologyIdSet = new Set(task.technologies.map((tt) => tt.technologyId));
+
+  const profileWhere = {
+    technologies: {
+      some: {},
+    },
+  };
+
+  if (availability) {
+    profileWhere.availability = availability;
+  }
+
+  if (experienceLevel) {
+    profileWhere.experienceLevel = experienceLevel;
+  }
+
+  if (minRating !== undefined && minRating !== null) {
+    profileWhere.avgRating = { gte: minRating };
+  }
+
+  if (task.acceptedApplication?.developerUserId) {
+    profileWhere.userId = { not: task.acceptedApplication.developerUserId };
+  }
+
+  if (search) {
+    profileWhere.OR = [
+      { displayName: { contains: search, mode: 'insensitive' } },
+      { jobTitle: { contains: search, mode: 'insensitive' } },
+      {
+        technologies: {
+          some: {
+            technology: {
+              name: { contains: search, mode: 'insensitive' },
+            },
+          },
+        },
+      },
+    ];
+  }
+
+  const [profiles, applications, pendingInvites] = await Promise.all([
+    prisma.developerProfile.findMany({
+      where: profileWhere,
+      select: {
+        userId: true,
+        displayName: true,
+        jobTitle: true,
+        avatarUrl: true,
+        experienceLevel: true,
+        availability: true,
+        avgRating: true,
+        reviewsCount: true,
+        technologies: {
+          include: {
+            technology: {
+              select: {
+                id: true,
+                slug: true,
+                name: true,
+                type: true,
+              },
+            },
+          },
+        },
+      },
+    }),
+    prisma.application.findMany({
+      where: { taskId },
+      select: {
+        developerUserId: true,
+      },
+    }),
+    prisma.taskInvite.findMany({
+      where: { taskId, status: 'PENDING' },
+      select: {
+        developerUserId: true,
+      },
+    }),
+  ]);
+
+  const appliedSet = new Set(applications.map((item) => item.developerUserId));
+  const invitedSet = new Set(pendingInvites.map((item) => item.developerUserId));
+
+  const candidates = profiles
+    .map((profile) =>
+      buildCandidateOutput({ profile, taskTechnologyIdSet, appliedSet, invitedSet })
+    )
+    .filter((candidate) => {
+      if (taskTechnologyIdSet.size === 0) return true;
+      return candidate.matched_technologies.length > 0;
+    })
+    .sort(sortCandidates);
+
+  return { candidates };
+}
+
 export async function createTaskDraft({ userId, task }) {
   const projectId = task.project_id ?? null;
   const technologyIds = await validateTechnologyIds(task.technology_ids || []);
@@ -795,6 +996,54 @@ export async function getTaskApplications({ userId, taskId, page = 1, size = 20 
     page,
     size,
     total,
+  };
+}
+
+export async function getRecommendedDevelopers({ userId, taskId, limit = 3 }) {
+  const { candidates } = await getRankedCandidates({ userId, taskId });
+  const filtered = candidates.filter((candidate) => candidate.can_invite);
+
+  return {
+    items: filtered.slice(0, limit),
+    total: filtered.length,
+  };
+}
+
+export async function getTaskCandidates({
+  userId,
+  taskId,
+  page = 1,
+  size = 20,
+  search,
+  availability,
+  experienceLevel,
+  minRating,
+  excludeInvited = false,
+  excludeApplied = false,
+}) {
+  const { candidates } = await getRankedCandidates({
+    userId,
+    taskId,
+    search,
+    availability,
+    experienceLevel,
+    minRating,
+  });
+
+  const filtered = candidates.filter((candidate) => {
+    if (excludeInvited && candidate.already_invited) return false;
+    if (excludeApplied && candidate.already_applied) return false;
+    return true;
+  });
+
+  const skip = (page - 1) * size;
+  const paginatedItems = filtered.slice(skip, skip + size);
+
+  return {
+    items: paginatedItems,
+    page,
+    size,
+    total: filtered.length,
   };
 }
 

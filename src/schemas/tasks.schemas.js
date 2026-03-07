@@ -22,6 +22,8 @@ const TASK_TYPES = ['PAID', 'UNPAID', 'VOLUNTEER', 'EXPERIENCE'];
 const TASK_DIFFICULTY = ['JUNIOR', 'MIDDLE', 'SENIOR', 'ANY'];
 const TASK_DURATION = ['DAYS_1_7', 'DAYS_8_14', 'DAYS_15_30', 'DAYS_30_PLUS'];
 const TASK_VISIBILITY = ['PUBLIC', 'UNLISTED'];
+const DEVELOPER_AVAILABILITY = ['FEW_HOURS_WEEK', 'PART_TIME', 'FULL_TIME'];
+const DEVELOPER_EXPERIENCE = ['STUDENT', 'JUNIOR', 'MIDDLE', 'SENIOR'];
 
 export const createTaskDraftSchema = Joi.object({
   project_id: Joi.string().guid({ version: 'uuidv4' }).allow(null).messages({
@@ -364,5 +366,54 @@ export const getProjectTasksQuerySchema = Joi.object({
     }),
   include_deleted: Joi.boolean().default(false).messages({
     'boolean.base': 'The include_deleted parameter must be true or false',
+  }),
+});
+
+export const getRecommendedDevelopersQuerySchema = Joi.object({
+  limit: Joi.number().integer().min(1).max(10).default(3).messages({
+    'number.base': 'Limit must be a number',
+    'number.integer': 'Limit must be an integer',
+    'number.min': 'Limit must be at least 1',
+    'number.max': 'Limit must not exceed 10',
+  }),
+});
+
+export const getTaskCandidatesQuerySchema = Joi.object({
+  page: Joi.number().integer().min(1).default(1).messages({
+    'number.base': 'Page must be a number',
+    'number.integer': 'Page must be an integer',
+    'number.min': 'Page must be at least 1',
+  }),
+  size: Joi.number().integer().min(1).max(100).default(20).messages({
+    'number.base': 'Size must be a number',
+    'number.integer': 'Size must be an integer',
+    'number.min': 'Size must be at least 1',
+    'number.max': 'Size must not exceed 100',
+  }),
+  search: Joi.string().trim().max(200).optional().messages({
+    'string.max': 'Search must not exceed 200 characters',
+  }),
+  availability: Joi.string()
+    .valid(...DEVELOPER_AVAILABILITY)
+    .optional()
+    .messages({
+      'any.only': 'Availability must be one of: FEW_HOURS_WEEK, PART_TIME, FULL_TIME',
+    }),
+  experience_level: Joi.string()
+    .valid(...DEVELOPER_EXPERIENCE)
+    .optional()
+    .messages({
+      'any.only': 'Experience level must be one of: STUDENT, JUNIOR, MIDDLE, SENIOR',
+    }),
+  min_rating: Joi.number().min(0).max(5).optional().messages({
+    'number.base': 'Minimum rating must be a number',
+    'number.min': 'Minimum rating must be at least 0',
+    'number.max': 'Minimum rating must not exceed 5',
+  }),
+  exclude_invited: Joi.boolean().default(false).messages({
+    'boolean.base': 'exclude_invited must be true or false',
+  }),
+  exclude_applied: Joi.boolean().default(false).messages({
+    'boolean.base': 'exclude_applied must be true or false',
   }),
 });

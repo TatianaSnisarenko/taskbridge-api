@@ -1056,6 +1056,61 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
           total: { type: 'integer', example: 5 },
         },
       },
+      TaskCandidate: {
+        type: 'object',
+        properties: {
+          user_id: { type: 'string', format: 'uuid' },
+          display_name: { type: 'string', nullable: true },
+          primary_role: { type: 'string', nullable: true },
+          avatar_url: { type: 'string', format: 'uri', nullable: true },
+          experience_level: {
+            type: 'string',
+            enum: ['STUDENT', 'JUNIOR', 'MIDDLE', 'SENIOR'],
+            nullable: true,
+          },
+          availability: {
+            type: 'string',
+            enum: ['FEW_HOURS_WEEK', 'PART_TIME', 'FULL_TIME'],
+            nullable: true,
+          },
+          avg_rating: { type: 'number', format: 'float' },
+          reviews_count: { type: 'integer' },
+          technologies: {
+            type: 'array',
+            items: { $ref: '#/components/schemas/Technology' },
+          },
+          matched_technologies: {
+            type: 'array',
+            items: { $ref: '#/components/schemas/Technology' },
+          },
+          score: { type: 'number', format: 'float' },
+          already_applied: { type: 'boolean' },
+          already_invited: { type: 'boolean' },
+          can_invite: { type: 'boolean' },
+        },
+      },
+      TaskRecommendedDevelopersResponse: {
+        type: 'object',
+        properties: {
+          items: {
+            type: 'array',
+            items: { $ref: '#/components/schemas/TaskCandidate' },
+          },
+          total: { type: 'integer', minimum: 0 },
+        },
+      },
+      TaskCandidatesResponse: {
+        type: 'object',
+        properties: {
+          items: {
+            type: 'array',
+            items: { $ref: '#/components/schemas/TaskCandidate' },
+          },
+          page: { type: 'integer', minimum: 1 },
+          size: { type: 'integer', minimum: 1, maximum: 100 },
+          total: { type: 'integer', minimum: 0 },
+        },
+      },
       AcceptApplicationResponse: {
         type: 'object',
         properties: {
@@ -3856,6 +3911,136 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
             payload: { task_id: 'uuid', application_id: 'uuid', review_id: null },
           },
         ],
+      },
+    },
+    '/api/v1/tasks/{taskId}/recommended-developers': {
+      get: {
+        tags: ['Tasks'],
+        summary: 'Get recommended developers for a task (top candidates)',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'taskId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+          {
+            name: 'X-Persona',
+            in: 'header',
+            required: true,
+            schema: { type: 'string', enum: ['company'] },
+            description: 'Must be company persona',
+          },
+          {
+            name: 'limit',
+            in: 'query',
+            required: false,
+            schema: { type: 'integer', minimum: 1, maximum: 10, default: 3 },
+            description: 'Maximum number of recommended developers',
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Top recommended developers for the task',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/TaskRecommendedDevelopersResponse' },
+              },
+            },
+          },
+          400: { description: 'Validation error' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Not task owner or company persona required' },
+          404: { description: 'Task not found' },
+          409: { description: 'Task must be in PUBLISHED status' },
+        },
+      },
+    },
+    '/api/v1/tasks/{taskId}/candidates': {
+      get: {
+        tags: ['Tasks'],
+        summary: 'Get full candidates list for a task',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'taskId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+          {
+            name: 'X-Persona',
+            in: 'header',
+            required: true,
+            schema: { type: 'string', enum: ['company'] },
+            description: 'Must be company persona',
+          },
+          {
+            name: 'page',
+            in: 'query',
+            schema: { type: 'integer', minimum: 1, default: 1 },
+            description: 'Page number (starting from 1)',
+          },
+          {
+            name: 'size',
+            in: 'query',
+            schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
+            description: 'Number of items per page',
+          },
+          {
+            name: 'search',
+            in: 'query',
+            schema: { type: 'string', maxLength: 200 },
+            description: 'Search in developer name, role, and technologies',
+          },
+          {
+            name: 'availability',
+            in: 'query',
+            schema: {
+              type: 'string',
+              enum: ['FEW_HOURS_WEEK', 'PART_TIME', 'FULL_TIME'],
+            },
+          },
+          {
+            name: 'experience_level',
+            in: 'query',
+            schema: {
+              type: 'string',
+              enum: ['STUDENT', 'JUNIOR', 'MIDDLE', 'SENIOR'],
+            },
+          },
+          {
+            name: 'min_rating',
+            in: 'query',
+            schema: { type: 'number', minimum: 0, maximum: 5 },
+          },
+          {
+            name: 'exclude_invited',
+            in: 'query',
+            schema: { type: 'boolean', default: false },
+          },
+          {
+            name: 'exclude_applied',
+            in: 'query',
+            schema: { type: 'boolean', default: false },
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Paginated candidates list for the task',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/TaskCandidatesResponse' },
+              },
+            },
+          },
+          400: { description: 'Validation error' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Not task owner or company persona required' },
+          404: { description: 'Task not found' },
+          409: { description: 'Task must be in PUBLISHED status' },
+        },
       },
     },
     '/api/v1/tasks/{taskId}/invites': {
