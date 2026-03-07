@@ -12,6 +12,7 @@ A RESTful API backend for a freelance collaboration platform that connects softw
 - **[Development Guide](docs/DEVELOPMENT.md)** - Detailed development workflows
 - **[Deployment Guide](docs/DEPLOYMENT.md)** - Production deployment instructions
 - **[Project Standards](docs/PROJECT_STANDARDS.md)** - Public engineering standards
+- **[Swagger Structure](docs/SWAGGER_STRUCTURE.md)** - How OpenAPI paths/schemas are organized
 - **[Contributing](docs/CONTRIBUTING.md)** - How to contribute to the project
 
 ---

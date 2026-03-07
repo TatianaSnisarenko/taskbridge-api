@@ -1,0 +1,18 @@
+export const TECHNOLOGY_TYPE_ENUM = [
+  'BACKEND',
+  'FRONTEND',
+  'DEVOPS',
+  'QA',
+  'DATA',
+  'MOBILE',
+  'OTHER',
+  'FULLSTACK',
+  'AI_ML',
+  'UI_UX_DESIGN',
+  'PRODUCT_MANAGEMENT',
+  'BUSINESS_ANALYSIS',
+  'CYBERSECURITY',
+  'GAME_DEV',
+  'EMBEDDED',
+  'TECH_WRITING',
+];

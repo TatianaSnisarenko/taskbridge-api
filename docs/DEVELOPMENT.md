@@ -4,6 +4,10 @@
 
 This guide covers everything you need to set up and develop the TeamUp IT Backend locally.
 
+## Related Docs
+
+- [Swagger Structure](SWAGGER_STRUCTURE.md) - OpenAPI modular layout and extension rules
+
 ## Prerequisites
 
 ### Required
