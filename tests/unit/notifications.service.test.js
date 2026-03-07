@@ -26,6 +26,7 @@ describe('notifications.service', () => {
       task_id: 't1',
       application_id: 'a1',
       review_id: 'r1',
+      invite_id: null,
     });
   });
 
@@ -49,6 +50,7 @@ describe('notifications.service', () => {
           task_id: 't1',
           application_id: 'a1',
           review_id: null,
+          invite_id: null,
         },
       },
     });

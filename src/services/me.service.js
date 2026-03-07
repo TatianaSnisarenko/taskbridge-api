@@ -487,6 +487,16 @@ function isNotificationRelevantForPersona(notif, userId, persona) {
     case 'TASK_COMPLETED':
       // Company (task owner) receives this
       return persona === 'company' && notif.task?.ownerUserId === userId;
+    case 'TASK_INVITE_CREATED':
+      // Developer receives invite notification
+      return persona === 'developer';
+    case 'TASK_INVITE_ACCEPTED':
+    case 'TASK_INVITE_DECLINED':
+      // Company receives accept/decline notification
+      return persona === 'company' && notif.task?.ownerUserId === userId;
+    case 'TASK_INVITE_CANCELLED':
+      // Developer receives cancellation notification
+      return persona === 'developer';
     case 'REVIEW_CREATED':
       // Both can receive depending on who authored the review
       if (notif.actor?.developerProfile?.userId === userId) {

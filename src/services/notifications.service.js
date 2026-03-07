@@ -1,10 +1,16 @@
 import { prisma } from '../db/prisma.js';
 
-export function buildTaskNotificationPayload({ taskId, applicationId = null, reviewId = null }) {
+export function buildTaskNotificationPayload({
+  taskId,
+  applicationId = null,
+  reviewId = null,
+  inviteId = null,
+}) {
   return {
     task_id: taskId,
     application_id: applicationId,
     review_id: reviewId,
+    invite_id: inviteId,
   };
 }
 

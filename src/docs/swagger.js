@@ -183,6 +183,18 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
           },
         },
       },
+      Technology: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          slug: { type: 'string' },
+          name: { type: 'string' },
+          type: {
+            type: 'string',
+            enum: TECHNOLOGY_TYPE_ENUM,
+          },
+        },
+      },
       TechnologyWithProficiency: {
         type: 'object',
         properties: {
