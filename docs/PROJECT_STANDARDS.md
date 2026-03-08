@@ -122,9 +122,16 @@ src/services/
 
 ## CI and Quality Gates
 
-- Lint must pass.
-- Test suite must pass.
-- Coverage thresholds enforced by CI must remain green.
+- **Lint must pass:** ESLint checks code quality and enforces:
+  - Import extensions (`.js` required)
+  - Max file size (400 lines for services and tests)
+  - English-only content in error messages and validation messages
+- **Test suite must pass:** All unit and integration tests
+- **Coverage thresholds enforced by CI must remain green:**
+  - Statements: 90%
+  - Branches: 80%
+  - Functions: 95%
+  - Lines: 90%
 
 ## Destructive Operations Policy
 

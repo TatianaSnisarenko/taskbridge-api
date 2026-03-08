@@ -444,10 +444,10 @@ Coverage report generated in `coverage/`:
 
 **Coverage thresholds (enforced in CI):**
 
-- Statements: 85%
-- Branches: 70%
-- Functions: 90%
-- Lines: 85%
+- Statements: 90%
+- Branches: 80%
+- Functions: 95%
+- Lines: 90%
 
 ### Watch Mode
 

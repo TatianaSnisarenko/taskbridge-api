@@ -277,10 +277,10 @@ describe('POST /api/v1/tasks', () => {
 
 All PRs must maintain coverage thresholds:
 
-- **Statements:** 85%
-- **Branches:** 70%
-- **Functions:** 90%
-- **Lines:** 85%
+- **Statements:** 90%
+- **Branches:** 80%
+- **Functions:** 95%
+- **Lines:** 90%
 
 ### Database Changes
 
@@ -406,7 +406,9 @@ Brief description of changes.
 - [ ] Comments added for complex logic
 - [ ] Documentation updated
 - [ ] No new warnings generated
-- [ ] Coverage thresholds maintained
+- [ ] **Linter passes** (`npm run lint`)
+- [ ] **All tests pass** (`npm run test:coverage`)
+- [ ] Coverage thresholds maintained (90/80/95/90)
 
 ## Screenshots (if applicable)
 ```
@@ -463,7 +465,10 @@ See [DEVELOPMENT.md](DEVELOPMENT.md) for detailed setup instructions.
 
 ### Code Review Process
 
-1. **Automated checks run** (lint, tests, coverage)
+1. **Automated CI checks run** (all must pass before merge):
+   - ✅ **ESLint:** Code quality and style
+   - ✅ **Tests:** Full test suite (unit + integration)
+   - ✅ **Coverage:** Statements (90%), Branches (80%), Functions (95%), Lines (90%)
 2. **Reviewer provides feedback**
 3. **You make requested changes**
 4. **Approval required** before merge
