@@ -5,19 +5,25 @@ export const profilesSchemas = {
     type: 'object',
     required: ['display_name'],
     properties: {
-      display_name: { type: 'string', minLength: 1, example: 'Olena Kovalenko' },
-      primary_role: { type: 'string', minLength: 1, example: 'Backend Engineer' },
+      display_name: { type: 'string', minLength: 2, maxLength: 100, example: 'Olena Kovalenko' },
+      primary_role: {
+        type: 'string',
+        minLength: 2,
+        maxLength: 100,
+        example: 'Backend Engineer',
+      },
       bio: {
         type: 'string',
-        minLength: 1,
+        minLength: 10,
+        maxLength: 2000,
         example: 'Node.js developer focused on reliable APIs, testing, and clean architecture.',
       },
       experience_level: {
         type: 'string',
         enum: ['STUDENT', 'JUNIOR', 'MIDDLE', 'SENIOR'],
       },
-      location: { type: 'string', minLength: 1, example: 'Warsaw, PL' },
-      timezone: { type: 'string', minLength: 1, example: 'Europe/Warsaw' },
+      location: { type: 'string', minLength: 2, maxLength: 100, example: 'Warsaw, PL' },
+      timezone: { type: 'string', minLength: 3, maxLength: 50, example: 'Europe/Warsaw' },
       technology_ids: {
         type: 'array',
         items: { type: 'string', format: 'uuid' },
@@ -36,6 +42,7 @@ export const profilesSchemas = {
           enum: TECHNOLOGY_TYPE_ENUM,
         },
         uniqueItems: true,
+        maxItems: 10,
       },
       portfolio_url: { type: 'string', format: 'uri' },
       linkedin_url: { type: 'string', format: 'uri' },
@@ -62,7 +69,7 @@ export const profilesSchemas = {
       bio: {
         type: 'string',
         minLength: 10,
-        maxLength: 500,
+        maxLength: 2000,
         example: 'Building scalable backend services with Node.js, PostgreSQL, and Prisma.',
       },
       experience_level: {
@@ -134,6 +141,7 @@ export const profilesSchemas = {
       website_url: { type: 'string', format: 'uri', example: 'https://novatechlabs.com' },
       links: {
         type: 'object',
+        maxProperties: 20,
         additionalProperties: { type: 'string', format: 'uri' },
         example: { linkedin: 'https://www.linkedin.com/company/novatechlabs' },
       },
@@ -169,6 +177,7 @@ export const profilesSchemas = {
       website_url: { type: 'string', format: 'uri', example: 'https://novatechlabs.com' },
       links: {
         type: 'object',
+        maxProperties: 20,
         additionalProperties: { type: 'string', format: 'uri' },
         example: { linkedin: 'https://www.linkedin.com/company/novatechlabs' },
       },
@@ -240,7 +249,7 @@ export const profilesSchemas = {
       bio: {
         type: 'string',
         minLength: 10,
-        maxLength: 500,
+        maxLength: 2000,
         example:
           'Backend engineer specializing in Node.js APIs, PostgreSQL optimization, and CI quality gates.',
       },

@@ -103,22 +103,7 @@ export const tasksSchemas = {
   },
   UpdateTaskDraftRequest: {
     type: 'object',
-    required: [
-      'title',
-      'description',
-      'category',
-      'type',
-      'difficulty',
-      'estimated_effort_hours',
-      'expected_duration',
-      'communication_language',
-      'timezone_preference',
-      'application_deadline',
-      'visibility',
-      'deliverables',
-      'requirements',
-      'nice_to_have',
-    ],
+    required: ['title', 'description', 'category', 'type', 'difficulty'],
     properties: {
       project_id: {
         type: 'string',

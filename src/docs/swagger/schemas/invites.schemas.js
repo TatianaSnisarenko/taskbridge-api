@@ -12,6 +12,7 @@ export const invitesSchemas = {
       },
       message: {
         type: 'string',
+        nullable: true,
         minLength: 1,
         maxLength: 2000,
         example:

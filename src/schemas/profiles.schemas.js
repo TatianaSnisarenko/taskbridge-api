@@ -34,9 +34,9 @@ const developerProfileFields = {
     'string.min': 'Primary role must be at least 2 characters',
     'string.max': 'Primary role must not exceed 100 characters',
   }),
-  bio: Joi.string().trim().min(10).max(500).messages({
+  bio: Joi.string().trim().min(10).max(2000).messages({
     'string.min': 'Bio must be at least 10 characters',
-    'string.max': 'Bio must not exceed 500 characters',
+    'string.max': 'Bio must not exceed 2000 characters',
   }),
   experience_level: Joi.string()
     .valid(...EXPERIENCE_LEVELS)
