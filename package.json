@@ -20,7 +20,8 @@
     "lint:js": "eslint .",
     "lint:docs:english": "node scripts/lint-docs-english.mjs",
     "check:swagger-joi": "node scripts/check-swagger-joi-consistency.mjs",
-    "format": "prettier --write .",
+    "format:base": "prettier --write --ignore-unknown",
+    "format": "npm run format:base -- .",
     "prepare": "husky",
     "prisma:generate": "prisma generate",
     "prisma:migrate:dev": "prisma migrate dev",
@@ -35,7 +36,7 @@
     "seed": "node prisma/seed.js"
   },
   "lint-staged": {
-    "**/*.{js,json,md,yml,yaml}": "prettier --write"
+    "*": "npm run format:base --"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.0.0",

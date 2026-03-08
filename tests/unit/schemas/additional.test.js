@@ -206,9 +206,9 @@ describe('additional Joi schemas', () => {
       timezone_preference: 'Europe/Kyiv',
       application_deadline: '2026-12-31T00:00:00.000Z',
       visibility: 'PUBLIC',
-      deliverables: 'Code and tests',
-      requirements: 'Node.js and PostgreSQL',
-      nice_to_have: 'Docker',
+      deliverables: ['Code', 'Tests'],
+      requirements: ['Node.js', 'PostgreSQL'],
+      nice_to_have: ['Docker'],
     };
 
     expect(createTaskDraftSchema.validate(draftPayload).error).toBeUndefined();

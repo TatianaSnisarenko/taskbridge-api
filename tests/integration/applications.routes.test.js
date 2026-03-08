@@ -76,9 +76,9 @@ describe('applications routes', () => {
           timezonePreference: 'UTC',
           applicationDeadline: new Date('2026-03-01'),
           visibility: 'PUBLIC',
-          deliverables: 'Code',
-          requirements: 'Tests',
-          niceToHave: 'Docs',
+          deliverables: ['Code'],
+          requirements: ['Tests'],
+          niceToHave: ['Docs'],
         },
       });
 
@@ -133,9 +133,9 @@ describe('applications routes', () => {
           timezonePreference: 'UTC',
           applicationDeadline: new Date('2026-03-01'),
           visibility: 'PUBLIC',
-          deliverables: 'Code',
-          requirements: 'Tests',
-          niceToHave: 'Docs',
+          deliverables: ['Code'],
+          requirements: ['Tests'],
+          niceToHave: ['Docs'],
         },
       });
 
@@ -183,9 +183,9 @@ describe('applications routes', () => {
           timezonePreference: 'UTC',
           applicationDeadline: new Date('2026-03-01'),
           visibility: 'PUBLIC',
-          deliverables: 'Code',
-          requirements: 'Tests',
-          niceToHave: 'Docs',
+          deliverables: ['Code'],
+          requirements: ['Tests'],
+          niceToHave: ['Docs'],
         },
       });
 

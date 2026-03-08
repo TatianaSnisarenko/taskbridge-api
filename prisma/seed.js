@@ -513,9 +513,10 @@ const taskTemplates = [
     title: 'Implement User Authentication Module',
     description:
       'Build a secure user authentication system with JWT tokens, refresh token rotation, and password hashing using bcrypt.',
-    requirements:
+    requirements: [
       'Must handle user registration, login, logout, password reset. Include comprehensive error handling and input validation.',
-    deliverables: 'Authentication service with unit tests, API endpoints, and documentation.',
+    ],
+    deliverables: ['Authentication service with unit tests, API endpoints, and documentation.'],
     category: 'BACKEND',
     type: 'PAID',
     difficulty: 'MIDDLE',
@@ -527,9 +528,10 @@ const taskTemplates = [
     title: 'Create Dashboard Component Library',
     description:
       'Build a reusable set of React components for dashboard UI (cards, charts, tables, modals, buttons).',
-    requirements:
+    requirements: [
       'Components must be responsive, accessible (WCAG 2.1), and documented. Include Storybook integration.',
-    deliverables: 'Component library with TypeScript types, Storybook, and usage examples.',
+    ],
+    deliverables: ['Component library with TypeScript types, Storybook, and usage examples.'],
     category: 'FRONTEND',
     type: 'PAID',
     difficulty: 'JUNIOR',
@@ -541,9 +543,10 @@ const taskTemplates = [
     title: 'Fix Mobile Responsive Layout Issues',
     description:
       'Debug and fix responsive design issues on tablet and mobile devices. Current layout breaks below 768px.',
-    requirements:
+    requirements: [
       'Must test on iOS Safari, Chrome Android, and Firefox. Use CSS Grid/Flexbox optimally.',
-    deliverables: 'Fixed CSS, browser compatibility report, before/after screenshots.',
+    ],
+    deliverables: ['Fixed CSS, browser compatibility report, before/after screenshots.'],
     category: 'FRONTEND',
     type: 'PAID',
     difficulty: 'JUNIOR',
@@ -555,9 +558,10 @@ const taskTemplates = [
     title: 'Database Query Optimization',
     description:
       'Optimize slow database queries causing performance bottlenecks. Analyze slow query logs and implement proper indexing.',
-    requirements:
+    requirements: [
       'Use EXPLAIN ANALYZE. Document optimization strategies. Minimize migration impact.',
-    deliverables: 'Optimized queries, migration script, performance comparison report.',
+    ],
+    deliverables: ['Optimized queries, migration script, performance comparison report.'],
     category: 'BACKEND',
     type: 'PAID',
     difficulty: 'MIDDLE',
@@ -569,9 +573,10 @@ const taskTemplates = [
     title: 'Build Admin User Management Page',
     description:
       'Create admin interface for managing user roles, permissions, and account status with bulk operations support.',
-    requirements:
+    requirements: [
       'Implement filtering, sorting, and pagination. Add audit logging for admin actions. Require confirmation for destructive operations.',
-    deliverables: 'React component, API endpoints, tests, and user documentation.',
+    ],
+    deliverables: ['React component, API endpoints, tests, and user documentation.'],
     category: 'FRONTEND',
     type: 'PAID',
     difficulty: 'MIDDLE',
@@ -583,9 +588,10 @@ const taskTemplates = [
     title: 'Implement Email Notification System',
     description:
       'Build email notification service triggered by user actions. Include templating, scheduling, and unsubscribe management.',
-    requirements:
+    requirements: [
       'Handle transactional emails, support SMTP, include rate limiting. Must be testable without sending real emails.',
-    deliverables: 'Email service with templates, unit tests, and integration documentation.',
+    ],
+    deliverables: ['Email service with templates, unit tests, and integration documentation.'],
     category: 'BACKEND',
     type: 'PAID',
     difficulty: 'MIDDLE',
@@ -597,9 +603,10 @@ const taskTemplates = [
     title: 'Create Figma Design System',
     description:
       'Design comprehensive UI kit in Figma covering colors, typography, components, and spacing guidelines.',
-    requirements:
+    requirements: [
       'Include light/dark modes, document usage patterns. Organize for developer handoff. Include annotation for measurements.',
-    deliverables: 'Figma design system file with components, documentation, and usage guide.',
+    ],
+    deliverables: ['Figma design system file with components, documentation, and usage guide.'],
     category: 'OTHER',
     type: 'PAID',
     difficulty: 'MIDDLE',
@@ -611,9 +618,10 @@ const taskTemplates = [
     title: 'Implement Search Functionality',
     description:
       'Add full-text search across products with filters, sorting, and pagination. Use Elasticsearch or PostgreSQL full-text search.',
-    requirements:
+    requirements: [
       'Must be fast (<200ms response). Support fuzzy matching. Include search analytics.',
-    deliverables: 'Search API, frontend component, search analytics dashboard.',
+    ],
+    deliverables: ['Search API, frontend component, search analytics dashboard.'],
     category: 'BACKEND',
     type: 'PAID',
     difficulty: 'SENIOR',
@@ -624,9 +632,10 @@ const taskTemplates = [
   {
     title: 'Add Dark Mode Support',
     description: 'Implement system-wide dark mode toggle with persistent user preference storage.',
-    requirements:
+    requirements: [
       'Support CSS custom properties, preserve accessibility, validate against WCAG AAA.',
-    deliverables: 'Dark theme CSS, theme toggle component, localStorage integration.',
+    ],
+    deliverables: ['Dark theme CSS, theme toggle component, localStorage integration.'],
     category: 'FRONTEND',
     type: 'EXPERIENCE',
     difficulty: 'JUNIOR',
@@ -638,9 +647,10 @@ const taskTemplates = [
     title: 'Create API Documentation',
     description:
       'Write comprehensive OpenAPI/Swagger documentation for all RESTful API endpoints including examples and authentication.',
-    requirements:
+    requirements: [
       'Include request/response schemas, error codes, authentication methods. Must be auto-generated from code.',
-    deliverables: 'OpenAPI spec file, Swagger UI implementation, usage guide.',
+    ],
+    deliverables: ['OpenAPI spec file, Swagger UI implementation, usage guide.'],
     category: 'OTHER',
     type: 'VOLUNTEER',
     difficulty: 'JUNIOR',

@@ -156,9 +156,9 @@ describe('profiles routes', () => {
           timezonePreference: 'UTC',
           applicationDeadline: new Date(),
           visibility: 'PUBLIC',
-          deliverables: 'Code',
-          requirements: 'Reqs',
-          niceToHave: 'Nice',
+          deliverables: ['Code'],
+          requirements: ['Reqs'],
+          niceToHave: ['Nice'],
         },
       });
 
@@ -179,9 +179,9 @@ describe('profiles routes', () => {
           timezonePreference: 'UTC',
           applicationDeadline: new Date(),
           visibility: 'PUBLIC',
-          deliverables: 'Code',
-          requirements: 'Reqs',
-          niceToHave: 'Nice',
+          deliverables: ['Code'],
+          requirements: ['Reqs'],
+          niceToHave: ['Nice'],
         },
       });
 

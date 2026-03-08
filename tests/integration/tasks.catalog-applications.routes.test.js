@@ -29,9 +29,9 @@ const basePayload = {
   timezone_preference: 'Europe/Any',
   application_deadline: '2026-02-20',
   visibility: 'PUBLIC',
-  deliverables: 'PR with code + tests',
-  requirements: 'REST + pagination',
-  nice_to_have: 'OpenAPI',
+  deliverables: ['PR with code', 'Tests'],
+  requirements: ['REST', 'Pagination'],
+  nice_to_have: ['OpenAPI'],
 };
 
 describe('tasks routes - catalog and applications', () => {
@@ -153,9 +153,9 @@ describe('tasks routes - catalog and applications', () => {
           timezonePreference: 'UTC',
           applicationDeadline: new Date('2026-03-01'),
           visibility: 'PUBLIC',
-          deliverables: 'Code',
-          requirements: 'Reqs',
-          niceToHave: 'Nice',
+          deliverables: ['Code'],
+          requirements: ['Reqs'],
+          niceToHave: ['Nice'],
         },
       });
 
@@ -174,9 +174,9 @@ describe('tasks routes - catalog and applications', () => {
           timezonePreference: 'UTC',
           applicationDeadline: new Date('2026-03-01'),
           visibility: 'PUBLIC',
-          deliverables: 'Code',
-          requirements: 'Reqs',
-          niceToHave: 'Nice',
+          deliverables: ['Code'],
+          requirements: ['Reqs'],
+          niceToHave: ['Nice'],
         },
       });
 
@@ -196,9 +196,9 @@ describe('tasks routes - catalog and applications', () => {
           timezonePreference: 'UTC',
           applicationDeadline: new Date('2026-03-01'),
           visibility: 'UNLISTED',
-          deliverables: 'Code',
-          requirements: 'Reqs',
-          niceToHave: 'Nice',
+          deliverables: ['Code'],
+          requirements: ['Reqs'],
+          niceToHave: ['Nice'],
         },
       });
 
@@ -234,9 +234,9 @@ describe('tasks routes - catalog and applications', () => {
           timezonePreference: 'UTC',
           applicationDeadline: new Date('2026-03-20'),
           visibility: 'PUBLIC',
-          deliverables: 'Code',
-          requirements: 'Tests',
-          niceToHave: 'Docs',
+          deliverables: ['Code'],
+          requirements: ['Tests'],
+          niceToHave: ['Docs'],
         },
       });
 
@@ -270,9 +270,9 @@ describe('tasks routes - catalog and applications', () => {
           timezonePreference: 'UTC',
           applicationDeadline: new Date('2026-03-20'),
           visibility: 'PUBLIC',
-          deliverables: 'Code',
-          requirements: 'Tests',
-          niceToHave: 'Docs',
+          deliverables: ['Code'],
+          requirements: ['Tests'],
+          niceToHave: ['Docs'],
         },
       });
 
@@ -321,9 +321,9 @@ describe('tasks routes - catalog and applications', () => {
           timezonePreference: 'UTC',
           applicationDeadline: new Date('2026-03-15'),
           visibility: 'PUBLIC',
-          deliverables: 'Code',
-          requirements: 'Tests',
-          niceToHave: 'Docs',
+          deliverables: ['Code'],
+          requirements: ['Tests'],
+          niceToHave: ['Docs'],
         },
       });
 
@@ -365,9 +365,9 @@ describe('tasks routes - catalog and applications', () => {
           timezonePreference: 'UTC',
           applicationDeadline: new Date('2026-03-01'),
           visibility: 'PUBLIC',
-          deliverables: 'Code',
-          requirements: 'Tests',
-          niceToHave: 'Docs',
+          deliverables: ['Code'],
+          requirements: ['Tests'],
+          niceToHave: ['Docs'],
         },
       });
 

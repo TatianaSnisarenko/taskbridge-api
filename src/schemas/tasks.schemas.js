@@ -25,6 +25,26 @@ const TASK_VISIBILITY = ['PUBLIC', 'UNLISTED'];
 const DEVELOPER_AVAILABILITY = ['FEW_HOURS_WEEK', 'PART_TIME', 'FULL_TIME'];
 const DEVELOPER_EXPERIENCE = ['STUDENT', 'JUNIOR', 'MIDDLE', 'SENIOR'];
 
+const taskNotesFieldOptional = (label) =>
+  Joi.array()
+    .items(
+      Joi.string()
+        .trim()
+        .min(3)
+        .max(2000)
+        .messages({
+          'string.base': `${label} item must be a string`,
+          'string.empty': `${label} item must not be empty`,
+          'string.min': `${label} item must be at least 3 characters`,
+          'string.max': `${label} item must not exceed 2000 characters`,
+        })
+    )
+    .max(30)
+    .messages({
+      'array.base': `${label} must be an array of strings`,
+      'array.max': `${label} must not exceed 30 items`,
+    });
+
 export const createTaskDraftSchema = Joi.object({
   project_id: Joi.string().guid({ version: 'uuidv4' }).allow(null).messages({
     'string.empty': 'Project id must be a valid UUID',
@@ -121,24 +141,9 @@ export const createTaskDraftSchema = Joi.object({
       'any.required': 'Visibility is required',
       'string.empty': 'Visibility is required',
     }),
-  deliverables: Joi.string().trim().min(3).max(2000).required().messages({
-    'string.empty': 'Deliverables are required',
-    'string.min': 'Deliverables must be at least 3 characters',
-    'string.max': 'Deliverables must not exceed 2000 characters',
-    'any.required': 'Deliverables are required',
-  }),
-  requirements: Joi.string().trim().min(3).max(2000).required().messages({
-    'string.empty': 'Requirements are required',
-    'string.min': 'Requirements must be at least 3 characters',
-    'string.max': 'Requirements must not exceed 2000 characters',
-    'any.required': 'Requirements are required',
-  }),
-  nice_to_have: Joi.string().trim().min(3).max(2000).required().messages({
-    'string.empty': 'Nice to have is required',
-    'string.min': 'Nice to have must be at least 3 characters',
-    'string.max': 'Nice to have must not exceed 2000 characters',
-    'any.required': 'Nice to have is required',
-  }),
+  deliverables: taskNotesFieldOptional('Deliverables'),
+  requirements: taskNotesFieldOptional('Requirements'),
+  nice_to_have: taskNotesFieldOptional('Nice to have'),
 });
 
 export const updateTaskDraftSchema = Joi.object({
@@ -225,18 +230,9 @@ export const updateTaskDraftSchema = Joi.object({
     .messages({
       'any.only': 'Visibility must be one of: PUBLIC, UNLISTED',
     }),
-  deliverables: Joi.string().trim().min(3).max(2000).messages({
-    'string.min': 'Deliverables must be at least 3 characters',
-    'string.max': 'Deliverables must not exceed 2000 characters',
-  }),
-  requirements: Joi.string().trim().min(3).max(2000).messages({
-    'string.min': 'Requirements must be at least 3 characters',
-    'string.max': 'Requirements must not exceed 2000 characters',
-  }),
-  nice_to_have: Joi.string().trim().min(3).max(2000).messages({
-    'string.min': 'Nice to have must be at least 3 characters',
-    'string.max': 'Nice to have must not exceed 2000 characters',
-  }),
+  deliverables: taskNotesFieldOptional('Deliverables'),
+  requirements: taskNotesFieldOptional('Requirements'),
+  nice_to_have: taskNotesFieldOptional('Nice to have'),
 });
 
 export const taskIdParamSchema = Joi.object({

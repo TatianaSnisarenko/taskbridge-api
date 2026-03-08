@@ -254,9 +254,9 @@ describe('tasks.service - update draft', () => {
       timezone_preference: 'Europe/Kyiv',
       application_deadline: new Date('2026-03-01'),
       visibility: 'UNLISTED',
-      deliverables: 'Updated deliverables',
-      requirements: 'Updated requirements',
-      nice_to_have: 'Updated nice to have',
+      deliverables: ['Updated deliverables'],
+      requirements: ['Updated requirements'],
+      nice_to_have: ['Updated nice to have'],
     };
 
     const result = await tasksService.updateTaskDraft({ userId: 'u1', taskId: 't1', task });
@@ -276,9 +276,9 @@ describe('tasks.service - update draft', () => {
         timezonePreference: 'Europe/Kyiv',
         applicationDeadline: task.application_deadline,
         visibility: 'UNLISTED',
-        deliverables: 'Updated deliverables',
-        requirements: 'Updated requirements',
-        niceToHave: 'Updated nice to have',
+        deliverables: ['Updated deliverables'],
+        requirements: ['Updated requirements'],
+        niceToHave: ['Updated nice to have'],
       },
       select: { id: true, updatedAt: true },
     });
@@ -314,9 +314,9 @@ describe('tasks.service - update draft', () => {
       timezone_preference: 'Europe/Kyiv',
       application_deadline: new Date('2026-03-01'),
       visibility: 'UNLISTED',
-      deliverables: 'Updated deliverables',
-      requirements: 'Updated requirements',
-      nice_to_have: 'Updated nice to have',
+      deliverables: ['Updated deliverables'],
+      requirements: ['Updated requirements'],
+      nice_to_have: ['Updated nice to have'],
     };
 
     const result = await tasksService.updateTaskDraft({ userId: 'u1', taskId: 't1', task });
@@ -341,9 +341,9 @@ describe('tasks.service - update draft', () => {
         timezonePreference: 'Europe/Kyiv',
         applicationDeadline: task.application_deadline,
         visibility: 'UNLISTED',
-        deliverables: 'Updated deliverables',
-        requirements: 'Updated requirements',
-        niceToHave: 'Updated nice to have',
+        deliverables: ['Updated deliverables'],
+        requirements: ['Updated requirements'],
+        niceToHave: ['Updated nice to have'],
       },
       select: { id: true, updatedAt: true },
     });

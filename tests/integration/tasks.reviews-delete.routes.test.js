@@ -51,9 +51,9 @@ describe('tasks routes - reviews and delete', () => {
         timezonePreference: 'UTC',
         applicationDeadline: new Date('2026-03-01'),
         visibility: 'PUBLIC',
-        deliverables: 'Code',
-        requirements: 'Reqs',
-        niceToHave: 'Nice',
+        deliverables: ['Code'],
+        requirements: ['Reqs'],
+        niceToHave: ['Nice'],
       },
     });
 
@@ -132,9 +132,9 @@ describe('tasks routes - reviews and delete', () => {
         timezonePreference: 'UTC',
         applicationDeadline: new Date('2026-03-01'),
         visibility: 'PUBLIC',
-        deliverables: 'Code',
-        requirements: 'Reqs',
-        niceToHave: 'Nice',
+        deliverables: ['Code'],
+        requirements: ['Reqs'],
+        niceToHave: ['Nice'],
       },
     });
 
@@ -210,9 +210,9 @@ describe('tasks routes - reviews and delete', () => {
         timezonePreference: 'UTC',
         applicationDeadline: new Date('2026-03-01'),
         visibility: 'PUBLIC',
-        deliverables: 'Code',
-        requirements: 'Reqs',
-        niceToHave: 'Nice',
+        deliverables: ['Code'],
+        requirements: ['Reqs'],
+        niceToHave: ['Nice'],
       },
     });
 

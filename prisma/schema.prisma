@@ -328,9 +328,9 @@ model Task {
   applicationDeadline   DateTime?      @map("application_deadline") @db.Date
   visibility            TaskVisibility @default(PUBLIC)
 
-  deliverables String @default("")
-  requirements String @default("")
-  niceToHave   String @default("") @map("nice_to_have")
+  deliverables String[] @default([])
+  requirements String[] @default([])
+  niceToHave   String[] @default([]) @map("nice_to_have")
 
   acceptedApplicationId String? @unique @map("accepted_application_id") @db.Uuid
 

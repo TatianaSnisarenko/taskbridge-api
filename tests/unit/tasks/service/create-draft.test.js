@@ -152,9 +152,9 @@ describe('tasks.service - create draft', () => {
       timezone_preference: 'Europe/Any',
       application_deadline: new Date('2026-02-20'),
       visibility: 'PUBLIC',
-      deliverables: 'PR with code + tests',
-      requirements: 'REST + pagination',
-      nice_to_have: 'OpenAPI',
+      deliverables: ['PR with code', 'Tests'],
+      requirements: ['REST', 'Pagination'],
+      nice_to_have: ['OpenAPI'],
     };
 
     const result = await tasksService.createTaskDraft({ userId: 'u1', task });
@@ -175,9 +175,9 @@ describe('tasks.service - create draft', () => {
         timezonePreference: 'Europe/Any',
         applicationDeadline: task.application_deadline,
         visibility: 'PUBLIC',
-        deliverables: 'PR with code + tests',
-        requirements: 'REST + pagination',
-        niceToHave: 'OpenAPI',
+        deliverables: ['PR with code', 'Tests'],
+        requirements: ['REST', 'Pagination'],
+        niceToHave: ['OpenAPI'],
       },
       select: { id: true, status: true, createdAt: true },
     });
@@ -207,9 +207,9 @@ describe('tasks.service - create draft', () => {
       timezone_preference: 'Europe/Any',
       application_deadline: new Date('2026-02-20'),
       visibility: 'PUBLIC',
-      deliverables: 'PR with code + tests',
-      requirements: 'REST + pagination',
-      nice_to_have: 'OpenAPI',
+      deliverables: ['PR with code', 'Tests'],
+      requirements: ['REST', 'Pagination'],
+      nice_to_have: ['OpenAPI'],
     };
 
     const result = await tasksService.createTaskDraft({ userId: 'u1', task });
@@ -235,9 +235,9 @@ describe('tasks.service - create draft', () => {
         timezonePreference: 'Europe/Any',
         applicationDeadline: task.application_deadline,
         visibility: 'PUBLIC',
-        deliverables: 'PR with code + tests',
-        requirements: 'REST + pagination',
-        niceToHave: 'OpenAPI',
+        deliverables: ['PR with code', 'Tests'],
+        requirements: ['REST', 'Pagination'],
+        niceToHave: ['OpenAPI'],
       },
       select: { id: true, status: true, createdAt: true },
     });
