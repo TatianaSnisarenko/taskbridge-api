@@ -91,7 +91,16 @@ src/services/
 ## Testing Standards
 
 - Add/update tests for every behavior change.
-- Prefer unit tests for service logic and integration tests for endpoint behavior.
+- Prefer unit tests as the primary coverage layer (service logic, controller mapping, validation rules, and edge-case permutations).
+- Aim for maximum practical unit coverage in changed modules before adding integration scenarios.
+- Keep integration tests minimal and contract-focused.
+- Integration tests should cover only what integration can uniquely validate:
+  - route registration and middleware wiring order
+  - auth/persona/validation interaction at HTTP level
+  - response contract shape/status mapping
+  - cross-layer side effects across controller/service/db boundaries
+- Do not duplicate business-rule permutation matrices in integration when equivalent unit coverage already exists.
+- Empty placeholders are not allowed in integration suites; remove no-op `describe` blocks.
 - Tests must be deterministic and isolated.
 - Avoid external network dependencies in tests.
 - Keep assertions explicit and meaningful.
@@ -133,6 +142,7 @@ Before opening a PR:
 - `npm run test:coverage`
 - Update relevant docs (`README` / `docs/*`) if behavior changed
 - Ensure new links in docs point only to tracked public files
+- Ensure any new integration test justifies integration-only value (not unit-test duplication)
 
 ---
 

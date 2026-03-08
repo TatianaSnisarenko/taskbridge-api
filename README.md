@@ -222,12 +222,23 @@ npm run test:integration
 npm run test:coverage
 ```
 
+### Testing Strategy (required)
+
+- Prefer unit tests as the primary coverage driver; service/controller/schema logic should be covered in unit tests first.
+- Aim to maximize unit coverage for changed modules before adding new integration scenarios.
+- Keep integration tests focused on behavior that unit tests cannot fully validate:
+  - route wiring and middleware chain (auth/persona/validation)
+  - real HTTP contract shape and status codes
+  - cross-layer side effects (DB state transitions, notifications, chat thread creation)
+- Do not add integration tests for logic already fully verified in unit tests unless they validate one of the integration-only concerns above.
+- Remove empty or placeholder integration blocks; every integration test block must execute at least one meaningful assertion path.
+
 **Coverage Thresholds (CI enforced):**
 
-- Statements: 85%
-- Branches: 70%
-- Functions: 90%
-- Lines: 85%
+- Statements: 90%
+- Branches: 80%
+- Functions: 95%
+- Lines: 90%
 
 **[→ Testing guide](docs/DEVELOPMENT.md#testing)**
 

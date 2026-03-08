@@ -7,13 +7,26 @@ export default {
   setupFilesAfterEnv: ['<rootDir>/tests/config/jest.setup.js'],
   collectCoverageFrom: ['<rootDir>/src/**/*.js'],
   coverageReporters: ['json-summary', 'json', 'lcov', 'text', 'clover'],
-  coveragePathIgnorePatterns: ['/docs/', '/src/docs/', '/src/templates/', '/src/jobs/'],
+  coveragePathIgnorePatterns: [
+    '/docs/',
+    '/src/docs/',
+    '/src/templates/',
+    '/src/jobs/',
+    // Exclude only pure barrel service index files (re-exports only, no runtime logic).
+    // Keep logic-bearing index files in coverage.
+    '/src/services/invites/index\\.js$',
+    '/src/services/me/index\\.js$',
+    '/src/services/profiles/index\\.js$',
+    '/src/services/projects/index\\.js$',
+    '/src/services/tasks/index\\.js$',
+    '/src/services/tasks/workflows/index\\.js$',
+  ],
   coverageThreshold: {
     global: {
-      statements: 85,
-      branches: 70,
-      functions: 90,
-      lines: 85,
+      statements: 90,
+      branches: 80,
+      functions: 95,
+      lines: 90,
     },
   },
 };

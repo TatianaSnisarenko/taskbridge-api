@@ -2,6 +2,9 @@ import js from '@eslint/js';
 import importPlugin from 'eslint-plugin-import';
 
 export default [
+  {
+    ignores: ['dev-notes/**', 'coverage/**', 'node_modules/**', '.tmp/**'],
+  },
   js.configs.recommended,
   {
     files: ['**/*.js'],
@@ -24,6 +27,12 @@ export default [
   },
   {
     files: ['src/services/**/*.js'],
+    rules: {
+      'max-lines': ['warn', { max: 400, skipBlankLines: true, skipComments: true }],
+    },
+  },
+  {
+    files: ['tests/**/*.test.js'],
     rules: {
       'max-lines': ['warn', { max: 400, skipBlankLines: true, skipComments: true }],
     },
