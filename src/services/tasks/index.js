@@ -14,3 +14,4 @@ export { getTaskApplications, getRecommendedDevelopers, getTaskCandidates } from
 
 export { createTaskDraft, updateTaskDraft, publishTask, deleteTask } from './task-drafts.js';
 export { getTaskById, getTasksCatalog, getProjectTasks } from './task-catalog.js';
+export { getTaskReviews } from './task-reviews.js';

@@ -553,6 +553,40 @@ export const tasksPaths = {
         },
       ],
     },
+    get: {
+      tags: ['Tasks'],
+      summary: 'Get task reviews',
+      parameters: [
+        {
+          name: 'taskId',
+          in: 'path',
+          required: true,
+          schema: { type: 'string', format: 'uuid' },
+        },
+        {
+          name: 'page',
+          in: 'query',
+          schema: { type: 'integer', minimum: 1, default: 1 },
+        },
+        {
+          name: 'size',
+          in: 'query',
+          schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
+        },
+      ],
+      responses: {
+        200: {
+          description: 'Task reviews',
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/TaskReviewsResponse' },
+            },
+          },
+        },
+        400: { description: 'Validation error' },
+        404: { description: 'Task not found' },
+      },
+    },
   },
   '/api/v1/tasks/{taskId}/applications': {
     get: {

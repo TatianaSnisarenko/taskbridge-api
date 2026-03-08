@@ -13,6 +13,7 @@ import {
   reportProjectSchema,
   updateProjectParamsSchema,
   updateProjectSchema,
+  getProjectReviewsQuerySchema,
 } from '../schemas/projects.schemas.js';
 import { getProjectTasksQuerySchema } from '../schemas/tasks.schemas.js';
 
@@ -96,4 +97,11 @@ projectsRouter.post(
   validate(reportProjectParamsSchema, 'params'),
   validate(reportProjectSchema),
   projectsController.reportProject
+);
+
+projectsRouter.get(
+  '/:projectId/reviews',
+  validate(getProjectParamsSchema, 'params'),
+  validate(getProjectReviewsQuerySchema, 'query'),
+  projectsController.getProjectReviews
 );

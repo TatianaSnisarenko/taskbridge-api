@@ -14,6 +14,7 @@ import {
   rejectTaskCompletionSchema,
   getRecommendedDevelopersQuerySchema,
   getTaskCandidatesQuerySchema,
+  getTaskReviewsQuerySchema,
 } from '../schemas/tasks.schemas.js';
 import { createTaskInviteSchema, getTaskInvitesQuerySchema } from '../schemas/invites.schemas.js';
 
@@ -155,6 +156,13 @@ tasksRouter.post(
   validate(taskIdParamSchema, 'params'),
   validate(createReviewSchema),
   tasksController.createReview
+);
+
+tasksRouter.get(
+  '/:taskId/reviews',
+  validate(taskIdParamSchema, 'params'),
+  validate(getTaskReviewsQuerySchema, 'query'),
+  tasksController.getTaskReviews
 );
 
 tasksRouter.post(

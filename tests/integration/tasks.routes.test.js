@@ -310,4 +310,84 @@ describe('tasks routes', () => {
       },
     });
   });
+
+  test('GET /tasks/:taskId/reviews returns both reviews when they exist', async () => {
+    const company = await createUser({ companyProfile: { companyName: 'Acme Corp' } });
+    const developer = await createUser({ developerProfile: { displayName: 'Alice Chen' } });
+
+    const task = await prisma.task.create({
+      data: {
+        ownerUserId: company.id,
+        status: 'COMPLETED',
+        title: 'Test task',
+        description: 'Test task description',
+        category: 'BACKEND',
+        type: 'PAID',
+        difficulty: 'JUNIOR',
+        estimatedEffortHours: 5,
+        expectedDuration: 'DAYS_1_7',
+        communicationLanguage: 'EN',
+        timezonePreference: 'UTC',
+        applicationDeadline: new Date('2026-03-20'),
+        visibility: 'PUBLIC',
+        deliverables: ['Code'],
+        requirements: ['Reqs'],
+        niceToHave: ['Nice'],
+        completedAt: new Date(),
+      },
+    });
+
+    const app1 = await prisma.application.create({
+      data: {
+        taskId: task.id,
+        developerUserId: developer.id,
+        message: 'I can do it',
+        status: 'ACCEPTED',
+      },
+    });
+
+    await prisma.task.update({
+      where: { id: task.id },
+      data: { acceptedApplicationId: app1.id },
+    });
+
+    // Create reviews
+    await prisma.review.create({
+      data: {
+        taskId: task.id,
+        authorUserId: company.id,
+        targetUserId: developer.id,
+        rating: 5,
+        text: 'Excellent execution',
+      },
+    });
+
+    await prisma.review.create({
+      data: {
+        taskId: task.id,
+        authorUserId: developer.id,
+        targetUserId: company.id,
+        rating: 4,
+        text: 'Clear requirements',
+      },
+    });
+
+    const res = await request(app).get(`/api/v1/tasks/${task.id}/reviews`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.company_review).toBeTruthy();
+    expect(res.body.company_review.rating).toBe(5);
+    expect(res.body.company_review.text).toBe('Excellent execution');
+    expect(res.body.developer_review).toBeTruthy();
+    expect(res.body.developer_review.rating).toBe(4);
+    expect(res.body.developer_review.text).toBe('Clear requirements');
+  });
+
+  test('GET /tasks/:taskId/reviews returns 404 for nonexistent task', async () => {
+    const fakeId = '123e4567-e89b-42d3-a456-426614174000';
+    const res = await request(app).get(`/api/v1/tasks/${fakeId}/reviews`);
+
+    expect(res.status).toBe(404);
+    expect(res.body.error.code).toBe('NOT_FOUND');
+  });
 });

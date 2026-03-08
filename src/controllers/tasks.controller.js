@@ -263,3 +263,13 @@ export const createReview = asyncHandler(async (req, res) => {
     created_at: result.createdAt.toISOString(),
   });
 });
+
+export const getTaskReviews = asyncHandler(async (req, res) => {
+  const result = await tasksService.getTaskReviews({
+    taskId: req.params.taskId,
+    page: req.query.page,
+    size: req.query.size,
+  });
+
+  return res.status(200).json(result);
+});

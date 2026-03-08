@@ -355,4 +355,46 @@
       },
     },
   },
+  '/api/v1/projects/{projectId}/reviews': {
+    get: {
+      tags: ['Projects'],
+      summary: 'Get project reviews',
+      parameters: [
+        {
+          name: 'projectId',
+          in: 'path',
+          required: true,
+          schema: { type: 'string', format: 'uuid' },
+        },
+        {
+          name: 'page',
+          in: 'query',
+          schema: { type: 'integer', minimum: 1, default: 1 },
+        },
+        {
+          name: 'size',
+          in: 'query',
+          schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
+        },
+        {
+          name: 'author_persona',
+          in: 'query',
+          schema: { type: 'string', enum: ['company', 'developer'] },
+          description: 'Filter by author persona (optional)',
+        },
+      ],
+      responses: {
+        200: {
+          description: 'Project reviews',
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/ProjectReviewsResponse' },
+            },
+          },
+        },
+        400: { description: 'Validation error' },
+        404: { description: 'Project not found' },
+      },
+    },
+  },
 };

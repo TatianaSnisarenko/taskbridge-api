@@ -86,3 +86,14 @@ export const getProjectTasks = asyncHandler(async (req, res) => {
 
   return res.status(200).json(result);
 });
+
+export const getProjectReviews = asyncHandler(async (req, res) => {
+  const result = await projectsService.getProjectReviews({
+    projectId: req.params.projectId,
+    page: req.query.page,
+    size: req.query.size,
+    authorPersona: req.query.author_persona,
+  });
+
+  return res.status(200).json(result);
+});
