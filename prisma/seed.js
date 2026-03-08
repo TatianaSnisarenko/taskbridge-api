@@ -700,11 +700,55 @@ const chatMessages = [
   'Could you review the PR when you have a chance? Made the updates you suggested.',
 ];
 
+/**
+ * Create admin user if ADMIN_EMAIL and ADMIN_PASSWORD are provided in ENV
+ */
+async function createAdminIfNeeded() {
+  const adminEmail = process.env.ADMIN_EMAIL;
+  const adminPassword = process.env.ADMIN_PASSWORD;
+
+  if (!adminEmail || !adminPassword) {
+    console.log(
+      '⚠️  Admin credentials not provided (ADMIN_EMAIL/ADMIN_PASSWORD) - skipping admin creation'
+    );
+    return;
+  }
+
+  const existingUser = await prisma.user.findUnique({
+    where: { email: adminEmail },
+  });
+
+  if (existingUser) {
+    // Update role to ADMIN if user exists
+    await prisma.user.update({
+      where: { id: existingUser.id },
+      data: { role: 'ADMIN' },
+    });
+    console.log(`✅ Updated existing user to ADMIN role: ${adminEmail}`);
+  } else {
+    // Create new admin user
+    const hashedPassword = await hashPassword(adminPassword);
+    await prisma.user.create({
+      data: {
+        email: adminEmail,
+        passwordHash: hashedPassword,
+        emailVerified: true,
+        role: 'ADMIN',
+      },
+    });
+    console.log(`✅ Created new ADMIN user: ${adminEmail}`);
+  }
+}
+
 // Main seed function
 async function main() {
   console.log('🌱 Starting database seed...');
 
   try {
+    // Create admin user if credentials provided
+    console.log('👑 Checking admin user...');
+    await createAdminIfNeeded();
+
     // Create/update technologies catalog first
     console.log('🔧 Creating technologies catalog (if not exists)...');
     const normalizedTechs = normalizeTechList(TECHNOLOGIES);

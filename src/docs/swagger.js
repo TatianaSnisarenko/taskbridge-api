@@ -1,6 +1,7 @@
 ﻿import { authPaths } from './swagger/paths/auth.paths.js';
 import { healthPaths } from './swagger/paths/health.paths.js';
 import { mePaths } from './swagger/paths/me.paths.js';
+import { platformReviewsPaths } from './swagger/paths/platform-reviews.paths.js';
 import { profilesPaths } from './swagger/paths/profiles.paths.js';
 import { projectsPaths } from './swagger/paths/projects.paths.js';
 import { tasksPaths } from './swagger/paths/tasks.paths.js';
@@ -11,6 +12,7 @@ import { authSchemas } from './swagger/schemas/auth.schemas.js';
 import { healthSchemas } from './swagger/schemas/health.schemas.js';
 import { invitesSchemas } from './swagger/schemas/invites.schemas.js';
 import { meSchemas } from './swagger/schemas/me.schemas.js';
+import { platformReviewsSchemas } from './swagger/schemas/platform-reviews.schemas.js';
 import { profilesSchemas } from './swagger/schemas/profiles.schemas.js';
 import { projectsSchemas } from './swagger/schemas/projects.schemas.js';
 import { reviewsSchemas } from './swagger/schemas/reviews.schemas.js';
@@ -34,6 +36,7 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
     { name: 'Tasks' },
     { name: 'Invites' },
     { name: 'Technologies' },
+    { name: 'Platform Reviews' },
   ],
   components: {
     securitySchemes: {
@@ -54,6 +57,7 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
       ...invitesSchemas,
       ...meSchemas,
       ...reviewsSchemas,
+      ...platformReviewsSchemas,
       ...sharedSchemas,
     },
   },
@@ -65,6 +69,7 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
     ...projectsPaths,
     ...tasksPaths,
     ...technologiesPaths,
+    ...platformReviewsPaths,
     ...workflowsPaths,
   },
 });

@@ -145,11 +145,17 @@ enum ProjectReportReason {
   OTHER
 }
 
+enum UserRole {
+  USER
+  ADMIN
+}
+
 model User {
   id            String   @id @default(uuid()) @db.Uuid
   email         String   @unique
   passwordHash  String   @map("password_hash")
   emailVerified Boolean  @default(false) @map("email_verified")
+  role          UserRole @default(USER)
   createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -177,6 +183,8 @@ model User {
   projectReports ProjectReport[] @relation("ProjectReportReporter")
 
   chatThreadReads ChatThreadRead[] @relation("ChatThreadRead")
+
+  platformReviews PlatformReview[] @relation("PlatformReviewAuthor")
 
   @@map("users")
 }
@@ -584,4 +592,20 @@ model TechnologySuggestion {
   @@index([status, createdAt(sort: Desc)])
   @@index([technologyId])
   @@map("technology_suggestions")
+}
+
+model PlatformReview {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  rating     Int
+  text       String
+  isApproved Boolean  @default(false) @map("is_approved")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user User @relation("PlatformReviewAuthor", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([isApproved, createdAt(sort: Desc)])
+  @@map("platform_reviews")
 }
