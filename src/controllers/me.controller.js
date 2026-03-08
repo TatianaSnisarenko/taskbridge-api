@@ -1,6 +1,6 @@
 import { prisma } from '../db/prisma.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
-import * as meService from '../services/me.service.js';
+import * as meService from '../services/me/index.js';
 
 export const getMe = asyncHandler(async (req, res) => {
   const userId = req.user.id;
@@ -33,7 +33,7 @@ export const getMyApplications = asyncHandler(async (req, res) => {
 });
 
 export const getMyInvites = asyncHandler(async (req, res) => {
-  const { getMyInvites: getMyInvitesService } = await import('../services/invites.service.js');
+  const { getMyInvites: getMyInvitesService } = await import('../services/invites/index.js');
   const result = await getMyInvitesService({
     userId: req.user.id,
     page: parseInt(req.query.page) || 1,

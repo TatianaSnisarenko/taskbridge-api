@@ -23,6 +23,12 @@ export default [
     },
   },
   {
+    files: ['src/services/**/*.js'],
+    rules: {
+      'max-lines': ['warn', { max: 400, skipBlankLines: true, skipComments: true }],
+    },
+  },
+  {
     files: ['tests/**/*.js'],
     languageOptions: {
       globals: {

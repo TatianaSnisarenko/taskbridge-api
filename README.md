@@ -136,18 +136,28 @@ npm run dev
 ```
 src/
 	controllers/    # HTTP request handlers
-	services/       # Business logic
+	services/       # Business logic (modular folder structure)
+	  tasks/        # Task domain: drafts, catalog, workflows, candidates
+	  projects/     # Project domain: lifecycle, catalog, reporting
+	  profiles/     # Profile domain: developer, company, reviews
+	  invites/      # Invite domain: creation, catalog, responses
+	  me/           # Current user: catalog, notifications, messaging
+	  auth/         # Authentication service
+	  ...           # Other domain services
 	routes/         # API routes
 	middleware/     # Auth, validation, errors
 	schemas/        # Joi validation schemas
 	utils/          # Helpers (JWT, email, cloudinary)
 	config/         # Environment & CORS config
+	db/
+	  prisma.js     # Prisma client
+	  queries/      # Query helper functions (tasks, projects, profiles)
 prisma/
 	schema.prisma   # Database schema
 	migrations/     # Migration history
 	seed.js         # Database seeding
 tests/
-	unit/           # Service unit tests
+	unit/           # Service & controller unit tests
 	integration/    # API integration tests
 docs/             # Project documentation
 docker/           # Docker configuration

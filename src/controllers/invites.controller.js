@@ -1,5 +1,5 @@
 import { asyncHandler } from '../utils/asyncHandler.js';
-import * as invitesService from '../services/invites.service.js';
+import * as invitesService from '../services/invites/index.js';
 
 export const createTaskInvite = asyncHandler(async (req, res) => {
   const result = await invitesService.createTaskInvite({

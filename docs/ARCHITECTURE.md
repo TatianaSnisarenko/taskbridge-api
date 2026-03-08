@@ -111,7 +111,132 @@ async createTask(userId, data) {
 }
 ```
 
-### 3. Schema-First Validation
+### 3. Modular Service Architecture
+
+**Decision:** Organize services as domain folders with multiple specialized modules instead of monolithic service files.
+
+**Rationale:**
+
+- Prevents service file bloat (enforced by ESLint max-lines rule: 400 lines)
+- Improves code navigation and discoverability
+- Enables focused testing of specific functionality
+- Reduces merge conflicts when multiple developers work on same domain
+- Makes code reviews more manageable
+
+**Structure:**
+
+```
+src/services/
+  tasks/
+    index.js              # Re-exports all task modules
+    task-drafts.js        # Draft creation and publishing
+    task-catalog.js       # Browse, search, and filter
+    candidates.js         # Candidate matching and recommendations
+    helpers.js            # Shared utilities
+    workflows/
+      application.js      # Apply/accept/reject workflow
+      completion.js       # Task completion workflow
+      review.js           # Review workflow
+  projects/
+    index.js              # Re-exports all project modules
+    lifecycle.js          # Create/update/delete operations
+    catalog.js            # Browse and search
+    reporting.js          # Report projects
+    helpers.js            # Shared utilities
+  profiles/
+    index.js              # Re-exports all profile modules
+    developer.js          # Developer profile management
+    company.js            # Company profile management
+    reviews.js            # Review system
+    helpers.js            # Profile utilities
+```
+
+**Benefits achieved:**
+
+- No service module exceeds 400 lines
+- Clear separation between CRUD, workflows, and utilities
+- Easier to locate specific functionality
+- Better code organization for large domains
+
+### 4. Query Helper Abstraction
+
+**Decision:** Extract common Prisma query patterns into reusable helper functions.
+
+**Rationale:**
+
+- Eliminates duplicate query patterns across services (DRY principle)
+- Single source of truth for complex queries
+- Easier to test services (mock query helpers instead of Prisma)
+- Consistent ownership and permission checking
+- Simplified service code focuses on business logic
+
+**Structure:**
+
+```
+src/db/
+  prisma.js       # Prisma client instance
+  queries/
+    tasks.queries.js     # Task query helpers
+    projects.queries.js  # Project query helpers (planned)
+    profiles.queries.js  # Profile query helpers (planned)
+```
+
+**Implementation pattern:**
+
+```javascript
+// src/db/queries/tasks.queries.js
+/**
+ * Find task and verify ownership.
+ * Single source of truth - used by 8+ service methods
+ */
+export async function findTaskForOwnership(taskId, userId) {
+  const task = await prisma.task.findUnique({
+    where: { id: taskId },
+    select: { id: true, ownerUserId: true, deletedAt: true },
+  });
+
+  if (!task || task.deletedAt) {
+    throw new ApiError(404, 'NOT_FOUND', 'Task not found');
+  }
+
+  if (task.ownerUserId !== userId) {
+    throw new ApiError(403, 'NOT_OWNER', 'Task does not belong to user');
+  }
+
+  return task;
+}
+
+/**
+ * Find task with configurable relations
+ */
+export async function findTaskWithDetails(taskId, options = {}) {
+  const { includeOwner, includeTechnologies, includeProject } = options;
+
+  return prisma.task.findUnique({
+    where: { id: taskId },
+    include: {
+      owner: includeOwner ? { include: { companyProfile: true } } : false,
+      technologies: includeTechnologies ? { include: { technology: true } } : false,
+      project: includeProject,
+    },
+  });
+}
+```
+
+**Service usage:**
+
+```javascript
+// Before: Duplicated everywhere (15+ times)
+const task = await prisma.task.findUnique({...});
+if (!task || task.deletedAt) throw new ApiError(404, ...);
+if (task.ownerUserId !== userId) throw new ApiError(403, ...);
+
+// After: Clean, reusable, consistent
+import { findTaskForOwnership } from '../db/queries/tasks.queries.js';
+const task = await findTaskForOwnership(taskId, userId);
+```
+
+### 5. Schema-First Validation
 
 **Decision:** Use Joi schemas to validate all inputs before processing.
 
@@ -128,7 +253,7 @@ async createTask(userId, data) {
 - Validation middleware applied at route level
 - Clear error messages returned to client
 
-### 4. Refresh Token Rotation
+### 6. Refresh Token Rotation
 
 **Decision:** Rotate refresh tokens on every refresh request.
 
@@ -144,7 +269,7 @@ async createTask(userId, data) {
 - New token issued with extended expiry
 - Automatic cleanup of expired tokens via cron job
 
-### 5. Soft Deletes
+### 7. Soft Deletes
 
 **Decision:** Use `deletedAt` timestamps instead of hard deletes for tasks and projects.
 
@@ -163,7 +288,7 @@ model Task {
 }
 ```
 
-### 6. Composite Unique Constraints
+### 8. Composite Unique Constraints
 
 **Decision:** Enforce uniqueness at database level for critical relationships.
 
@@ -181,7 +306,7 @@ model Task {
 @@unique([ownerUserId, title])      // Unique project titles per owner
 ```
 
-### 7. Event-Driven Notifications
+### 9. Event-Driven Notifications
 
 **Decision:** Centralize notification creation in service layer.
 
@@ -192,7 +317,7 @@ model Task {
 - Easy to add notification channels (email, push, etc.)
 - Business logic triggers notifications automatically
 
-### 8. Scheduled Cleanup Jobs
+### 10. Scheduled Cleanup Jobs
 
 **Decision:** Use node-cron for periodic data cleanup.
 

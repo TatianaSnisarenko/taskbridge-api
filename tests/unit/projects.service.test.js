@@ -36,12 +36,9 @@ const technologiesServiceMock = {
 };
 
 jest.unstable_mockModule('../../src/db/prisma.js', () => ({ prisma: prismaMock }));
-jest.unstable_mockModule(
-  '../../src/services/technologies.service.js',
-  () => technologiesServiceMock
-);
+jest.unstable_mockModule('../../src/services/technologies/index.js', () => technologiesServiceMock);
 
-const projectsService = await import('../../src/services/projects.service.js');
+const projectsService = await import('../../src/services/projects/index.js');
 
 describe('projects.service', () => {
   beforeEach(() => {

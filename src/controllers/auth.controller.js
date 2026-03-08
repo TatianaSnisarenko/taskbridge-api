@@ -1,6 +1,6 @@
 import { env } from '../config/env.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
-import * as authService from '../services/auth.service.js';
+import * as authService from '../services/auth/index.js';
 
 function refreshCookieOptions() {
   return {

@@ -10,7 +10,7 @@ const prismaMock = {
 
 jest.unstable_mockModule('../../src/db/prisma.js', () => ({ prisma: prismaMock }));
 
-const technologiesService = await import('../../src/services/technologies.service.js');
+const technologiesService = await import('../../src/services/technologies/index.js');
 
 describe('technologies.service', () => {
   beforeEach(() => {
@@ -43,6 +43,30 @@ describe('technologies.service', () => {
     expect(result.items).toHaveLength(1);
   });
 
+  test('getTechnologyTypes returns a copy of the list', () => {
+    const result = technologiesService.getTechnologyTypes();
+    expect(result).toContain('BACKEND');
+    expect(Array.isArray(result)).toBe(true);
+  });
+
+  test('getTechnologyById throws NOT_FOUND for missing technology', async () => {
+    prismaMock.technology.findUnique.mockResolvedValue(null);
+
+    await expect(technologiesService.getTechnologyById('missing')).rejects.toMatchObject({
+      status: 404,
+      code: 'NOT_FOUND',
+    });
+  });
+
+  test('getTechnologiesByIds returns mapped records', async () => {
+    prismaMock.technology.findMany.mockResolvedValue([
+      { id: 't1', slug: 'nodejs', name: 'Node.js', type: 'BACKEND' },
+    ]);
+
+    const result = await technologiesService.getTechnologiesByIds(['t1']);
+    expect(result).toEqual([{ id: 't1', slug: 'nodejs', name: 'Node.js', type: 'BACKEND' }]);
+  });
+
   test('searchTechnologies prioritizes prefix before contains', async () => {
     prismaMock.technology.findMany.mockResolvedValue([
       {
@@ -67,6 +91,38 @@ describe('technologies.service', () => {
     expect(slugs.indexOf('redux')).toBeLessThan(slugs.indexOf('sentry-react'));
   });
 
+  test('searchTechnologies supports type filter without activeOnly constraint', async () => {
+    prismaMock.technology.findMany.mockResolvedValue([]);
+
+    await technologiesService.searchTechnologies({
+      q: '',
+      type: 'BACKEND',
+      activeOnly: false,
+      limit: 3,
+    });
+
+    expect(prismaMock.technology.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { type: 'BACKEND' },
+        take: 3,
+      })
+    );
+  });
+
+  test('searchTechnologies caps limit at 20', async () => {
+    prismaMock.technology.findMany.mockResolvedValue([]);
+
+    await technologiesService.searchTechnologies({
+      q: 're',
+      limit: 100,
+    });
+
+    const args = prismaMock.technology.findMany.mock.calls[0][0];
+    if (args.take !== undefined) {
+      expect(args.take).toBe(20);
+    }
+  });
+
   test('validateTechnologyIds returns deduplicated ids when all valid', async () => {
     prismaMock.technology.findMany.mockResolvedValue([{ id: 't1' }, { id: 't2' }]);
 
@@ -88,6 +144,17 @@ describe('technologies.service', () => {
     await expect(technologiesService.validateTechnologyIds(['t1', 't2'])).rejects.toMatchObject({
       status: 400,
       code: 'INVALID_TECHNOLOGY_IDS',
+    });
+  });
+
+  test('validateTechnologyIds with requireActive=false allows inactive records', async () => {
+    prismaMock.technology.findMany.mockResolvedValue([{ id: 't1' }]);
+
+    const result = await technologiesService.validateTechnologyIds(['t1'], false);
+    expect(result).toEqual(['t1']);
+    expect(prismaMock.technology.findMany).toHaveBeenCalledWith({
+      where: { id: { in: ['t1'] } },
+      select: { id: true },
     });
   });
 

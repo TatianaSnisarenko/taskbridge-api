@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken';
-import { signAccessToken, generateRefreshToken } from '../../src/services/token.service.js';
+import { signAccessToken, generateRefreshToken } from '../../src/services/token/index.js';
 import { env } from '../../src/config/env.js';
 
 describe('token.service', () => {

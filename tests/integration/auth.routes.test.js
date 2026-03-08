@@ -14,7 +14,7 @@ import { buildAccessToken, hashToken } from '../helpers/auth.js';
 
 const sendVerificationEmailMock = jest.fn().mockResolvedValue(undefined);
 
-jest.unstable_mockModule('../../src/services/email.service.js', () => ({
+jest.unstable_mockModule('../../src/services/email/index.js', () => ({
   sendVerificationEmail: sendVerificationEmailMock,
   sendEmail: jest.fn(),
   sendResetPasswordEmail: jest.fn().mockResolvedValue(undefined),
@@ -432,7 +432,7 @@ describe('auth routes', () => {
   });
 
   test('POST /auth/forgot-password returns 200 OK for existing verified user', async () => {
-    const { sendResetPasswordEmail } = await import('../../src/services/email.service.js');
+    const { sendResetPasswordEmail } = await import('../../src/services/email/index.js');
     const password = buildPassword();
     const user = await createUser({ emailVerified: true, password });
 
@@ -453,7 +453,7 @@ describe('auth routes', () => {
   });
 
   test('POST /auth/forgot-password returns 200 OK for non-existent user (no reveal)', async () => {
-    const { sendResetPasswordEmail } = await import('../../src/services/email.service.js');
+    const { sendResetPasswordEmail } = await import('../../src/services/email/index.js');
     sendResetPasswordEmail.mockClear();
 
     const res = await request(app)
@@ -466,7 +466,7 @@ describe('auth routes', () => {
   });
 
   test('POST /auth/forgot-password returns 200 OK for unverified user (no reveal)', async () => {
-    const { sendResetPasswordEmail } = await import('../../src/services/email.service.js');
+    const { sendResetPasswordEmail } = await import('../../src/services/email/index.js');
     sendResetPasswordEmail.mockClear();
 
     const user = await createUser({ emailVerified: false });

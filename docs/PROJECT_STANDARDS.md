@@ -35,7 +35,29 @@ These standards apply to:
 - Controllers must not call Prisma directly.
 - Routes must not contain business logic.
 - Service methods should encapsulate domain behavior and error semantics.
-- Repeated complex Prisma queries should be extracted into reusable helpers/modules.
+- Repeated complex Prisma queries should be extracted into query helpers (`src/db/queries/`).
+- Services organized as domain folders should keep individual modules under 400 lines (ESLint enforced).
+
+### Service Organization
+
+For large domains, services should be organized as folders with specialized modules:
+
+- Each service folder contains an `index.js` that re-exports all modules
+- Modules are split by responsibility (CRUD, workflows, catalog, helpers)
+- Maximum 400 lines per file (enforced by ESLint `max-lines` rule)
+- Common query patterns extracted to `src/db/queries/<domain>.queries.js`
+
+**Example structure:**
+
+```
+src/services/
+  tasks/
+    index.js              # Re-exports all task modules
+    task-drafts.js        # Draft creation and publishing
+    task-catalog.js       # Browse and search
+    workflows/
+      application.js      # Application workflow
+```
 
 ## API and Validation Standards
 

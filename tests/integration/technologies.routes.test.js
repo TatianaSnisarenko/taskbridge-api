@@ -3,7 +3,7 @@ import request from 'supertest';
 import { prisma } from '../../src/db/prisma.js';
 import { resetDatabase } from '../helpers/db.js';
 
-jest.unstable_mockModule('../../src/services/email.service.js', () => ({
+jest.unstable_mockModule('../../src/services/email/index.js', () => ({
   sendVerificationEmail: jest.fn().mockResolvedValue(undefined),
   sendEmail: jest.fn(),
   sendResetPasswordEmail: jest.fn().mockResolvedValue(undefined),

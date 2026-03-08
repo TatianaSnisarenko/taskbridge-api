@@ -5,7 +5,7 @@ import { resetDatabase } from '../helpers/db.js';
 import { buildAccessToken } from '../helpers/auth.js';
 import { createUser } from '../helpers/factories.js';
 
-jest.unstable_mockModule('../../src/services/email.service.js', () => ({
+jest.unstable_mockModule('../../src/services/email/index.js', () => ({
   sendVerificationEmail: jest.fn().mockResolvedValue(undefined),
   sendEmail: jest.fn(),
   sendResetPasswordEmail: jest.fn().mockResolvedValue(undefined),
@@ -32,22 +32,10 @@ describe('me routes', () => {
     };
 
     prisma.task.create = (args) => {
-      if (args?.data?.requiredSkills) {
-        // eslint-disable-next-line no-unused-vars
-        const { requiredSkills, ...rest } = args.data;
-        return originalTaskCreate({ ...args, data: rest });
-      }
-
       return originalTaskCreate(args);
     };
 
     prisma.task.update = (args) => {
-      if (args?.data?.requiredSkills) {
-        // eslint-disable-next-line no-unused-vars
-        const { requiredSkills, ...rest } = args.data;
-        return originalTaskUpdate({ ...args, data: rest });
-      }
-
       return originalTaskUpdate(args);
     };
 
@@ -254,7 +242,6 @@ describe('me routes', () => {
           category: 'BACKEND',
           type: 'PAID',
           difficulty: 'JUNIOR',
-          requiredSkills: ['Node.js'],
           estimatedEffortHours: 5,
           expectedDuration: 'DAYS_1_7',
           communicationLanguage: 'EN',
@@ -324,7 +311,6 @@ describe('me routes', () => {
           category: 'BACKEND',
           type: 'PAID',
           difficulty: 'JUNIOR',
-          requiredSkills: ['Node.js'],
           estimatedEffortHours: 5,
           expectedDuration: 'DAYS_1_7',
           communicationLanguage: 'EN',
@@ -347,7 +333,6 @@ describe('me routes', () => {
           category: 'FRONTEND',
           type: 'PAID',
           difficulty: 'MIDDLE',
-          requiredSkills: ['React'],
           estimatedEffortHours: 8,
           expectedDuration: 'DAYS_8_14',
           communicationLanguage: 'EN',
@@ -409,7 +394,6 @@ describe('me routes', () => {
             category: 'BACKEND',
             type: 'PAID',
             difficulty: 'JUNIOR',
-            requiredSkills: ['Node.js'],
             estimatedEffortHours: 5,
             expectedDuration: 'DAYS_1_7',
             communicationLanguage: 'EN',
@@ -496,7 +480,6 @@ describe('me routes', () => {
           category: 'BACKEND',
           type: 'PAID',
           difficulty: 'JUNIOR',
-          requiredSkills: ['Node.js'],
           estimatedEffortHours: 5,
           expectedDuration: 'DAYS_1_7',
           communicationLanguage: 'EN',

@@ -1,5 +1,5 @@
 import { asyncHandler } from '../utils/asyncHandler.js';
-import * as tasksService from '../services/tasks.service.js';
+import * as tasksService from '../services/tasks/index.js';
 
 export const createTaskDraft = asyncHandler(async (req, res) => {
   const result = await tasksService.createTaskDraft({

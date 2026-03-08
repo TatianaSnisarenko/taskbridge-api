@@ -1,4 +1,4 @@
-import { getTechnologyTypes, searchTechnologies } from '../services/technologies.service.js';
+import { getTechnologyTypes, searchTechnologies } from '../services/technologies/index.js';
 
 /**
  * GET /technologies

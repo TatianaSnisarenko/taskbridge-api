@@ -1,4 +1,4 @@
-import { jest } from '@jest/globals';
+﻿import { jest } from '@jest/globals';
 
 const prismaMock = {
   $transaction: jest.fn(),
@@ -10,6 +10,7 @@ const prismaMock = {
     create: jest.fn(),
     findUnique: jest.fn(),
     update: jest.fn(),
+    count: jest.fn(),
   },
   taskTechnology: {
     createMany: jest.fn(),
@@ -31,6 +32,18 @@ const prismaMock = {
     findMany: jest.fn(),
     count: jest.fn(),
     create: jest.fn(),
+    update: jest.fn(),
+    findUnique: jest.fn(),
+  },
+  chatThread: {
+    findUnique: jest.fn(),
+    create: jest.fn(),
+  },
+  chatMessage: {
+    create: jest.fn(),
+  },
+  chatThreadRead: {
+    upsert: jest.fn(),
   },
 };
 
@@ -51,19 +64,16 @@ const notificationEmailServiceMock = {
 
 jest.unstable_mockModule('../../src/db/prisma.js', () => ({ prisma: prismaMock }));
 jest.unstable_mockModule(
-  '../../src/services/notifications.service.js',
+  '../../src/services/notifications/index.js',
   () => notificationsServiceMock
 );
+jest.unstable_mockModule('../../src/services/technologies/index.js', () => technologiesServiceMock);
 jest.unstable_mockModule(
-  '../../src/services/technologies.service.js',
-  () => technologiesServiceMock
-);
-jest.unstable_mockModule(
-  '../../src/services/notification-email.service.js',
+  '../../src/services/notification-email/index.js',
   () => notificationEmailServiceMock
 );
 
-const tasksService = await import('../../src/services/tasks.service.js');
+const tasksService = await import('../../src/services/tasks/index.js');
 
 describe('tasks.service', () => {
   beforeEach(() => {
@@ -137,7 +147,6 @@ describe('tasks.service', () => {
       category: 'BACKEND',
       type: 'EXPERIENCE',
       difficulty: 'JUNIOR',
-      required_skills: ['Node.js'],
       estimated_effort_hours: 6,
       expected_duration: 'DAYS_8_14',
       communication_language: 'EN',
@@ -193,7 +202,6 @@ describe('tasks.service', () => {
       category: 'BACKEND',
       type: 'EXPERIENCE',
       difficulty: 'JUNIOR',
-      required_skills: ['Node.js'],
       estimated_effort_hours: 6,
       expected_duration: 'DAYS_8_14',
       communication_language: 'EN',
@@ -401,7 +409,7 @@ describe('tasks.service', () => {
       category: 'FRONTEND',
       type: 'PAID',
       difficulty: 'MIDDLE',
-      required_skills: ['React'],
+
       estimated_effort_hours: 10,
       expected_duration: 'DAYS_15_30',
       communication_language: 'UA',
@@ -462,7 +470,7 @@ describe('tasks.service', () => {
       category: 'FRONTEND',
       type: 'PAID',
       difficulty: 'MIDDLE',
-      required_skills: ['React'],
+
       estimated_effort_hours: 10,
       expected_duration: 'DAYS_15_30',
       communication_language: 'UA',
@@ -1503,711 +1511,158 @@ describe('tasks.service', () => {
     });
   });
 
-  describe('getTaskById', () => {
-    test('rejects missing task', async () => {
-      prismaMock.task.findUnique.mockResolvedValue(null);
+  // ========================================================================
+  // BATCH 5 BRANCH COVERAGE: getTaskCandidates filter branches
+  // ========================================================================
 
-      await expect(tasksService.getTaskById({ taskId: 't1' })).rejects.toMatchObject({
-        status: 404,
-        code: 'NOT_FOUND',
-      });
-    });
-
-    test('rejects deleted task', async () => {
-      prismaMock.task.findUnique.mockResolvedValue({
-        id: 't1',
-        deletedAt: new Date(),
-        status: 'DELETED',
-      });
-
-      await expect(tasksService.getTaskById({ taskId: 't1' })).rejects.toMatchObject({
-        status: 404,
-        code: 'NOT_FOUND',
-      });
-    });
-
-    test('rejects non-public task without auth', async () => {
+  describe('getTaskCandidates - branch coverage', () => {
+    // Setup helpers for candidates tests
+    function setupCandidatesBaseMocks() {
       prismaMock.task.findUnique.mockResolvedValue({
         id: 't1',
         ownerUserId: 'u1',
-        status: 'DRAFT',
-        visibility: 'PUBLIC',
         deletedAt: null,
-        owner: { companyProfile: { companyName: 'TeamUp', verified: false } },
-      });
-
-      await expect(tasksService.getTaskById({ taskId: 't1' })).rejects.toMatchObject({
-        status: 401,
-        code: 'AUTH_REQUIRED',
-      });
-    });
-
-    test('rejects non-owner access to non-public task', async () => {
-      prismaMock.task.findUnique.mockResolvedValue({
-        id: 't1',
-        ownerUserId: 'u1',
-        status: 'DRAFT',
-        visibility: 'UNLISTED',
-        deletedAt: null,
-        owner: { companyProfile: { companyName: 'TeamUp', verified: false } },
-      });
-
-      await expect(
-        tasksService.getTaskById({ taskId: 't1', userId: 'u2', persona: 'company' })
-      ).rejects.toMatchObject({
-        status: 403,
-        code: 'NOT_OWNER',
-      });
-    });
-
-    test('rejects owner access without persona', async () => {
-      prismaMock.task.findUnique.mockResolvedValue({
-        id: 't1',
-        ownerUserId: 'u1',
-        status: 'DRAFT',
-        visibility: 'UNLISTED',
-        deletedAt: null,
-        owner: { companyProfile: { companyName: 'TeamUp', verified: false } },
-      });
-
-      await expect(tasksService.getTaskById({ taskId: 't1', userId: 'u1' })).rejects.toMatchObject({
-        status: 400,
-        code: 'PERSONA_REQUIRED',
-      });
-    });
-
-    test('returns public task details', async () => {
-      const task = {
-        id: 't1',
-        ownerUserId: 'u1',
         status: 'PUBLISHED',
-        project: { id: 'p1', title: 'TeamUp MVP' },
-        title: 'Add filtering to tasks catalog',
-        description: 'Implement filters + pagination.',
-        category: 'BACKEND',
-        type: 'EXPERIENCE',
-        difficulty: 'JUNIOR',
-        technologies: [],
-        estimatedEffortHours: 6,
-        expectedDuration: 'DAYS_8_14',
-        communicationLanguage: 'EN',
-        timezonePreference: 'Europe/Any',
-        applicationDeadline: new Date('2026-02-20'),
-        visibility: 'PUBLIC',
-        deliverables: 'PR with code + tests',
-        requirements: 'REST + pagination',
-        niceToHave: 'OpenAPI',
-        acceptedApplicationId: null,
+        technologies: [{ technologyId: 'tech-1' }, { technologyId: 'tech-2' }],
         acceptedApplication: null,
-        createdAt: new Date('2026-02-14T13:00:00Z'),
-        publishedAt: new Date('2026-02-14T13:20:00Z'),
-        deletedAt: null,
-        owner: {
-          companyProfile: {
-            companyName: 'TeamUp Studio',
-            verified: false,
-            avgRating: 4.6,
-            reviewsCount: 8,
-          },
-        },
-      };
-
-      prismaMock.task.findUnique.mockResolvedValue(task);
-      prismaMock.application.count.mockResolvedValue(0);
-
-      const result = await tasksService.getTaskById({ taskId: 't1' });
-
-      expect(result).toEqual({
-        task_id: 't1',
-        owner_user_id: 'u1',
-        status: 'PUBLISHED',
-        project: { project_id: 'p1', title: 'TeamUp MVP' },
-        title: 'Add filtering to tasks catalog',
-        description: 'Implement filters + pagination.',
-        category: 'BACKEND',
-        type: 'EXPERIENCE',
-        difficulty: 'JUNIOR',
-        technologies: [],
-        estimated_effort_hours: 6,
-        expected_duration: 'DAYS_8_14',
-        communication_language: 'EN',
-        timezone_preference: 'Europe/Any',
-        application_deadline: '2026-02-20',
-        visibility: 'PUBLIC',
-        deliverables: 'PR with code + tests',
-        requirements: 'REST + pagination',
-        nice_to_have: 'OpenAPI',
-        created_at: new Date('2026-02-14T13:00:00Z').toISOString(),
-        published_at: new Date('2026-02-14T13:20:00Z').toISOString(),
-        accepted_application_id: null,
-        deleted_at: null,
-        applications_count: 0,
-        can_apply: false,
-        is_owner: false,
-        is_accepted_developer: false,
-        company: {
-          user_id: 'u1',
-          company_name: 'TeamUp Studio',
-          verified: false,
-          avg_rating: 4.6,
-          reviews_count: 8,
-        },
-      });
-    });
-
-    test('returns can_apply true for eligible developer', async () => {
-      const task = {
-        id: 't1',
-        ownerUserId: 'u1',
-        status: 'PUBLISHED',
-        visibility: 'PUBLIC',
-        project: null,
-        title: 'Task title',
-        description: 'Task description',
-        category: 'BACKEND',
-        type: 'EXPERIENCE',
-        difficulty: 'JUNIOR',
-        requiredSkills: ['Node.js'],
-        estimatedEffortHours: 6,
-        expectedDuration: 'DAYS_8_14',
-        communicationLanguage: 'EN',
-        timezonePreference: 'Europe/Any',
-        applicationDeadline: new Date('2026-02-20'),
-        deliverables: 'PR with code + tests',
-        requirements: 'REST + pagination',
-        niceToHave: 'OpenAPI',
-        acceptedApplicationId: null,
-        acceptedApplication: null,
-        createdAt: new Date('2026-02-14T13:00:00Z'),
-        publishedAt: new Date('2026-02-14T13:20:00Z'),
-        deletedAt: null,
-        owner: {
-          companyProfile: {
-            companyName: 'TeamUp Studio',
-            verified: false,
-            avgRating: 4.6,
-            reviewsCount: 8,
-          },
-        },
-      };
-
-      prismaMock.task.findUnique.mockResolvedValue(task);
-      prismaMock.application.count.mockResolvedValue(0);
-      prismaMock.developerProfile.findUnique.mockResolvedValue({ userId: 'u2' });
-      prismaMock.application.findFirst.mockResolvedValue(null);
-
-      const result = await tasksService.getTaskById({
-        taskId: 't1',
-        userId: 'u2',
-        persona: 'developer',
       });
 
-      expect(result).toMatchObject({
-        can_apply: true,
-        is_owner: false,
-        is_accepted_developer: false,
-        applications_count: 0,
-      });
-    });
-
-    test('returns can_apply false when developer already applied', async () => {
-      const task = {
-        id: 't1',
-        ownerUserId: 'u1',
-        status: 'PUBLISHED',
-        visibility: 'PUBLIC',
-        project: null,
-        title: 'Task title',
-        description: 'Task description',
-        category: 'BACKEND',
-        type: 'EXPERIENCE',
-        difficulty: 'JUNIOR',
-        requiredSkills: ['Node.js'],
-        estimatedEffortHours: 6,
-        expectedDuration: 'DAYS_8_14',
-        communicationLanguage: 'EN',
-        timezonePreference: 'Europe/Any',
-        applicationDeadline: new Date('2026-02-20'),
-        deliverables: 'PR with code + tests',
-        requirements: 'REST + pagination',
-        niceToHave: 'OpenAPI',
-        acceptedApplicationId: null,
-        acceptedApplication: null,
-        createdAt: new Date('2026-02-14T13:00:00Z'),
-        publishedAt: new Date('2026-02-14T13:20:00Z'),
-        deletedAt: null,
-        owner: {
-          companyProfile: {
-            companyName: 'TeamUp Studio',
-            verified: false,
-            avgRating: 4.6,
-            reviewsCount: 8,
-          },
-        },
-      };
-
-      prismaMock.task.findUnique.mockResolvedValue(task);
-      prismaMock.application.count.mockResolvedValue(1);
-      prismaMock.developerProfile.findUnique.mockResolvedValue({ userId: 'u2' });
-      prismaMock.application.findFirst.mockResolvedValue({ id: 'a1' });
-
-      const result = await tasksService.getTaskById({
-        taskId: 't1',
-        userId: 'u2',
-        persona: 'developer',
-      });
-
-      expect(result).toMatchObject({
-        can_apply: false,
-        is_owner: false,
-        applications_count: 1,
-      });
-    });
-
-    test('returns is_accepted_developer true for accepted developer', async () => {
-      const task = {
-        id: 't1',
-        ownerUserId: 'u1',
-        status: 'PUBLISHED',
-        visibility: 'PUBLIC',
-        project: null,
-        title: 'Task title',
-        description: 'Task description',
-        category: 'BACKEND',
-        type: 'EXPERIENCE',
-        difficulty: 'JUNIOR',
-        requiredSkills: ['Node.js'],
-        estimatedEffortHours: 6,
-        expectedDuration: 'DAYS_8_14',
-        communicationLanguage: 'EN',
-        timezonePreference: 'Europe/Any',
-        applicationDeadline: new Date('2026-02-20'),
-        deliverables: 'PR with code + tests',
-        requirements: 'REST + pagination',
-        niceToHave: 'OpenAPI',
-        acceptedApplicationId: 'a1',
-        acceptedApplication: { developerUserId: 'u2' },
-        createdAt: new Date('2026-02-14T13:00:00Z'),
-        publishedAt: new Date('2026-02-14T13:20:00Z'),
-        deletedAt: null,
-        owner: {
-          companyProfile: {
-            companyName: 'TeamUp Studio',
-            verified: false,
-            avgRating: 4.6,
-            reviewsCount: 8,
-          },
-        },
-      };
-
-      prismaMock.task.findUnique.mockResolvedValue(task);
-      prismaMock.application.count.mockResolvedValue(1);
-
-      const result = await tasksService.getTaskById({ taskId: 't1', userId: 'u2' });
-
-      expect(result).toMatchObject({
-        is_accepted_developer: true,
-        can_apply: false,
-        applications_count: 1,
-      });
-    });
-  });
-
-  describe('getTaskApplications', () => {
-    test('returns applications with developer avatar', async () => {
-      prismaMock.task.findUnique.mockResolvedValue({
-        id: 't1',
-        ownerUserId: 'u1',
-        deletedAt: null,
-      });
-
-      prismaMock.application.findMany.mockResolvedValue([
+      prismaMock.developerProfile.findMany.mockResolvedValue([
         {
-          id: 'a1',
-          status: 'APPLIED',
-          message: 'Message',
-          proposedPlan: 'Plan',
-          availabilityNote: 'Evenings',
-          createdAt: new Date('2026-02-14T12:00:00Z'),
-          developer: {
-            id: 'dev1',
-            developerProfile: {
-              displayName: 'Tetiana',
-              jobTitle: 'Java Backend Engineer',
-              avatarUrl: 'https://cdn.example.com/dev-avatar.webp',
-              avgRating: 4.6,
-              reviewsCount: 3,
-            },
-          },
+          userId: 'd1',
+          displayName: 'Dev 1',
+          jobTitle: 'Senior Engineer',
+          avatarUrl: null,
+          experienceLevel: 'SENIOR',
+          availability: 'AVAILABLE',
+          avgRating: 4.8,
+          reviewsCount: 15,
+          technologies: [],
+        },
+        {
+          userId: 'd2',
+          displayName: 'Dev 2',
+          jobTitle: 'Junior Engineer',
+          avatarUrl: null,
+          experienceLevel: 'JUNIOR',
+          availability: 'PARTIALLY_AVAILABLE',
+          avgRating: 3.5,
+          reviewsCount: 3,
+          technologies: [],
         },
       ]);
-      prismaMock.application.count.mockResolvedValue(1);
+    }
 
-      const result = await tasksService.getTaskApplications({
+    test('getTaskCandidates applies availability filter', async () => {
+      setupCandidatesBaseMocks();
+      prismaMock.application.findMany.mockResolvedValue([]);
+      prismaMock.taskInvite.findMany.mockResolvedValue([]);
+
+      await tasksService.getTaskCandidates({
         userId: 'u1',
         taskId: 't1',
-        page: 1,
-        size: 20,
+        availability: 'AVAILABLE',
       });
 
-      expect(result).toEqual({
-        items: [
-          {
-            application_id: 'a1',
-            status: 'APPLIED',
-            message: 'Message',
-            proposed_plan: 'Plan',
-            availability_note: 'Evenings',
-            created_at: new Date('2026-02-14T12:00:00Z').toISOString(),
-            developer: {
-              user_id: 'dev1',
-              display_name: 'Tetiana',
-              primary_role: 'Java Backend Engineer',
-              avatar_url: 'https://cdn.example.com/dev-avatar.webp',
-              avg_rating: 4.6,
-              reviews_count: 3,
-            },
-          },
-        ],
-        page: 1,
-        size: 20,
-        total: 1,
-      });
-    });
-  });
-
-  describe('createReview', () => {
-    test('createReview rejects missing task', async () => {
-      prismaMock.$transaction.mockImplementation((callback) => callback(prismaMock));
-      prismaMock.task.findUnique.mockResolvedValue(null);
-
-      await expect(
-        tasksService.createReview({
-          userId: 'u1',
-          taskId: 't1',
-          review: { rating: 5, text: 'Great work' },
+      expect(prismaMock.developerProfile.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            availability: 'AVAILABLE',
+          }),
         })
-      ).rejects.toMatchObject({
-        status: 404,
-        code: 'NOT_FOUND',
-      });
+      );
     });
 
-    test('createReview rejects deleted task', async () => {
-      prismaMock.$transaction.mockImplementation((callback) => callback(prismaMock));
-      prismaMock.task.findUnique.mockResolvedValue({
-        id: 't1',
-        ownerUserId: 'u1',
-        status: 'COMPLETED',
-        deletedAt: new Date(),
-        acceptedApplicationId: 'a1',
-        acceptedApplication: { developerUserId: 'u2' },
-      });
+    test('getTaskCandidates applies experienceLevel filter', async () => {
+      setupCandidatesBaseMocks();
+      prismaMock.application.findMany.mockResolvedValue([]);
+      prismaMock.taskInvite.findMany.mockResolvedValue([]);
 
-      await expect(
-        tasksService.createReview({
-          userId: 'u1',
-          taskId: 't1',
-          review: { rating: 5, text: 'Great work' },
-        })
-      ).rejects.toMatchObject({
-        status: 404,
-        code: 'NOT_FOUND',
-      });
-    });
-
-    test('createReview rejects non-completed task', async () => {
-      prismaMock.$transaction.mockImplementation((callback) => callback(prismaMock));
-      prismaMock.task.findUnique.mockResolvedValue({
-        id: 't1',
-        ownerUserId: 'u1',
-        status: 'IN_PROGRESS',
-        deletedAt: null,
-        acceptedApplicationId: 'a1',
-        acceptedApplication: { developerUserId: 'u2' },
-      });
-
-      await expect(
-        tasksService.createReview({
-          userId: 'u1',
-          taskId: 't1',
-          review: { rating: 5, text: 'Great work' },
-        })
-      ).rejects.toMatchObject({
-        status: 409,
-        code: 'INVALID_STATE',
-      });
-    });
-
-    test('createReview rejects non-participant', async () => {
-      prismaMock.$transaction.mockImplementation((callback) => callback(prismaMock));
-      prismaMock.task.findUnique.mockResolvedValue({
-        id: 't1',
-        ownerUserId: 'u1',
-        status: 'COMPLETED',
-        deletedAt: null,
-        acceptedApplicationId: 'a1',
-        acceptedApplication: { developerUserId: 'u2' },
-      });
-
-      await expect(
-        tasksService.createReview({
-          userId: 'u3',
-          taskId: 't1',
-          review: { rating: 5, text: 'Great work' },
-        })
-      ).rejects.toMatchObject({
-        status: 403,
-        code: 'FORBIDDEN',
-      });
-    });
-
-    test('createReview rejects missing developer', async () => {
-      prismaMock.$transaction.mockImplementation((callback) => callback(prismaMock));
-      prismaMock.task.findUnique.mockResolvedValue({
-        id: 't1',
-        ownerUserId: 'u1',
-        status: 'COMPLETED',
-        deletedAt: null,
-        acceptedApplicationId: null,
-        acceptedApplication: null,
-      });
-
-      await expect(
-        tasksService.createReview({
-          userId: 'u1',
-          taskId: 't1',
-          review: { rating: 5, text: 'Great work' },
-        })
-      ).rejects.toMatchObject({
-        status: 409,
-        code: 'INVALID_STATE',
-      });
-    });
-
-    test('createReview rejects duplicate review', async () => {
-      prismaMock.$transaction.mockImplementation((callback) => callback(prismaMock));
-      prismaMock.task.findUnique.mockResolvedValue({
-        id: 't1',
-        ownerUserId: 'u1',
-        status: 'COMPLETED',
-        deletedAt: null,
-        acceptedApplicationId: 'a1',
-        acceptedApplication: { developerUserId: 'u2' },
-      });
-      prismaMock.review = {
-        findUnique: jest.fn().mockResolvedValue({ id: 'r1' }),
-      };
-
-      await expect(
-        tasksService.createReview({
-          userId: 'u1',
-          taskId: 't1',
-          review: { rating: 5, text: 'Great work' },
-        })
-      ).rejects.toMatchObject({
-        status: 409,
-        code: 'ALREADY_REVIEWED',
-      });
-    });
-
-    test('createReview creates review from owner', async () => {
-      const createdAt = new Date('2026-02-14T10:00:00Z');
-      prismaMock.$transaction.mockImplementation((callback) => callback(prismaMock));
-      prismaMock.task.findUnique.mockResolvedValue({
-        id: 't1',
-        ownerUserId: 'u1',
-        status: 'COMPLETED',
-        deletedAt: null,
-        acceptedApplicationId: 'a1',
-        acceptedApplication: { developerUserId: 'u2' },
-      });
-      prismaMock.review = {
-        findUnique: jest.fn().mockResolvedValue(null),
-        create: jest.fn().mockResolvedValue({
-          id: 'r1',
-          taskId: 't1',
-          authorUserId: 'u1',
-          targetUserId: 'u2',
-          rating: 5,
-          text: 'Great work',
-          createdAt,
-        }),
-      };
-      notificationsServiceMock.createNotification.mockResolvedValue(null);
-
-      const result = await tasksService.createReview({
+      await tasksService.getTaskCandidates({
         userId: 'u1',
         taskId: 't1',
-        review: { rating: 5, text: 'Great work' },
+        experienceLevel: 'SENIOR',
       });
 
-      expect(result).toEqual({
-        reviewId: 'r1',
-        taskId: 't1',
-        authorUserId: 'u1',
-        targetUserId: 'u2',
-        rating: 5,
-        text: 'Great work',
-        createdAt,
-      });
-
-      expect(notificationsServiceMock.createNotification).toHaveBeenCalledWith({
-        client: prismaMock,
-        userId: 'u2',
-        actorUserId: 'u1',
-        taskId: 't1',
-        type: 'REVIEW_CREATED',
-        payload: {
-          review_id: 'r1',
-          task_id: 't1',
-          rating: 5,
-        },
-      });
+      expect(prismaMock.developerProfile.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            experienceLevel: 'SENIOR',
+          }),
+        })
+      );
     });
 
-    test('createReview creates review from developer', async () => {
-      const createdAt = new Date('2026-02-14T10:00:00Z');
-      prismaMock.$transaction.mockImplementation((callback) => callback(prismaMock));
-      prismaMock.task.findUnique.mockResolvedValue({
-        id: 't1',
-        ownerUserId: 'u1',
-        status: 'COMPLETED',
-        deletedAt: null,
-        acceptedApplicationId: 'a1',
-        acceptedApplication: { developerUserId: 'u2' },
-      });
-      prismaMock.review = {
-        findUnique: jest.fn().mockResolvedValue(null),
-        create: jest.fn().mockResolvedValue({
-          id: 'r2',
-          taskId: 't1',
-          authorUserId: 'u2',
-          targetUserId: 'u1',
-          rating: 4,
-          text: 'Professional company',
-          createdAt,
-        }),
-      };
-      notificationsServiceMock.createNotification.mockResolvedValue(null);
+    test('getTaskCandidates applies minRating filter', async () => {
+      setupCandidatesBaseMocks();
+      prismaMock.application.findMany.mockResolvedValue([]);
+      prismaMock.taskInvite.findMany.mockResolvedValue([]);
 
-      const result = await tasksService.createReview({
-        userId: 'u2',
-        taskId: 't1',
-        review: { rating: 4, text: 'Professional company' },
-      });
-
-      expect(result).toEqual({
-        reviewId: 'r2',
-        taskId: 't1',
-        authorUserId: 'u2',
-        targetUserId: 'u1',
-        rating: 4,
-        text: 'Professional company',
-        createdAt,
-      });
-
-      expect(notificationsServiceMock.createNotification).toHaveBeenCalledWith({
-        client: prismaMock,
+      await tasksService.getTaskCandidates({
         userId: 'u1',
-        actorUserId: 'u2',
         taskId: 't1',
-        type: 'REVIEW_CREATED',
-        payload: {
-          review_id: 'r2',
-          task_id: 't1',
-          rating: 4,
-        },
-      });
-    });
-  });
-
-  describe('optional chaining and null handling', () => {
-    test('handles company profile with null rating', async () => {
-      prismaMock.task.findUnique.mockResolvedValue({
-        id: 't1',
-        ownerUserId: 'u1',
-        status: 'PUBLISHED',
-        visibility: 'PUBLIC',
-        project: null,
-        title: 'Task',
-        description: 'Description',
-        category: 'BACKEND',
-        type: 'EXPERIENCE',
-        difficulty: 'JUNIOR',
-        requiredSkills: [],
-        estimatedEffortHours: 5,
-        expectedDuration: 'DAYS_1_7',
-        communicationLanguage: 'EN',
-        timezonePreference: 'Europe/Any',
-        applicationDeadline: new Date('2026-03-01'),
-        deliverables: 'Code',
-        requirements: 'Tests',
-        niceToHave: null,
-        acceptedApplicationId: null,
-        acceptedApplication: null,
-        createdAt: new Date(),
-        publishedAt: new Date(),
-        deletedAt: null,
-        owner: {
-          companyProfile: {
-            companyName: 'Company',
-            verified: false,
-            avgRating: null,
-            reviewsCount: 0,
-          },
-        },
+        minRating: 4.0,
       });
 
-      prismaMock.application.count.mockResolvedValue(0);
-
-      const result = await tasksService.getTaskById({ taskId: 't1' });
-
-      expect(result.company.avg_rating).toBeNull();
+      expect(prismaMock.developerProfile.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            avgRating: { gte: 4.0 },
+          }),
+        })
+      );
     });
 
-    test('handles missing company profile gracefully', async () => {
-      prismaMock.task.findUnique.mockResolvedValue({
-        id: 't1',
-        ownerUserId: 'u1',
-        status: 'PUBLISHED',
-        visibility: 'PUBLIC',
-        project: null,
-        title: 'Task',
-        description: 'Description',
-        category: 'BACKEND',
-        type: 'EXPERIENCE',
-        difficulty: 'JUNIOR',
-        requiredSkills: [],
-        estimatedEffortHours: 5,
-        expectedDuration: 'DAYS_1_7',
-        communicationLanguage: 'EN',
-        timezonePreference: 'Europe/Any',
-        applicationDeadline: new Date('2026-03-01'),
-        deliverables: 'Code',
-        requirements: 'Tests',
-        niceToHave: null,
-        acceptedApplicationId: null,
-        acceptedApplication: null,
-        createdAt: new Date(),
-        publishedAt: new Date(),
-        deletedAt: null,
-        owner: {
-          companyProfile: null,
-        },
+    test('getTaskCandidates with excludeInvited flag filters invited candidates', async () => {
+      setupCandidatesBaseMocks();
+      prismaMock.application.findMany.mockResolvedValue([]);
+      // d1 is invited
+      prismaMock.taskInvite.findMany.mockResolvedValue([{ developerUserId: 'd1' }]);
+
+      const result = await tasksService.getTaskCandidates({
+        userId: 'u1',
+        taskId: 't1',
+        excludeInvited: true,
       });
 
-      prismaMock.application.count.mockResolvedValue(0);
+      // d1 should be marked as invited (already_invited = true)
+      // With excludeInvited flag, it should be filtered out
+      const candidateIds = result.items.map((c) => c.user_id);
+      expect(candidateIds).not.toContain('d1');
+    });
 
-      const result = await tasksService.getTaskById({ taskId: 't1' });
+    test('getTaskCandidates with excludeApplied flag filters applied candidates', async () => {
+      setupCandidatesBaseMocks();
+      // d2 has applied
+      prismaMock.application.findMany.mockResolvedValue([{ developerUserId: 'd2' }]);
+      prismaMock.taskInvite.findMany.mockResolvedValue([]);
 
-      expect(result.company).toEqual({
-        user_id: 'u1',
-        company_name: undefined,
-        verified: undefined,
-        avg_rating: null,
-        reviews_count: undefined,
+      const result = await tasksService.getTaskCandidates({
+        userId: 'u1',
+        taskId: 't1',
+        excludeApplied: true,
       });
+
+      // d2 should be marked as applied (already_applied = true)
+      // With excludeApplied flag, it should be filtered out
+      const candidateIds = result.items.map((c) => c.user_id);
+      expect(candidateIds).not.toContain('d2');
+    });
+
+    test('getTaskCandidates handles combined exclude filters', async () => {
+      setupCandidatesBaseMocks();
+      prismaMock.application.findMany.mockResolvedValue([{ developerUserId: 'd2' }]);
+      prismaMock.taskInvite.findMany.mockResolvedValue([{ developerUserId: 'd1' }]);
+
+      const result = await tasksService.getTaskCandidates({
+        userId: 'u1',
+        taskId: 't1',
+        excludeInvited: true,
+        excludeApplied: true,
+      });
+
+      // Both d1 and d2 should be filtered out
+      expect(result.items.length).toBe(0);
     });
   });
 });

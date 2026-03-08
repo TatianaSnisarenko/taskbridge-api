@@ -8,7 +8,7 @@ const prismaMock = {
 
 jest.unstable_mockModule('../../src/db/prisma.js', () => ({ prisma: prismaMock }));
 
-const notificationsService = await import('../../src/services/notifications.service.js');
+const notificationsService = await import('../../src/services/notifications/index.js');
 
 describe('notifications.service', () => {
   beforeEach(() => {

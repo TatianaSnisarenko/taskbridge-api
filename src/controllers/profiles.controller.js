@@ -1,6 +1,6 @@
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { ApiError } from '../utils/ApiError.js';
-import * as profilesService from '../services/profiles.service.js';
+import * as profilesService from '../services/profiles/index.js';
 
 export const createDeveloperProfile = asyncHandler(async (req, res) => {
   const result = await profilesService.createDeveloperProfile({

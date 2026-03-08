@@ -15,7 +15,7 @@ jest.unstable_mockModule('../../src/utils/password.js', () => ({
   verifyPassword: verifyPasswordMock,
 }));
 
-const userService = await import('../../src/services/user.service.js');
+const userService = await import('../../src/services/user/index.js');
 
 describe('user.service', () => {
   beforeEach(() => {

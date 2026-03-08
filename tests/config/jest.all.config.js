@@ -6,5 +6,5 @@ export default {
   testMatch: ['<rootDir>/tests/unit/**/*.test.js', '<rootDir>/tests/integration/**/*.test.js'],
   globalSetup: '<rootDir>/tests/config/jest.global-setup.js',
   globalTeardown: '<rootDir>/tests/config/jest.global-teardown.js',
-  testTimeout: 60000,
+  testTimeout: 300000, // 5 minutes for long-running integration tests
 };

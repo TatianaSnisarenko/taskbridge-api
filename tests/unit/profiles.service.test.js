@@ -30,6 +30,7 @@ const prismaMock = {
   developerTechnology: {
     createMany: jest.fn(),
     deleteMany: jest.fn(),
+    findMany: jest.fn(),
   },
 };
 
@@ -51,12 +52,9 @@ const technologiesServiceMock = {
 jest.unstable_mockModule('../../src/db/prisma.js', () => ({ prisma: prismaMock }));
 jest.unstable_mockModule('../../src/utils/cloudinary.js', () => cloudinaryMock);
 jest.unstable_mockModule('sharp', () => ({ default: sharpMock }));
-jest.unstable_mockModule(
-  '../../src/services/technologies.service.js',
-  () => technologiesServiceMock
-);
+jest.unstable_mockModule('../../src/services/technologies/index.js', () => technologiesServiceMock);
 
-const profilesService = await import('../../src/services/profiles.service.js');
+const profilesService = await import('../../src/services/profiles/index.js');
 
 describe('profiles.service', () => {
   beforeEach(() => {
@@ -116,6 +114,31 @@ describe('profiles.service', () => {
         portfolioUrl: 'https://example.com/portfolio',
         linkedinUrl: 'https://linkedin.com/in/example',
       },
+    });
+
+    expect(result).toEqual({ userId: 'u1', created: true });
+  });
+
+  test('createDeveloperProfile creates profile with technologies', async () => {
+    prismaMock.developerProfile.findUnique.mockResolvedValue(null);
+    prismaMock.developerProfile.create.mockResolvedValue({ userId: 'u1' });
+
+    const profile = {
+      display_name: 'Tetiana',
+      primary_role: 'Java Backend Engineer',
+      technology_ids: ['tech1', 'tech2'],
+    };
+
+    technologiesServiceMock.validateTechnologyIds.mockResolvedValue(['tech1', 'tech2']);
+
+    const result = await profilesService.createDeveloperProfile({ userId: 'u1', profile });
+
+    expect(prismaMock.developerTechnology.createMany).toHaveBeenCalledWith({
+      data: [
+        { developerUserId: 'u1', technologyId: 'tech1', proficiencyYears: 0 },
+        { developerUserId: 'u1', technologyId: 'tech2', proficiencyYears: 0 },
+      ],
+      skipDuplicates: true,
     });
 
     expect(result).toEqual({ userId: 'u1', created: true });
@@ -193,6 +216,127 @@ describe('profiles.service', () => {
       user_id: 'u1',
       updated: true,
       updated_at: updatedAt.toISOString(),
+      technologies: [],
+    });
+  });
+
+  test('updateDeveloperProfile updates technologies when provided', async () => {
+    prismaMock.developerProfile.findUnique.mockResolvedValue({ userId: 'u1' });
+    const updatedAt = new Date('2026-02-14T12:00:00Z');
+
+    prismaMock.developerProfile.update.mockResolvedValue({
+      userId: 'u1',
+      updatedAt,
+      technologies: [],
+    });
+
+    prismaMock.developerTechnology.findMany.mockResolvedValue([
+      {
+        developerUserId: 'u1',
+        technologyId: 'tech1',
+        proficiencyYears: 0,
+        technology: {
+          id: 'tech1',
+          slug: 'nodejs',
+          name: 'Node.js',
+          type: 'BACKEND',
+        },
+      },
+      {
+        developerUserId: 'u1',
+        technologyId: 'tech2',
+        proficiencyYears: 0,
+        technology: {
+          id: 'tech2',
+          slug: 'react',
+          name: 'React',
+          type: 'FRONTEND',
+        },
+      },
+    ]);
+
+    technologiesServiceMock.validateTechnologyIds.mockResolvedValue(['tech1', 'tech2']);
+
+    const profile = {
+      display_name: 'Tetiana',
+      technology_ids: ['tech1', 'tech2'],
+    };
+
+    const result = await profilesService.updateDeveloperProfile({ userId: 'u1', profile });
+
+    expect(prismaMock.developerTechnology.deleteMany).toHaveBeenCalledWith({
+      where: { developerUserId: 'u1' },
+    });
+
+    expect(prismaMock.developerTechnology.createMany).toHaveBeenCalledWith({
+      data: [
+        { developerUserId: 'u1', technologyId: 'tech1', proficiencyYears: 0 },
+        { developerUserId: 'u1', technologyId: 'tech2', proficiencyYears: 0 },
+      ],
+      skipDuplicates: true,
+    });
+
+    expect(technologiesServiceMock.incrementTechnologyPopularity).toHaveBeenCalledWith([
+      'tech1',
+      'tech2',
+    ]);
+
+    expect(result).toMatchObject({
+      user_id: 'u1',
+      updated: true,
+      updated_at: updatedAt.toISOString(),
+    });
+
+    expect(result.technologies).toEqual([
+      {
+        id: 'tech1',
+        slug: 'nodejs',
+        name: 'Node.js',
+        type: 'BACKEND',
+        proficiency_years: 0,
+      },
+      {
+        id: 'tech2',
+        slug: 'react',
+        name: 'React',
+        type: 'FRONTEND',
+        proficiency_years: 0,
+      },
+    ]);
+  });
+
+  test('updateDeveloperProfile handles empty technology_ids array', async () => {
+    prismaMock.developerProfile.findUnique.mockResolvedValue({ userId: 'u1' });
+    const updatedAt = new Date('2026-02-14T12:00:00Z');
+
+    prismaMock.developerProfile.update.mockResolvedValue({
+      userId: 'u1',
+      updatedAt,
+      technologies: [],
+    });
+
+    technologiesServiceMock.validateTechnologyIds.mockResolvedValue([]);
+
+    const profile = {
+      display_name: 'Tetiana',
+      technology_ids: [],
+    };
+
+    const result = await profilesService.updateDeveloperProfile({ userId: 'u1', profile });
+
+    expect(prismaMock.developerTechnology.deleteMany).toHaveBeenCalledWith({
+      where: { developerUserId: 'u1' },
+    });
+
+    // Should not create any technologies
+    expect(prismaMock.developerTechnology.createMany).not.toHaveBeenCalled();
+
+    // Should not increment popularity for empty array
+    expect(technologiesServiceMock.incrementTechnologyPopularity).not.toHaveBeenCalled();
+
+    expect(result).toMatchObject({
+      user_id: 'u1',
+      updated: true,
       technologies: [],
     });
   });
@@ -284,6 +428,38 @@ describe('profiles.service', () => {
           developerUserId: 'u1',
         },
       },
+    });
+  });
+
+  test('getDeveloperProfileByUserId returns success_rate as null when no projects', async () => {
+    prismaMock.developerProfile.findUnique.mockResolvedValue({
+      userId: 'u2',
+      displayName: 'NewDev',
+      jobTitle: 'Junior Developer',
+      bio: 'New to the platform',
+      experienceLevel: 'JUNIOR',
+      location: 'USA',
+      timezone: 'America/New_York',
+      technologies: [],
+      portfolioUrl: null,
+      linkedinUrl: null,
+      avatarUrl: null,
+      avgRating: null,
+      reviewsCount: 0,
+    });
+
+    // Mock task.count for 0 completed and 0 failed tasks
+    prismaMock.task.count
+      .mockResolvedValueOnce(0) // completed tasks
+      .mockResolvedValueOnce(0); // failed tasks
+
+    const result = await profilesService.getDeveloperProfileByUserId({ userId: 'u2' });
+
+    expect(result).toMatchObject({
+      user_id: 'u2',
+      display_name: 'NewDev',
+      projects_completed: 0,
+      success_rate: null, // null when totalProjects is 0
     });
   });
 
@@ -631,6 +807,24 @@ describe('profiles.service', () => {
       ).rejects.toMatchObject({
         status: 400,
         code: 'INVALID_FILE_TYPE',
+      });
+    });
+
+    test('rejects image with missing dimensions', async () => {
+      prismaMock.developerProfile.findUnique.mockResolvedValue({ userId: 'u1' });
+      sharpMock.mockReturnValue({
+        metadata: jest.fn().mockResolvedValue({ width: undefined, height: undefined }),
+      });
+
+      await expect(
+        profilesService.uploadDeveloperAvatar({
+          userId: 'u1',
+          file: { buffer: Buffer.from('nodimensions') },
+        })
+      ).rejects.toMatchObject({
+        status: 400,
+        code: 'INVALID_FILE_TYPE',
+        message: 'Unable to determine image dimensions',
       });
     });
 

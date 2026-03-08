@@ -45,7 +45,7 @@ async function loadEmailService() {
     buildResetPasswordTemplate: buildResetTemplateMock,
   }));
 
-  const emailService = await import('../../src/services/email.service.js');
+  const emailService = await import('../../src/services/email/index.js');
 
   return {
     emailService,

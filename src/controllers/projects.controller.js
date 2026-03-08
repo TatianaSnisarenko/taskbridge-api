@@ -1,6 +1,6 @@
 import { asyncHandler } from '../utils/asyncHandler.js';
-import * as projectsService from '../services/projects.service.js';
-import * as tasksService from '../services/tasks.service.js';
+import * as projectsService from '../services/projects/index.js';
+import * as tasksService from '../services/tasks/index.js';
 
 export const createProject = asyncHandler(async (req, res) => {
   const result = await projectsService.createProject({

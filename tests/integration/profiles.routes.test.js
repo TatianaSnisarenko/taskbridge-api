@@ -7,7 +7,7 @@ import { resetDatabase } from '../helpers/db.js';
 import { buildAccessToken } from '../helpers/auth.js';
 import { createUser } from '../helpers/factories.js';
 
-jest.unstable_mockModule('../../src/services/email.service.js', () => ({
+jest.unstable_mockModule('../../src/services/email/index.js', () => ({
   sendVerificationEmail: jest.fn().mockResolvedValue(undefined),
   sendEmail: jest.fn(),
   sendResetPasswordEmail: jest.fn().mockResolvedValue(undefined),

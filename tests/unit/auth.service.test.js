@@ -28,7 +28,7 @@ const sendVerificationEmailMock = jest.fn();
 const sendResetPasswordEmailMock = jest.fn();
 
 jest.unstable_mockModule('../../src/db/prisma.js', () => ({ prisma: prismaMock }));
-jest.unstable_mockModule('../../src/services/user.service.js', () => ({
+jest.unstable_mockModule('../../src/services/user/index.js', () => ({
   createUser: createUserMock,
   findUserByEmail: findUserByEmailMock,
 }));
@@ -36,16 +36,16 @@ jest.unstable_mockModule('../../src/utils/password.js', () => ({
   verifyPassword: verifyPasswordMock,
   hashPassword: hashPasswordMock,
 }));
-jest.unstable_mockModule('../../src/services/token.service.js', () => ({
+jest.unstable_mockModule('../../src/services/token/index.js', () => ({
   generateRefreshToken: generateRefreshTokenMock,
   signAccessToken: signAccessTokenMock,
 }));
-jest.unstable_mockModule('../../src/services/email.service.js', () => ({
+jest.unstable_mockModule('../../src/services/email/index.js', () => ({
   sendVerificationEmail: sendVerificationEmailMock,
   sendResetPasswordEmail: sendResetPasswordEmailMock,
 }));
 
-const authService = await import('../../src/services/auth.service.js');
+const authService = await import('../../src/services/auth/index.js');
 
 describe('auth.service', () => {
   beforeEach(() => {

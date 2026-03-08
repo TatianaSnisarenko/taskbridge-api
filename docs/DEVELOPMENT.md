@@ -591,13 +591,39 @@ git commit --no-verify
 ### Adding a New Endpoint
 
 1. **Define Joi schema** (`src/schemas/`)
-2. **Create service method** (`src/services/`)
+2. **Create service method** (`src/services/<domain>/`)
+   - For large domains, services are organized as folders (e.g., `tasks/`, `projects/`)
+   - Each folder has an `index.js` that re-exports all modules
+   - Keep individual modules under 400 lines (ESLint enforced)
+   - Consider using query helpers from `src/db/queries/` for common patterns
 3. **Create controller** (`src/controllers/`)
 4. **Add route** (`src/routes/`)
 5. **Write tests**:
    - Unit test for service (`tests/unit/`)
+   - Unit test for controller (`tests/unit/`)
    - Integration test for endpoint (`tests/integration/`)
 6. **Update Swagger docs** (if needed)
+
+**Example service structure:**
+
+```
+src/services/
+  myDomain/
+    index.js           # Re-exports all modules
+    crud.js            # Create, read, update, delete operations
+    workflows.js       # Complex state transitions
+    helpers.js         # Shared utilities
+```
+
+**Using query helpers:**
+
+```javascript
+// Instead of duplicating Prisma queries:
+import { findTaskForOwnership } from '../db/queries/tasks.queries.js';
+
+// Use in your service:
+const task = await findTaskForOwnership(taskId, userId);
+```
 
 ### Database Schema Changes
 

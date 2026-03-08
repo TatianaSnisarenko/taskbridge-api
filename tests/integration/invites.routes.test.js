@@ -5,7 +5,7 @@ import { resetDatabase } from '../helpers/db.js';
 import { buildAccessToken } from '../helpers/auth.js';
 import { createUser } from '../helpers/factories.js';
 
-jest.unstable_mockModule('../../src/services/email.service.js', () => ({
+jest.unstable_mockModule('../../src/services/email/index.js', () => ({
   sendVerificationEmail: jest.fn().mockResolvedValue(undefined),
   sendEmail: jest.fn(),
   sendResetPasswordEmail: jest.fn().mockResolvedValue(undefined),
@@ -40,22 +40,10 @@ describe('invites routes', () => {
     };
 
     prisma.task.create = (args) => {
-      if (Array.isArray(args?.data?.required_skills)) {
-        // eslint-disable-next-line no-unused-vars
-        const { required_skills, ...rest } = args.data;
-        return originalTaskCreate({ ...args, data: rest });
-      }
-
       return originalTaskCreate(args);
     };
 
     prisma.task.update = (args) => {
-      if (Array.isArray(args?.data?.required_skills)) {
-        // eslint-disable-next-line no-unused-vars
-        const { required_skills, ...rest } = args.data;
-        return originalTaskUpdate({ ...args, data: rest });
-      }
-
       return originalTaskUpdate(args);
     };
 
@@ -101,7 +89,6 @@ describe('invites routes', () => {
         category: 'BACKEND',
         type: 'EXPERIENCE',
         difficulty: 'JUNIOR',
-        required_skills: ['JavaScript'],
         estimatedEffortHours: 10,
         expectedDuration: 'DAYS_8_14',
         communicationLanguage: 'EN',
@@ -203,7 +190,6 @@ describe('invites routes', () => {
           category: 'BACKEND',
           type: 'EXPERIENCE',
           difficulty: 'JUNIOR',
-          required_skills: ['Node.js'],
           estimatedEffortHours: 6,
           expectedDuration: 'DAYS_8_14',
           communicationLanguage: 'EN',
@@ -265,7 +251,6 @@ describe('invites routes', () => {
           category: 'BACKEND',
           type: 'EXPERIENCE',
           difficulty: 'JUNIOR',
-          required_skills: ['Node.js'],
           estimatedEffortHours: 6,
           expectedDuration: 'DAYS_8_14',
           communicationLanguage: 'EN',
@@ -322,7 +307,6 @@ describe('invites routes', () => {
           category: 'BACKEND',
           type: 'EXPERIENCE',
           difficulty: 'JUNIOR',
-          required_skills: ['Node.js'],
           estimatedEffortHours: 6,
           expectedDuration: 'DAYS_8_14',
           communicationLanguage: 'EN',
