@@ -1,7 +1,14 @@
 import Joi from 'joi';
+import {
+  emailRegexp,
+  passRegexp,
+  EXPERIENCE_LEVELS,
+  AVAILABILITY_LEVELS,
+  TASK_CATEGORIES,
+  COMPANY_TYPES,
+} from './constants.js';
 
-export const emailRegexp = /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/;
-export const passRegexp = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9])[ -~]{6,64}$/;
+export { emailRegexp, passRegexp };
 
 export const signupSchema = Joi.object({
   email: Joi.string().pattern(emailRegexp).required().messages({
@@ -15,11 +22,105 @@ export const signupSchema = Joi.object({
     'any.required': 'Password is required',
   }),
   developerProfile: Joi.object({
-    displayName: Joi.string().trim().min(1).required(),
-  }).unknown(true),
+    displayName: Joi.string().trim().min(2).max(100).required().messages({
+      'string.empty': 'Display name is required',
+      'string.min': 'Display name must be at least 2 characters',
+      'string.max': 'Display name must not exceed 100 characters',
+      'any.required': 'Display name is required',
+    }),
+    jobTitle: Joi.string().trim().min(2).max(100),
+    bio: Joi.string().trim().min(10).max(2000),
+    experienceLevel: Joi.string()
+      .valid(...EXPERIENCE_LEVELS)
+      .messages({
+        'any.only': 'Experience level must be one of: STUDENT, JUNIOR, MIDDLE, SENIOR',
+      }),
+    location: Joi.string().trim().min(2).max(100),
+    timezone: Joi.string().trim().min(3).max(50),
+    availability: Joi.string()
+      .valid(...AVAILABILITY_LEVELS)
+      .messages({
+        'any.only': 'Availability must be one of: FEW_HOURS_WEEK, PART_TIME, FULL_TIME',
+      }),
+    preferredTaskCategories: Joi.array()
+      .items(
+        Joi.string()
+          .valid(...TASK_CATEGORIES)
+          .messages({
+            'any.only':
+              'Each task category must be one of: BACKEND, FRONTEND, DEVOPS, QA, DATA, MOBILE, OTHER, FULLSTACK, AI_ML, UI_UX_DESIGN, PRODUCT_MANAGEMENT, BUSINESS_ANALYSIS, CYBERSECURITY, GAME_DEV, EMBEDDED, TECH_WRITING',
+          })
+      )
+      .unique()
+      .max(10)
+      .messages({
+        'array.unique': 'Task categories must be unique',
+        'array.max': 'Task categories list must not exceed 10 items',
+      }),
+    portfolioUrl: Joi.string().uri().messages({
+      'string.uri': 'Portfolio URL must be a valid URI',
+    }),
+    linkedinUrl: Joi.string().uri().messages({
+      'string.uri': 'LinkedIn URL must be a valid URI',
+    }),
+    technologyIds: Joi.array()
+      .items(
+        Joi.string().guid({ version: 'uuidv4' }).messages({
+          'string.guid': 'Each technology ID must be a valid UUID',
+        })
+      )
+      .unique()
+      .max(50)
+      .messages({
+        'array.unique': 'Technology IDs must be unique',
+        'array.max': 'Technology list must not exceed 50 items',
+      }),
+  }),
   companyProfile: Joi.object({
-    companyName: Joi.string().trim().min(1).required(),
-  }).unknown(true),
+    companyName: Joi.string().trim().min(2).max(100).required().messages({
+      'string.empty': 'Company name is required',
+      'string.min': 'Company name must be at least 2 characters',
+      'string.max': 'Company name must not exceed 100 characters',
+      'any.required': 'Company name is required',
+    }),
+    companyType: Joi.string()
+      .valid(...COMPANY_TYPES)
+      .messages({
+        'any.only': 'Company type must be one of: STARTUP, SMB, ENTERPRISE, INDIVIDUAL',
+      }),
+    description: Joi.string().trim().min(10).max(2000),
+    teamSize: Joi.number().integer().min(1).max(100000).messages({
+      'number.base': 'Team size must be a number',
+      'number.integer': 'Team size must be an integer',
+      'number.min': 'Team size must be at least 1',
+      'number.max': 'Team size must not exceed 100000',
+    }),
+    country: Joi.string()
+      .trim()
+      .pattern(/^[A-Z]{2}$/)
+      .messages({
+        'string.pattern.base': 'Country must be a valid 2-letter ISO code',
+      }),
+    timezone: Joi.string().trim().min(3).max(50),
+    contactEmail: Joi.string().pattern(emailRegexp).messages({
+      'string.pattern.base': 'Contact email must be a valid email',
+    }),
+    websiteUrl: Joi.string().uri().messages({
+      'string.uri': 'Website URL must be a valid URI',
+    }),
+    links: Joi.object()
+      .pattern(
+        Joi.string().trim().min(2).max(30),
+        Joi.string().uri().messages({
+          'string.uri': 'Each link value must be a valid URI',
+        })
+      )
+      .max(20)
+      .messages({
+        'object.base': 'Links must be an object',
+        'object.max': 'Links must not exceed 20 items',
+      }),
+  }),
 })
   .or('developerProfile', 'companyProfile')
   .messages({

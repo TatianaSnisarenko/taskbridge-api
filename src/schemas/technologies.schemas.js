@@ -1,34 +1,15 @@
 import Joi from 'joi';
-
-// Technology types enum (from Prisma schema)
-const TECHNOLOGY_TYPES = [
-  'BACKEND',
-  'FRONTEND',
-  'DEVOPS',
-  'QA',
-  'DATA',
-  'MOBILE',
-  'OTHER',
-  'FULLSTACK',
-  'AI_ML',
-  'UI_UX_DESIGN',
-  'PRODUCT_MANAGEMENT',
-  'BUSINESS_ANALYSIS',
-  'CYBERSECURITY',
-  'GAME_DEV',
-  'EMBEDDED',
-  'TECH_WRITING',
-];
+import { TASK_CATEGORIES } from './constants.js';
 
 export const searchTechnologiesSchema = Joi.object({
   q: Joi.string().max(100).optional().messages({
     'string.max': 'Search query must not exceed 100 characters',
   }),
   type: Joi.string()
-    .valid(...TECHNOLOGY_TYPES)
+    .valid(...TASK_CATEGORIES)
     .optional()
     .messages({
-      'any.only': `Technology type must be one of: ${TECHNOLOGY_TYPES.join(', ')}`,
+      'any.only': `Technology type must be one of: ${TASK_CATEGORIES.join(', ')}`,
     }),
   limit: Joi.number().integer().min(1).max(20).optional().default(5).messages({
     'number.min': 'Limit must be at least 1',

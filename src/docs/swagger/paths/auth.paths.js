@@ -2,20 +2,115 @@
   '/api/v1/auth/signup': {
     post: {
       tags: ['Auth'],
-      summary: 'Create a new user',
+      summary: 'Create a new user (with developer profile, company profile, or both)',
       requestBody: {
         required: true,
         content: {
           'application/json': {
             schema: { $ref: '#/components/schemas/SignupRequest' },
             example: {
-              email: 'user@example.com',
-              password: 'password',
+              email: 'founder@example.com',
+              password: 'Passw0rd!',
               developerProfile: {
                 displayName: 'Olena Kovalenko',
+                jobTitle: 'Founder & CTO',
+                bio: 'Founder of NovaTech Labs, experienced full stack developer',
+                experienceLevel: 'SENIOR',
+                location: 'Kyiv, Ukraine',
+                timezone: 'EET',
+                availability: 'FULL_TIME',
+                preferredTaskCategories: ['BACKEND', 'FRONTEND', 'FULLSTACK'],
+                portfolioUrl: 'https://olena-dev.com',
+                linkedinUrl: 'https://linkedin.com/in/olena-kovalenko',
               },
               companyProfile: {
                 companyName: 'NovaTech Labs',
+                companyType: 'STARTUP',
+                description: 'We are an innovative tech startup focused on AI solutions',
+                teamSize: 15,
+                country: 'UA',
+                timezone: 'EET',
+                contactEmail: 'contact@novatech.com',
+                websiteUrl: 'https://novatech.com',
+                links: {
+                  github: 'https://github.com/novatech',
+                  linkedin: 'https://linkedin.com/company/novatech',
+                },
+              },
+            },
+            examples: {
+              developerOnly: {
+                summary: 'Signup with developer profile only',
+                value: {
+                  email: 'developer@example.com',
+                  password: 'Passw0rd!',
+                  developerProfile: {
+                    displayName: 'Olena Kovalenko',
+                    jobTitle: 'Senior Full Stack Developer',
+                    bio: 'I am an experienced developer with 5 years in full stack development',
+                    experienceLevel: 'SENIOR',
+                    location: 'Kyiv, Ukraine',
+                    timezone: 'EET',
+                    availability: 'FULL_TIME',
+                    preferredTaskCategories: ['BACKEND', 'FRONTEND', 'FULLSTACK'],
+                    portfolioUrl: 'https://olena-dev.com',
+                    linkedinUrl: 'https://linkedin.com/in/olena-kovalenko',
+                  },
+                },
+              },
+              companyOnly: {
+                summary: 'Signup with company profile only',
+                value: {
+                  email: 'company@example.com',
+                  password: 'Passw0rd!',
+                  companyProfile: {
+                    companyName: 'NovaTech Labs',
+                    companyType: 'STARTUP',
+                    description: 'We are an innovative tech startup focused on AI solutions',
+                    teamSize: 15,
+                    country: 'UA',
+                    timezone: 'EET',
+                    contactEmail: 'contact@novatech.com',
+                    websiteUrl: 'https://novatech.com',
+                    links: {
+                      github: 'https://github.com/novatech',
+                      linkedin: 'https://linkedin.com/company/novatech',
+                    },
+                  },
+                },
+              },
+              bothProfiles: {
+                summary: 'Signup with both developer and company profiles (default example)',
+                value: {
+                  email: 'founder@example.com',
+                  password: 'Passw0rd!',
+                  developerProfile: {
+                    displayName: 'Olena Kovalenko',
+                    jobTitle: 'Founder & CTO',
+                    bio: 'Founder of NovaTech Labs, experienced full stack developer',
+                    experienceLevel: 'SENIOR',
+                    location: 'Kyiv, Ukraine',
+                    timezone: 'EET',
+                    availability: 'FULL_TIME',
+                    preferredTaskCategories: ['BACKEND', 'FRONTEND', 'FULLSTACK'],
+                    portfolioUrl: 'https://olena-dev.com',
+                    linkedinUrl: 'https://linkedin.com/in/olena-kovalenko',
+                  },
+                  companyProfile: {
+                    companyName: 'NovaTech Labs',
+                    companyType: 'STARTUP',
+                    description: 'We are an innovative tech startup focused on AI solutions',
+                    teamSize: 15,
+                    country: 'UA',
+                    timezone: 'EET',
+                    contactEmail: 'contact@novatech.com',
+                    websiteUrl: 'https://novatech.com',
+                    links: {
+                      github: 'https://github.com/novatech',
+                      linkedin: 'https://linkedin.com/company/novatech',
+                    },
+                  },
+                },
               },
             },
           },

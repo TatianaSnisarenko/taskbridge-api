@@ -30,6 +30,7 @@ export const profilesSchemas = {
         uniqueItems: true,
         maxItems: 50,
         description: 'Array of technology IDs from the catalog',
+        example: ['3fa85f64-5717-4562-b3fc-2c963f66afa6', 'a1b2c3d4-5e6f-7890-abcd-ef1234567890'],
       },
       availability: {
         type: 'string',
@@ -85,6 +86,7 @@ export const profilesSchemas = {
         maxItems: 50,
         description:
           'Array of technology IDs from the catalog. If provided, replaces all existing technologies.',
+        example: ['3fa85f64-5717-4562-b3fc-2c963f66afa6'],
       },
       availability: {
         type: 'string',
@@ -131,7 +133,7 @@ export const profilesSchemas = {
       description: {
         type: 'string',
         minLength: 10,
-        maxLength: 1000,
+        maxLength: 2000,
         example: 'Product company building SaaS collaboration tools for distributed teams.',
       },
       team_size: { type: 'integer', minimum: 1, maximum: 100000 },
@@ -166,7 +168,7 @@ export const profilesSchemas = {
       description: {
         type: 'string',
         minLength: 10,
-        maxLength: 1000,
+        maxLength: 2000,
         example:
           'Updated company profile with focus on platform engineering and AI-enabled analytics.',
       },
@@ -203,7 +205,7 @@ export const profilesSchemas = {
       description: {
         type: 'string',
         minLength: 10,
-        maxLength: 1000,
+        maxLength: 2000,
         example: 'SaaS company focused on developer productivity and team workflows.',
       },
       team_size: { type: 'integer', minimum: 1, maximum: 100000 },

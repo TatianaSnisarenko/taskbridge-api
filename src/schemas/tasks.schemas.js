@@ -1,29 +1,10 @@
 import Joi from 'joi';
+import { TASK_CATEGORIES, AVAILABILITY_LEVELS, EXPERIENCE_LEVELS } from './constants.js';
 
-const TASK_CATEGORIES = [
-  'BACKEND',
-  'FRONTEND',
-  'DEVOPS',
-  'QA',
-  'DATA',
-  'MOBILE',
-  'OTHER',
-  'FULLSTACK',
-  'AI_ML',
-  'UI_UX_DESIGN',
-  'PRODUCT_MANAGEMENT',
-  'BUSINESS_ANALYSIS',
-  'CYBERSECURITY',
-  'GAME_DEV',
-  'EMBEDDED',
-  'TECH_WRITING',
-];
 const TASK_TYPES = ['PAID', 'UNPAID', 'VOLUNTEER', 'EXPERIENCE'];
 const TASK_DIFFICULTY = ['JUNIOR', 'MIDDLE', 'SENIOR', 'ANY'];
 const TASK_DURATION = ['DAYS_1_7', 'DAYS_8_14', 'DAYS_15_30', 'DAYS_30_PLUS'];
 const TASK_VISIBILITY = ['PUBLIC', 'UNLISTED'];
-const DEVELOPER_AVAILABILITY = ['FEW_HOURS_WEEK', 'PART_TIME', 'FULL_TIME'];
-const DEVELOPER_EXPERIENCE = ['STUDENT', 'JUNIOR', 'MIDDLE', 'SENIOR'];
 
 const taskNotesFieldOptional = (label) =>
   Joi.array()
@@ -390,13 +371,13 @@ export const getTaskCandidatesQuerySchema = Joi.object({
     'string.max': 'Search must not exceed 200 characters',
   }),
   availability: Joi.string()
-    .valid(...DEVELOPER_AVAILABILITY)
+    .valid(...AVAILABILITY_LEVELS)
     .optional()
     .messages({
       'any.only': 'Availability must be one of: FEW_HOURS_WEEK, PART_TIME, FULL_TIME',
     }),
   experience_level: Joi.string()
-    .valid(...DEVELOPER_EXPERIENCE)
+    .valid(...EXPERIENCE_LEVELS)
     .optional()
     .messages({
       'any.only': 'Experience level must be one of: STUDENT, JUNIOR, MIDDLE, SENIOR',

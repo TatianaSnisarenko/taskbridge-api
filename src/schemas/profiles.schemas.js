@@ -1,27 +1,11 @@
 import Joi from 'joi';
-import { emailRegexp } from './auth.schemas.js';
-
-const EXPERIENCE_LEVELS = ['STUDENT', 'JUNIOR', 'MIDDLE', 'SENIOR'];
-const AVAILABILITY_LEVELS = ['FEW_HOURS_WEEK', 'PART_TIME', 'FULL_TIME'];
-const TASK_CATEGORIES = [
-  'BACKEND',
-  'FRONTEND',
-  'DEVOPS',
-  'QA',
-  'DATA',
-  'MOBILE',
-  'OTHER',
-  'FULLSTACK',
-  'AI_ML',
-  'UI_UX_DESIGN',
-  'PRODUCT_MANAGEMENT',
-  'BUSINESS_ANALYSIS',
-  'CYBERSECURITY',
-  'GAME_DEV',
-  'EMBEDDED',
-  'TECH_WRITING',
-];
-const COMPANY_TYPES = ['STARTUP', 'SMB', 'ENTERPRISE', 'INDIVIDUAL'];
+import {
+  emailRegexp,
+  EXPERIENCE_LEVELS,
+  AVAILABILITY_LEVELS,
+  TASK_CATEGORIES,
+  COMPANY_TYPES,
+} from './constants.js';
 
 const developerProfileFields = {
   display_name: Joi.string().trim().min(2).max(100).required().messages({
@@ -123,9 +107,9 @@ const companyProfileFields = {
     .messages({
       'any.only': 'Company type must be one of: STARTUP, SMB, ENTERPRISE, INDIVIDUAL',
     }),
-  description: Joi.string().trim().min(10).max(1000).messages({
+  description: Joi.string().trim().min(10).max(2000).messages({
     'string.min': 'Description must be at least 10 characters',
-    'string.max': 'Description must not exceed 1000 characters',
+    'string.max': 'Description must not exceed 2000 characters',
   }),
   team_size: Joi.number().integer().min(1).max(100000).messages({
     'number.base': 'Team size must be a number',

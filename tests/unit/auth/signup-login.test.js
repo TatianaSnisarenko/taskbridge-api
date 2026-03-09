@@ -96,6 +96,135 @@ describe('auth.service', () => {
     });
   });
 
+  test('signup with extended developer profile fields passes to createUser', async () => {
+    findUserByEmailMock.mockResolvedValue(null);
+    createUserMock.mockResolvedValue({
+      id: 'u1',
+      email: 'a@example.com',
+      developerProfile: {
+        id: 'd1',
+        displayName: 'John Developer',
+        jobTitle: 'Senior Developer',
+        bio: 'I am a senior full stack developer',
+        experienceLevel: 'SENIOR',
+        location: 'Kyiv, Ukraine',
+        timezone: 'EET',
+        availability: 'FULL_TIME',
+        preferredTaskCategories: ['BACKEND', 'FRONTEND'],
+        portfolioUrl: 'https://johndeveloper.com',
+        linkedinUrl: 'https://linkedin.com/in/john',
+      },
+      companyProfile: null,
+    });
+
+    const profileData = {
+      displayName: 'John Developer',
+      jobTitle: 'Senior Developer',
+      bio: 'I am a senior full stack developer',
+      experienceLevel: 'SENIOR',
+      location: 'Kyiv, Ukraine',
+      timezone: 'EET',
+      availability: 'FULL_TIME',
+      preferredTaskCategories: ['BACKEND', 'FRONTEND'],
+      portfolioUrl: 'https://johndeveloper.com',
+      linkedinUrl: 'https://linkedin.com/in/john',
+    };
+
+    const result = await authService.signup({
+      email: 'a@example.com',
+      password: 'Passw0rd!',
+      developerProfile: profileData,
+    });
+
+    expect(createUserMock).toHaveBeenCalledWith({
+      email: 'a@example.com',
+      password: 'Passw0rd!',
+      developerProfile: profileData,
+      companyProfile: undefined,
+    });
+    expect(result.hasDeveloperProfile).toBe(true);
+  });
+
+  test('signup with extended company profile fields passes to createUser', async () => {
+    findUserByEmailMock.mockResolvedValue(null);
+    createUserMock.mockResolvedValue({
+      id: 'u1',
+      email: 'a@example.com',
+      developerProfile: null,
+      companyProfile: {
+        id: 'c1',
+        companyName: 'Tech Startup',
+        companyType: 'STARTUP',
+        description: 'We are an innovative tech startup',
+        teamSize: 15,
+        country: 'UA',
+        timezone: 'EET',
+        contactEmail: 'contact@techstartup.com',
+        websiteUrl: 'https://techstartup.com',
+        links: {
+          github: 'https://github.com/techstartup',
+        },
+      },
+    });
+
+    const profileData = {
+      companyName: 'Tech Startup',
+      companyType: 'STARTUP',
+      description: 'We are an innovative tech startup',
+      teamSize: 15,
+      country: 'UA',
+      timezone: 'EET',
+      contactEmail: 'contact@techstartup.com',
+      websiteUrl: 'https://techstartup.com',
+      links: {
+        github: 'https://github.com/techstartup',
+      },
+    };
+
+    const result = await authService.signup({
+      email: 'a@example.com',
+      password: 'Passw0rd!',
+      companyProfile: profileData,
+    });
+
+    expect(createUserMock).toHaveBeenCalledWith({
+      email: 'a@example.com',
+      password: 'Passw0rd!',
+      developerProfile: undefined,
+      companyProfile: profileData,
+    });
+    expect(result.hasCompanyProfile).toBe(true);
+  });
+
+  test('signup with optional fields omitted still works', async () => {
+    findUserByEmailMock.mockResolvedValue(null);
+    createUserMock.mockResolvedValue({
+      id: 'u1',
+      email: 'a@example.com',
+      developerProfile: { id: 'd1', displayName: 'Dev' },
+      companyProfile: null,
+    });
+
+    const profileData = {
+      displayName: 'Dev',
+      // All other fields omitted
+    };
+
+    const result = await authService.signup({
+      email: 'a@example.com',
+      password: 'Passw0rd!',
+      developerProfile: profileData,
+    });
+
+    expect(createUserMock).toHaveBeenCalledWith({
+      email: 'a@example.com',
+      password: 'Passw0rd!',
+      developerProfile: profileData,
+      companyProfile: undefined,
+    });
+    expect(result.hasDeveloperProfile).toBe(true);
+  });
+
   test('login rejects missing user', async () => {
     findUserByEmailMock.mockResolvedValue(null);
 
