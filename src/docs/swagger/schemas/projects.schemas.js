@@ -33,7 +33,7 @@
       visibility: { type: 'string', enum: ['PUBLIC', 'UNLISTED'] },
       status: { type: 'string', enum: ['ACTIVE', 'ARCHIVED'] },
       max_talents: { type: 'integer', minimum: 1, maximum: 100 },
-      deadline: { type: 'string', format: 'date', nullable: true, example: '2026-09-01' },
+      deadline: { type: 'string', format: 'date', example: '2026-09-01' },
     },
   },
   CreateProjectResponse: {
@@ -86,7 +86,7 @@
       visibility: { type: 'string', enum: ['PUBLIC', 'UNLISTED'] },
       status: { type: 'string', enum: ['ACTIVE', 'ARCHIVED'] },
       max_talents: { type: 'integer', minimum: 1, maximum: 100 },
-      deadline: { type: 'string', format: 'date', nullable: true, example: '2026-10-01' },
+      deadline: { type: 'string', format: 'date', example: '2026-10-01' },
     },
   },
   UpdateProjectResponse: {

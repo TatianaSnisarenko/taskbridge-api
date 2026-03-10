@@ -127,5 +127,50 @@ describe('me.service - applications', () => {
       expect(result.items).toEqual([]);
       expect(result.total).toBe(0);
     });
+
+    test('maps null optional task fields when deadline and project are absent', async () => {
+      prismaMock.developerProfile.findUnique.mockResolvedValue({ userId: 'u1' });
+
+      prismaMock.application.findMany.mockResolvedValue([
+        {
+          id: 'app2',
+          status: 'ACCEPTED',
+          createdAt: new Date('2026-03-01T12:00:00Z'),
+          task: {
+            id: 't2',
+            title: 'No Project Task',
+            status: 'IN_PROGRESS',
+            deadline: null,
+            project: null,
+            owner: {
+              id: 'c2',
+              companyProfile: null,
+            },
+          },
+        },
+      ]);
+      prismaMock.application.count.mockResolvedValue(1);
+
+      const result = await meService.getMyApplications({ userId: 'u1', page: 1, size: 20 });
+
+      expect(result.items).toEqual([
+        {
+          application_id: 'app2',
+          status: 'ACCEPTED',
+          created_at: '2026-03-01T12:00:00.000Z',
+          task: {
+            task_id: 't2',
+            title: 'No Project Task',
+            status: 'IN_PROGRESS',
+            deadline: null,
+            project: null,
+          },
+          company: {
+            user_id: 'c2',
+            company_name: undefined,
+          },
+        },
+      ]);
+    });
   });
 });

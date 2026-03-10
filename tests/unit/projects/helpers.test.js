@@ -281,6 +281,32 @@ describe('projects.helpers', () => {
       expect(result.technologies[0].is_required).toBe(true);
       expect(result.technologies[1].is_required).toBe(false);
     });
+
+    test('maps null deadline to null in list output', () => {
+      const project = {
+        id: 'proj-123',
+        title: 'Project',
+        shortDescription: 'Desc',
+        visibility: 'PUBLIC',
+        status: 'ACTIVE',
+        maxTalents: 1,
+        deadline: null,
+        createdAt: new Date('2026-03-01T10:00:00Z'),
+        owner: {
+          id: 'user-456',
+          companyProfile: {
+            companyName: 'Company',
+            verified: false,
+            avgRating: 4.5,
+            reviewsCount: 2,
+          },
+        },
+      };
+
+      const result = mapProjectOutput(project);
+
+      expect(result.deadline).toBeNull();
+    });
   });
 
   describe('buildTaskSummary', () => {
@@ -400,6 +426,15 @@ describe('projects.helpers', () => {
 
       expect(result.in_progress).toBe(5);
       expect(result.total).toBe(5);
+    });
+
+    test('handles DISPUTE status (mapped to in_progress)', () => {
+      const groups = [{ status: 'DISPUTE', _count: { _all: 4 } }];
+
+      const result = buildTaskSummary(groups);
+
+      expect(result.in_progress).toBe(4);
+      expect(result.total).toBe(4);
     });
 
     test('ignores unknown status values', () => {

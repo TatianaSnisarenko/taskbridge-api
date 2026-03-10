@@ -148,6 +148,7 @@ describe('tasks.service - Task Details & Applications', () => {
         deliverables: ['PR with code', 'Tests'],
         requirements: ['REST', 'Pagination'],
         nice_to_have: ['OpenAPI'],
+        deadline: null,
         created_at: new Date('2026-02-14T13:00:00Z').toISOString(),
         published_at: new Date('2026-02-14T13:20:00Z').toISOString(),
         accepted_application_id: null,

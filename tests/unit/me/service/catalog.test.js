@@ -123,6 +123,48 @@ describe('me.service - catalog', () => {
     );
   });
 
+  test('getMyTasks maps null optional fields and missing company profile', async () => {
+    prismaMock.developerProfile.findUnique.mockResolvedValue({ userId: 'u1' });
+
+    prismaMock.task.findMany.mockResolvedValue([
+      {
+        id: 't2',
+        title: 'Task B',
+        status: 'IN_PROGRESS',
+        deadline: null,
+        publishedAt: null,
+        completedAt: null,
+        project: null,
+        ownerUserId: 'c2',
+        owner: {
+          companyProfile: null,
+        },
+      },
+    ]);
+    prismaMock.task.count.mockResolvedValue(1);
+
+    const result = await meService.getMyTasks({ userId: 'u1', page: 1, size: 20 });
+
+    expect(result.items).toEqual([
+      {
+        task_id: 't2',
+        title: 'Task B',
+        status: 'IN_PROGRESS',
+        deadline: null,
+        published_at: null,
+        completed_at: null,
+        project: null,
+        company: {
+          user_id: 'c2',
+          company_name: undefined,
+          verified: undefined,
+          avg_rating: null,
+          reviews_count: undefined,
+        },
+      },
+    ]);
+  });
+
   test('getMyProjects rejects when developer profile is missing', async () => {
     prismaMock.developerProfile.findUnique.mockResolvedValue(null);
 
@@ -227,6 +269,64 @@ describe('me.service - catalog', () => {
       status: 403,
       code: 'PERSONA_NOT_AVAILABLE',
     });
+  });
+
+  test('getMyProjects maps null deadline and null rating to API output', async () => {
+    prismaMock.developerProfile.findUnique.mockResolvedValue({ userId: 'u1' });
+
+    prismaMock.project.findMany.mockResolvedValue([
+      {
+        id: 'p2',
+        ownerUserId: 'c2',
+        title: 'Project B',
+        shortDescription: 'No rating',
+        status: 'ACTIVE',
+        visibility: 'PRIVATE',
+        maxTalents: 2,
+        deadline: null,
+        createdAt: new Date('2026-03-01T00:00:00Z'),
+        updatedAt: new Date('2026-03-02T00:00:00Z'),
+        owner: {
+          id: 'c2',
+          companyProfile: {
+            companyName: 'No Rating LLC',
+            verified: true,
+            avgRating: null,
+            reviewsCount: 0,
+          },
+        },
+      },
+    ]);
+    prismaMock.project.count.mockResolvedValue(1);
+
+    const result = await meService.getMyProjects({
+      userId: 'u1',
+      persona: 'developer',
+      page: 1,
+      size: 20,
+    });
+
+    expect(result.items).toEqual([
+      {
+        project_id: 'p2',
+        owner_user_id: 'c2',
+        title: 'Project B',
+        short_description: 'No rating',
+        status: 'ACTIVE',
+        visibility: 'PRIVATE',
+        max_talents: 2,
+        deadline: null,
+        created_at: '2026-03-01T00:00:00.000Z',
+        updated_at: '2026-03-02T00:00:00.000Z',
+        company: {
+          user_id: 'c2',
+          company_name: 'No Rating LLC',
+          verified: true,
+          avg_rating: null,
+          reviews_count: 0,
+        },
+      },
+    ]);
   });
 
   describe('getMyTasks - branch coverage', () => {
