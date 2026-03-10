@@ -71,6 +71,13 @@ TeamUp IT enables developers to showcase their skills, apply for tasks, and coll
 - 1-5 star ratings with optional feedback
 - Automatic profile rating recalculation
 
+### Platform Reviews
+
+- Users can submit reviews about the platform itself
+- Review moderation system with admin approval
+- Cooldown period between reviews to prevent spam
+- Public display of approved reviews
+
 **[→ See complete API reference](docs/API.md)**
 
 ## Tech Stack
@@ -189,15 +196,15 @@ POST /api/v1/auth/logout
 
 ### Main Resources
 
+- **`/api/v1/me`** - Current user info, applications, invites, tasks, projects, notifications, chat
 - **`/api/v1/profiles`** - Developer and company profiles
 - **`/api/v1/projects`** - Project management
 - **`/api/v1/tasks`** - Task CRUD and lifecycle
 - **`/api/v1/applications`** - Task applications
 - **`/api/v1/invites`** - Task invitations
 - **`/api/v1/technologies`** - Technology catalog
-- **`/api/v1/users/notifications`** - Notifications
-- **`/api/v1/users/chat-threads`** - Chat messaging
-- **`/api/v1/users/reviews`** - Reviews and ratings
+- **`/api/v1/platform-reviews`** - Platform feedback and reviews
+- **`/api/v1/users/:userId/reviews`** - User reviews and ratings
 
 **Protected routes** require `Authorization: Bearer <token>` header.
 **Persona routes** also require `X-Persona: developer` or `X-Persona: company` header.

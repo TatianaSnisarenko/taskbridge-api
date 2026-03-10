@@ -16,23 +16,25 @@ src/docs/swagger/
     auth.paths.js
     health.paths.js
     me.paths.js
+    platform-reviews.paths.js
     profiles.paths.js
     projects.paths.js
     tasks.paths.js
     technologies.paths.js
     workflows.paths.js
   schemas/
+    applications.schemas.js
     auth.schemas.js
     health.schemas.js
-    technologies.schemas.js
-    profiles.schemas.js
-    projects.schemas.js
-    tasks.schemas.js
-    applications.schemas.js
     invites.schemas.js
     me.schemas.js
+    platform-reviews.schemas.js
+    profiles.schemas.js
+    projects.schemas.js
     reviews.schemas.js
     shared.schemas.js
+    tasks.schemas.js
+    technologies.schemas.js
 ```
 
 ## Rules

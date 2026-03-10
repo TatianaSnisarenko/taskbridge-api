@@ -124,7 +124,7 @@ Revokes the refresh token and clears the cookie.
 **Request Reset:**
 
 ```http
-POST /auth/request-password-reset
+POST /auth/forgot-password
 Content-Type: application/json
 
 {
@@ -172,15 +172,17 @@ X-Persona: company
 
 ### Authentication
 
-| Method | Endpoint                       | Description               | Auth Required |
-| ------ | ------------------------------ | ------------------------- | ------------- |
-| `POST` | `/auth/signup`                 | Register new user         | No            |
-| `POST` | `/auth/login`                  | Authenticate user         | No            |
-| `POST` | `/auth/refresh`                | Refresh access token      | Cookie        |
-| `POST` | `/auth/logout`                 | Revoke session            | Cookie        |
-| `POST` | `/auth/verify-email`           | Verify email address      | No            |
-| `POST` | `/auth/request-password-reset` | Request password reset    | No            |
-| `POST` | `/auth/reset-password`         | Reset password with token | No            |
+| Method | Endpoint                    | Description               | Auth Required |
+| ------ | --------------------------- | ------------------------- | ------------- |
+| `POST` | `/auth/signup`              | Register new user         | No            |
+| `POST` | `/auth/login`               | Authenticate user         | No            |
+| `POST` | `/auth/refresh`             | Refresh access token      | Cookie        |
+| `POST` | `/auth/logout`              | Revoke session            | Cookie        |
+| `GET`  | `/auth/verify-email`        | Verify email address      | No            |
+| `POST` | `/auth/resend-verification` | Resend verification email | No            |
+| `POST` | `/auth/forgot-password`     | Request password reset    | No            |
+| `POST` | `/auth/reset-password`      | Reset password with token | No            |
+| `POST` | `/auth/password`            | Set/change password       | Yes           |
 
 ### Current User
 
@@ -256,28 +258,69 @@ X-Persona: company
 
 ### Technologies
 
-| Method | Endpoint                | Description            | Auth Required |
-| ------ | ----------------------- | ---------------------- | ------------- |
-| `GET`  | `/technologies`         | List all technologies  | No            |
-| `GET`  | `/technologies/search`  | Search technologies    | No            |
-| `POST` | `/technologies/suggest` | Suggest new technology | Yes           |
+| Method | Endpoint              | Description                  | Auth Required |
+| ------ | --------------------- | ---------------------------- | ------------- |
+| `GET`  | `/technologies`       | List/search all technologies | No            |
+| `GET`  | `/technologies/types` | List technology categories   | No            |
+
+### Current User (Me)
+
+| Method | Endpoint                              | Description                    | Auth Required | Persona   |
+| ------ | ------------------------------------- | ------------------------------ | ------------- | --------- |
+| `GET`  | `/me`                                 | Get current user info          | Yes           | -         |
+| `GET`  | `/me/applications`                    | Get my applications            | Yes           | developer |
+| `GET`  | `/me/invites`                         | Get my task invitations        | Yes           | developer |
+| `GET`  | `/me/tasks`                           | Get my tasks (as developer)    | Yes           | developer |
+| `GET`  | `/me/projects`                        | Get my projects (as developer) | Yes           | developer |
+| `GET`  | `/me/notifications`                   | Get my notifications           | Yes           | both      |
+| `POST` | `/me/notifications/:id/read`          | Mark notification as read      | Yes           | both      |
+| `POST` | `/me/notifications/read-all`          | Mark all notifications as read | Yes           | both      |
+| `GET`  | `/me/chat/threads`                    | Get my chat threads            | Yes           | both      |
+| `GET`  | `/me/chat/threads/:threadId`          | Get specific chat thread       | Yes           | both      |
+| `GET`  | `/me/chat/threads/:threadId/messages` | Get chat messages              | Yes           | both      |
+| `POST` | `/me/chat/threads/:threadId/messages` | Send chat message              | Yes           | both      |
 
 ### Notifications & Chat
 
-| Method  | Endpoint                           | Description               | Auth Required |
-| ------- | ---------------------------------- | ------------------------- | ------------- |
-| `GET`   | `/users/notifications`             | Get user notifications    | Yes           |
-| `PATCH` | `/users/notifications/:id/read`    | Mark notification as read | Yes           |
-| `GET`   | `/users/chat-threads`              | Get chat threads          | Yes           |
-| `GET`   | `/users/chat-threads/:id/messages` | Get chat messages         | Yes           |
-| `POST`  | `/users/chat-threads/:id/messages` | Send chat message         | Yes           |
+| Method | Endpoint                 | Description      | Auth Required |
+| ------ | ------------------------ | ---------------- | ------------- |
+| `GET`  | `/users/:userId/reviews` | Get user reviews | No            |
 
 ### Reviews
 
-| Method | Endpoint             | Description      | Auth Required |
-| ------ | -------------------- | ---------------- | ------------- |
-| `POST` | `/users/reviews`     | Create review    | Yes           |
-| `GET`  | `/users/:id/reviews` | Get user reviews | No            |
+Reviews are bidirectional feedback between developers and companies after task completion.
+
+| Method | Endpoint                 | Description      | Auth Required |
+| ------ | ------------------------ | ---------------- | ------------- |
+| `POST` | `/users/reviews`         | Create review    | Yes           |
+| `GET`  | `/users/:userId/reviews` | Get user reviews | No            |
+
+### Platform Reviews
+
+Platform reviews are user feedback about the platform itself (not about other users).
+
+| Method   | Endpoint                              | Description                 | Auth Required | Admin Only |
+| -------- | ------------------------------------- | --------------------------- | ------------- | ---------- |
+| `GET`    | `/platform-reviews`                   | List platform reviews       | Optional      | No         |
+| `GET`    | `/platform-reviews/:reviewId`         | Get single platform review  | Optional      | No         |
+| `POST`   | `/platform-reviews`                   | Create platform review      | Yes           | No         |
+| `PATCH`  | `/platform-reviews/:reviewId`         | Update review (owner/admin) | Yes           | No         |
+| `DELETE` | `/platform-reviews/:reviewId`         | Delete review               | Yes           | Yes        |
+| `PATCH`  | `/platform-reviews/:reviewId/approve` | Approve review              | Yes           | Yes        |
+
+**Query Parameters for GET /platform-reviews:**
+
+- `status` – Filter by status (approved, unapproved, all) - default: 'approved'
+- `limit` – Number of results (default: 20, max: 100)
+- `offset` – Pagination offset (default: 0)
+- `sort` – Sort order (newest, oldest, highest_rated, lowest_rated) - default: 'newest'
+
+**Notes:**
+
+- Only approved reviews are visible to non-authenticated users
+- Users can submit one review per cooldown period (configurable via `PLATFORM_REVIEW_COOLDOWN_DAYS`)
+- Owners can update their own unapproved reviews
+- Admins can update, approve, and delete any review
 
 ---
 

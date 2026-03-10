@@ -373,6 +373,9 @@ Notifications (polymorphic)
 ├── Project (optional)
 ├── Task (optional)
 └── ChatThread (optional)
+
+PlatformReviews
+└── User (author)
 ```
 
 ### Key Entities
@@ -487,6 +490,20 @@ Event notification system.
 - Invite events (created, accepted, declined)
 - Chat messages
 - Reviews
+
+#### PlatformReview
+
+User feedback about the platform itself (not about other users).
+
+**Features:**
+
+- 1-5 star rating
+- Text feedback
+- Approval system (default: unapproved, requires admin approval)
+- Cooldown period between reviews (configurable, default: 30 days)
+- Only approved reviews visible to public
+- Owners can edit unapproved reviews
+- Admins can approve, edit, and delete any review
 
 ---
 
