@@ -525,4 +525,123 @@
       },
     },
   },
+  '/api/v1/me/favorites/tasks': {
+    get: {
+      tags: ['Me'],
+      summary: 'Get my favorite tasks',
+      description: 'Get paginated list of tasks saved as favorites by the current developer.',
+      security: [{ bearerAuth: [] }],
+      parameters: [
+        {
+          name: 'X-Persona',
+          in: 'header',
+          required: true,
+          schema: { type: 'string', enum: ['developer'] },
+          description: 'Must be developer persona',
+        },
+        {
+          name: 'page',
+          in: 'query',
+          schema: { type: 'integer', minimum: 1, default: 1 },
+          description: 'Page number (starting from 1)',
+        },
+        {
+          name: 'size',
+          in: 'query',
+          schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
+          description: 'Number of items per page',
+        },
+      ],
+      responses: {
+        200: {
+          description: 'Paginated list of favorite tasks sorted by saved date (newest first)',
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/GetMyFavoriteTasksResponse' },
+            },
+          },
+        },
+        400: { description: 'Validation error' },
+        401: { description: 'Unauthorized' },
+        403: { description: 'Developer profile does not exist' },
+      },
+    },
+  },
+  '/api/v1/me/favorites/tasks/{taskId}': {
+    post: {
+      tags: ['Me'],
+      summary: 'Add task to favorites',
+      description:
+        "Save a task to the current developer's favorites. Returns 409 if already favorited.",
+      security: [{ bearerAuth: [] }],
+      parameters: [
+        {
+          name: 'X-Persona',
+          in: 'header',
+          required: true,
+          schema: { type: 'string', enum: ['developer'] },
+          description: 'Must be developer persona',
+        },
+        {
+          name: 'taskId',
+          in: 'path',
+          required: true,
+          schema: { type: 'string', format: 'uuid' },
+          description: 'Task ID to add to favorites',
+        },
+      ],
+      responses: {
+        201: {
+          description: 'Task added to favorites',
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/AddFavoriteTaskResponse' },
+            },
+          },
+        },
+        400: { description: 'Validation error' },
+        401: { description: 'Unauthorized' },
+        403: { description: 'Developer profile does not exist' },
+        404: { description: 'Task not found' },
+        409: { description: 'Task is already in favorites' },
+      },
+    },
+    delete: {
+      tags: ['Me'],
+      summary: 'Remove task from favorites',
+      description:
+        "Remove a task from the current developer's favorites. Returns 404 if not favorited.",
+      security: [{ bearerAuth: [] }],
+      parameters: [
+        {
+          name: 'X-Persona',
+          in: 'header',
+          required: true,
+          schema: { type: 'string', enum: ['developer'] },
+          description: 'Must be developer persona',
+        },
+        {
+          name: 'taskId',
+          in: 'path',
+          required: true,
+          schema: { type: 'string', format: 'uuid' },
+          description: 'Task ID to remove from favorites',
+        },
+      ],
+      responses: {
+        200: {
+          description: 'Task removed from favorites',
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/RemoveFavoriteTaskResponse' },
+            },
+          },
+        },
+        400: { description: 'Validation error' },
+        401: { description: 'Unauthorized' },
+        403: { description: 'Developer profile does not exist' },
+        404: { description: 'Task not found in favorites' },
+      },
+    },
+  },
 };

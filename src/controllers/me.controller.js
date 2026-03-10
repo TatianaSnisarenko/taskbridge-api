@@ -185,3 +185,36 @@ export const markThreadAsRead = asyncHandler(async (req, res) => {
 
   return res.status(200).json(result);
 });
+
+export const addFavoriteTask = asyncHandler(async (req, res) => {
+  const result = await meService.addFavoriteTask({
+    userId: req.user.id,
+    taskId: req.params.taskId,
+  });
+
+  return res.status(201).json(result);
+});
+
+export const removeFavoriteTask = asyncHandler(async (req, res) => {
+  const result = await meService.removeFavoriteTask({
+    userId: req.user.id,
+    taskId: req.params.taskId,
+  });
+
+  return res.status(200).json(result);
+});
+
+export const getMyFavoriteTasks = asyncHandler(async (req, res) => {
+  const result = await meService.getMyFavoriteTasks({
+    userId: req.user.id,
+    page: parseInt(req.query.page) || 1,
+    size: parseInt(req.query.size) || 20,
+  });
+
+  return res.status(200).json({
+    items: result.items,
+    page: result.page,
+    size: result.size,
+    total: result.total,
+  });
+});

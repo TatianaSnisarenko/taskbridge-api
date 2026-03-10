@@ -22,6 +22,13 @@ describe('service barrel index exports', () => {
         chatThread: { findMany: jest.fn(), findUnique: jest.fn() },
         chatMessage: { findMany: jest.fn(), count: jest.fn(), create: jest.fn() },
         chatThreadRead: { upsert: jest.fn() },
+        taskFavorite: {
+          findUnique: jest.fn(),
+          findMany: jest.fn(),
+          count: jest.fn(),
+          create: jest.fn(),
+          delete: jest.fn(),
+        },
       },
     }));
 
@@ -41,6 +48,9 @@ describe('service barrel index exports', () => {
     expect(me.getMyTasks).toEqual(expect.any(Function));
     expect(me.getMyProjects).toEqual(expect.any(Function));
     expect(me.getMyNotifications).toEqual(expect.any(Function));
+    expect(me.addFavoriteTask).toEqual(expect.any(Function));
+    expect(me.removeFavoriteTask).toEqual(expect.any(Function));
+    expect(me.getMyFavoriteTasks).toEqual(expect.any(Function));
 
     expect(projects.createProject).toEqual(expect.any(Function));
     expect(projects.getProjects).toEqual(expect.any(Function));

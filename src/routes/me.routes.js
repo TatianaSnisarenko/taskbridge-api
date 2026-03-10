@@ -13,6 +13,8 @@ import {
   threadIdParamSchema,
   threadMessagesQuerySchema,
   createMessageBodySchema,
+  favoriteTaskParamSchema,
+  getMyFavoriteTasksQuerySchema,
 } from '../schemas/me.schemas.js';
 
 export const meRouter = Router();
@@ -113,4 +115,28 @@ meRouter.post(
   requirePersona('developer', 'company'),
   validate(threadIdParamSchema, 'params'),
   meController.markThreadAsRead
+);
+
+meRouter.get(
+  '/favorites/tasks',
+  requireAuth,
+  requirePersona('developer'),
+  validate(getMyFavoriteTasksQuerySchema, 'query'),
+  meController.getMyFavoriteTasks
+);
+
+meRouter.post(
+  '/favorites/tasks/:taskId',
+  requireAuth,
+  requirePersona('developer'),
+  validate(favoriteTaskParamSchema, 'params'),
+  meController.addFavoriteTask
+);
+
+meRouter.delete(
+  '/favorites/tasks/:taskId',
+  requireAuth,
+  requirePersona('developer'),
+  validate(favoriteTaskParamSchema, 'params'),
+  meController.removeFavoriteTask
 );

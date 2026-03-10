@@ -255,4 +255,91 @@
       read_at: { type: 'string', format: 'date-time', example: '2026-02-14T15:00:00Z' },
     },
   },
+  FavoriteTaskItem: {
+    type: 'object',
+    properties: {
+      favorite_id: {
+        type: 'string',
+        format: 'uuid',
+        example: '7c3d1a2b-1111-4abc-9bcd-000000000001',
+      },
+      saved_at: { type: 'string', format: 'date-time', example: '2026-03-10T12:00:00Z' },
+      task: {
+        type: 'object',
+        properties: {
+          task_id: {
+            type: 'string',
+            format: 'uuid',
+            example: '21f01069-2f1f-47ea-bf23-6fbe5b27f2f5',
+          },
+          title: { type: 'string', example: 'Implement REST API for task catalog' },
+          status: {
+            type: 'string',
+            enum: [
+              'DRAFT',
+              'PUBLISHED',
+              'IN_PROGRESS',
+              'COMPLETION_REQUESTED',
+              'COMPLETED',
+              'FAILED',
+              'CLOSED',
+              'DELETED',
+            ],
+          },
+          category: { type: 'string', nullable: true, example: 'BACKEND' },
+          difficulty: {
+            type: 'string',
+            nullable: true,
+            enum: ['JUNIOR', 'MIDDLE', 'SENIOR', 'ANY'],
+          },
+          type: { type: 'string', enum: ['PAID', 'UNPAID', 'VOLUNTEER', 'EXPERIENCE'] },
+          is_deleted: {
+            type: 'boolean',
+            description: 'True if the task has been soft-deleted',
+            example: false,
+          },
+          company: {
+            type: 'object',
+            properties: {
+              user_id: {
+                type: 'string',
+                format: 'uuid',
+                example: 'b2de0ab8-5cc1-4b79-9e79-9b7bf2b9981c',
+              },
+              company_name: { type: 'string', nullable: true, example: 'NovaTech Labs' },
+              verified: { type: 'boolean', example: false },
+            },
+          },
+        },
+      },
+    },
+  },
+  AddFavoriteTaskResponse: {
+    type: 'object',
+    properties: {
+      favorite_id: {
+        type: 'string',
+        format: 'uuid',
+        example: '7c3d1a2b-1111-4abc-9bcd-000000000001',
+      },
+      task_id: { type: 'string', format: 'uuid', example: '21f01069-2f1f-47ea-bf23-6fbe5b27f2f5' },
+      saved_at: { type: 'string', format: 'date-time', example: '2026-03-10T12:00:00Z' },
+    },
+  },
+  RemoveFavoriteTaskResponse: {
+    type: 'object',
+    properties: {
+      task_id: { type: 'string', format: 'uuid', example: '21f01069-2f1f-47ea-bf23-6fbe5b27f2f5' },
+      removed: { type: 'boolean', example: true },
+    },
+  },
+  GetMyFavoriteTasksResponse: {
+    type: 'object',
+    properties: {
+      items: { type: 'array', items: { $ref: '#/components/schemas/FavoriteTaskItem' } },
+      page: { type: 'integer', example: 1 },
+      size: { type: 'integer', example: 20 },
+      total: { type: 'integer', example: 5 },
+    },
+  },
 };

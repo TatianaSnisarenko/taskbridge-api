@@ -186,6 +186,8 @@ model User {
 
   platformReviews PlatformReview[] @relation("PlatformReviewAuthor")
 
+  taskFavorites TaskFavorite[] @relation("TaskFavoriteUser")
+
   @@map("users")
 }
 
@@ -362,6 +364,7 @@ model Task {
   invites             TaskInvite[]
 
   notifications Notification[]
+  favorites     TaskFavorite[] @relation("TaskFavoriteTask")
 
   @@index([status, publishedAt(sort: Desc)])
   @@index([ownerUserId, createdAt(sort: Desc)])
@@ -390,6 +393,20 @@ model Application {
   @@index([taskId, createdAt(sort: Desc)])
   @@index([developerUserId, createdAt(sort: Desc)])
   @@map("applications")
+}
+
+model TaskFavorite {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  taskId    String   @map("task_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user User @relation("TaskFavoriteUser", fields: [userId], references: [id], onDelete: Cascade)
+  task Task @relation("TaskFavoriteTask", fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, taskId])
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("task_favorites")
 }
 
 model TaskInvite {
