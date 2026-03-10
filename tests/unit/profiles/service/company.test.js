@@ -182,6 +182,7 @@ describe('profiles.service - company', () => {
   test('getCompanyProfileByUserId returns mapped profile', async () => {
     prismaMock.companyProfile.findUnique.mockResolvedValue({
       userId: 'u2',
+      createdAt: new Date('2026-03-02T08:00:00.000Z'),
       companyName: 'TeamUp Studio',
       companyType: 'STARTUP',
       description: 'We build...',
@@ -206,6 +207,7 @@ describe('profiles.service - company', () => {
 
     expect(result).toEqual({
       user_id: 'u2',
+      created_at: new Date('2026-03-02T08:00:00.000Z'),
       company_name: 'TeamUp Studio',
       company_type: 'STARTUP',
       description: 'We build...',

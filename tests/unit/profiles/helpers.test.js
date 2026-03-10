@@ -329,6 +329,7 @@ describe('profiles.helpers', () => {
     test('maps database record to API response format', () => {
       const profile = {
         userId: 'company-123',
+        createdAt: new Date('2026-03-01T12:00:00.000Z'),
         companyName: 'TechCorp',
         companyType: 'STARTUP',
         description: 'Innovative company',
@@ -347,6 +348,7 @@ describe('profiles.helpers', () => {
 
       expect(result).toEqual({
         user_id: 'company-123',
+        created_at: new Date('2026-03-01T12:00:00.000Z'),
         company_name: 'TechCorp',
         company_type: 'STARTUP',
         description: 'Innovative company',

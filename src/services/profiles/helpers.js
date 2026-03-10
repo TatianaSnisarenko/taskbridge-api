@@ -63,6 +63,7 @@ function mapDeveloperProfileOutput(profile) {
 function mapCompanyProfileOutput(profile) {
   return {
     user_id: profile.userId,
+    created_at: profile.createdAt,
     company_name: profile.companyName,
     company_type: profile.companyType,
     description: profile.description,

@@ -197,6 +197,12 @@ export const profilesSchemas = {
     type: 'object',
     properties: {
       user_id: { type: 'string', format: 'uuid', example: 'b2de0ab8-5cc1-4b79-9e79-9b7bf2b9981c' },
+      created_at: {
+        type: 'string',
+        format: 'date-time',
+        description: 'Company profile creation timestamp (registration date on platform)',
+        example: '2026-02-14T09:30:00Z',
+      },
       company_name: { type: 'string', minLength: 2, maxLength: 100, example: 'NovaTech Labs' },
       company_type: {
         type: 'string',
