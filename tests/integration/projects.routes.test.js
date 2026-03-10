@@ -27,6 +27,7 @@ const projectPayload = {
   visibility: 'PUBLIC',
   status: 'ACTIVE',
   max_talents: 3,
+  deadline: '2026-09-01',
 };
 
 describe('projects routes', () => {
@@ -129,6 +130,7 @@ describe('projects routes', () => {
       expect(res.status).toBe(200);
       expect(res.body.tasks_preview).toHaveLength(1);
       expect(res.body.tasks_preview[0].id).toBe(visibleTask.id);
+      expect(res.body.deadline).toBeNull();
     });
 
     test('developers CAN see ARCHIVED projects they worked on', async () => {
@@ -207,6 +209,7 @@ describe('projects routes', () => {
       visibility: projectPayload.visibility,
       status: projectPayload.status,
       maxTalents: projectPayload.max_talents,
+      deadline: new Date(projectPayload.deadline),
     });
   });
 
@@ -281,6 +284,7 @@ describe('projects routes', () => {
           category: 'BACKEND',
           type: 'PAID',
           difficulty: 'MIDDLE',
+          deadline: new Date('2026-10-10'),
         },
       });
 
@@ -319,6 +323,7 @@ describe('projects routes', () => {
       expect(res.status).toBe(200);
       expect(res.body.items).toHaveLength(1);
       expect(res.body.items[0].title).toBe('Published Public Task');
+      expect(res.body.items[0].deadline).toBe('2026-10-10');
       expect(res.body.total).toBe(1);
     });
   });

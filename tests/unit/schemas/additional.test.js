@@ -158,6 +158,7 @@ describe('additional Joi schemas', () => {
       visibility: 'PUBLIC',
       status: 'ACTIVE',
       max_talents: 3,
+      deadline: '2026-09-01',
     };
 
     expect(createProjectSchema.validate(payload).error).toBeUndefined();
@@ -207,6 +208,7 @@ describe('additional Joi schemas', () => {
       communication_language: 'English',
       timezone_preference: 'Europe/Kyiv',
       application_deadline: '2026-12-31T00:00:00.000Z',
+      deadline: '2027-01-15',
       visibility: 'PUBLIC',
       deliverables: ['Code', 'Tests'],
       requirements: ['Node.js', 'PostgreSQL'],

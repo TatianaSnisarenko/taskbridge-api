@@ -69,6 +69,7 @@ export const tasksSchemas = {
         example: 'Europe/Warsaw',
       },
       application_deadline: { type: 'string', format: 'date', example: '2026-03-20' },
+      deadline: { type: 'string', format: 'date', nullable: true, example: '2026-04-15' },
       visibility: { type: 'string', enum: ['PUBLIC', 'UNLISTED'] },
       deliverables: {
         type: 'array',
@@ -154,6 +155,7 @@ export const tasksSchemas = {
         example: 'Europe/Warsaw',
       },
       application_deadline: { type: 'string', format: 'date', example: '2026-03-25' },
+      deadline: { type: 'string', format: 'date', nullable: true, example: '2026-04-30' },
       visibility: { type: 'string', enum: ['PUBLIC', 'UNLISTED'] },
       deliverables: {
         type: 'array',
@@ -425,6 +427,7 @@ export const tasksSchemas = {
       },
       type: { type: 'string', enum: ['PAID', 'UNPAID', 'VOLUNTEER', 'EXPERIENCE'] },
       difficulty: { type: 'string', enum: ['JUNIOR', 'MIDDLE', 'SENIOR', 'ANY'] },
+      deadline: { type: 'string', format: 'date', nullable: true, example: '2026-08-20' },
       technologies: {
         type: 'array',
         items: { $ref: '#/components/schemas/TechnologyWithRequirement' },
@@ -498,6 +501,12 @@ export const tasksSchemas = {
         format: 'date',
         nullable: true,
         example: '2026-03-20',
+      },
+      deadline: {
+        type: 'string',
+        format: 'date',
+        nullable: true,
+        example: '2026-04-15',
       },
       visibility: { type: 'string', enum: ['PUBLIC', 'UNLISTED'] },
       deliverables: {

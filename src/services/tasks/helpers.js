@@ -21,6 +21,7 @@ export function mapTaskInput(input) {
     communicationLanguage: input.communication_language,
     timezonePreference: input.timezone_preference,
     applicationDeadline: input.application_deadline,
+    deadline: input.deadline,
     visibility: input.visibility,
     deliverables: input.deliverables,
     requirements: input.requirements,
@@ -61,6 +62,7 @@ export function mapTaskDetailsOutput(task, computed) {
     application_deadline: task.applicationDeadline
       ? task.applicationDeadline.toISOString().slice(0, 10)
       : null,
+    deadline: task.deadline ? task.deadline.toISOString().slice(0, 10) : null,
     visibility: task.visibility,
     deliverables: task.deliverables,
     requirements: task.requirements,

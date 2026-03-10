@@ -54,6 +54,7 @@ describe('me.service - catalog', () => {
         id: 't1',
         title: 'Task A',
         status: 'COMPLETED',
+        deadline: new Date('2026-08-15'),
         publishedAt,
         completedAt,
         project: { id: 'p1', title: 'Project' },
@@ -87,6 +88,7 @@ describe('me.service - catalog', () => {
           task_id: 't1',
           title: 'Task A',
           status: 'COMPLETED',
+          deadline: '2026-08-15',
           published_at: publishedAt.toISOString(),
           completed_at: completedAt.toISOString(),
           project: { project_id: 'p1', title: 'Project' },
@@ -147,6 +149,7 @@ describe('me.service - catalog', () => {
         status: 'ARCHIVED',
         visibility: 'PUBLIC',
         maxTalents: 8,
+        deadline: new Date('2026-09-01'),
         createdAt,
         updatedAt,
         owner: {
@@ -199,6 +202,7 @@ describe('me.service - catalog', () => {
           status: 'ARCHIVED',
           visibility: 'PUBLIC',
           max_talents: 8,
+          deadline: '2026-09-01',
           created_at: createdAt.toISOString(),
           updated_at: updatedAt.toISOString(),
           company: {

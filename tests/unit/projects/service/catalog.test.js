@@ -75,6 +75,7 @@ describe('projects.service - catalog', () => {
       visibility: 'PUBLIC',
       status: 'ACTIVE',
       maxTalents: 3,
+      deadline: new Date('2026-09-01'),
       createdAt: new Date('2026-02-14T10:00:00Z'),
       owner: {
         id: 'u1',
@@ -153,6 +154,7 @@ describe('projects.service - catalog', () => {
             visibility: 'PUBLIC',
             status: 'ACTIVE',
             max_talents: 3,
+            deadline: '2026-09-01',
             created_at: '2026-02-14T10:00:00.000Z',
             company: {
               user_id: 'u1',

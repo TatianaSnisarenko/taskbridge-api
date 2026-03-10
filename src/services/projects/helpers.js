@@ -6,6 +6,7 @@ function mapProjectInput(input) {
     visibility: input.visibility,
     status: input.status,
     maxTalents: input.max_talents,
+    deadline: input.deadline,
   };
 }
 
@@ -26,6 +27,7 @@ function mapProjectOutput(project) {
     visibility: project.visibility,
     status: project.status,
     max_talents: project.maxTalents,
+    deadline: project.deadline ? project.deadline.toISOString().slice(0, 10) : null,
     created_at: project.createdAt.toISOString(),
     company: {
       user_id: project.owner.id,
@@ -95,6 +97,7 @@ function mapProjectDetailsOutput(project, taskSummary, tasksPreview) {
     visibility: project.visibility,
     status: project.status,
     max_talents: project.maxTalents,
+    deadline: project.deadline ? project.deadline.toISOString().slice(0, 10) : null,
     created_at: project.createdAt.toISOString(),
     updated_at: project.updatedAt.toISOString(),
     deleted_at: project.deletedAt ? project.deletedAt.toISOString() : null,

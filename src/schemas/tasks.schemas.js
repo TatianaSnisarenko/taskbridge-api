@@ -114,6 +114,11 @@ export const createTaskDraftSchema = Joi.object({
     'date.iso': 'Application deadline must be a valid ISO date',
     'any.required': 'Application deadline is required',
   }),
+  deadline: Joi.date().iso().messages({
+    'date.base': 'Deadline must be a valid date',
+    'date.format': 'Deadline must be a valid ISO date',
+    'date.iso': 'Deadline must be a valid ISO date',
+  }),
   visibility: Joi.string()
     .valid(...TASK_VISIBILITY)
     .required()
@@ -205,6 +210,11 @@ export const updateTaskDraftSchema = Joi.object({
     'date.base': 'Application deadline must be a valid date',
     'date.format': 'Application deadline must be a valid ISO date',
     'date.iso': 'Application deadline must be a valid ISO date',
+  }),
+  deadline: Joi.date().iso().messages({
+    'date.base': 'Deadline must be a valid date',
+    'date.format': 'Deadline must be a valid ISO date',
+    'date.iso': 'Deadline must be a valid ISO date',
   }),
   visibility: Joi.string()
     .valid(...TASK_VISIBILITY)

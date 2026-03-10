@@ -77,6 +77,7 @@ describe('projects.service - details', () => {
       visibility: 'PUBLIC',
       status: 'ACTIVE',
       maxTalents: 3,
+      deadline: new Date('2026-12-01'),
       createdAt: new Date('2026-02-14T10:00:00Z'),
       updatedAt: new Date('2026-02-14T12:00:00Z'),
       deletedAt: null,
@@ -169,6 +170,7 @@ describe('projects.service - details', () => {
         visibility: 'PUBLIC',
         status: 'ACTIVE',
         max_talents: 3,
+        deadline: '2026-12-01',
         deleted_at: null,
         company: {
           user_id: 'u1',

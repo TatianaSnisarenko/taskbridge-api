@@ -152,6 +152,7 @@ describe('tasks routes - catalog and applications', () => {
           communicationLanguage: 'EN',
           timezonePreference: 'UTC',
           applicationDeadline: new Date('2026-03-01'),
+          deadline: new Date('2026-08-20'),
           visibility: 'PUBLIC',
           deliverables: ['Code'],
           requirements: ['Reqs'],
@@ -210,6 +211,7 @@ describe('tasks routes - catalog and applications', () => {
       expect(res.body.items[0].task_id).toBe(publishedTask.id);
       expect(res.body.items[0].title).toBe('Public published task');
       expect(res.body.items[0].status).toBe('PUBLISHED');
+      expect(res.body.items[0].deadline).toBe('2026-08-20');
     });
   });
 

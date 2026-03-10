@@ -152,6 +152,7 @@ export async function getTasksCatalog(query) {
         category: true,
         type: true,
         difficulty: true,
+        deadline: true,
         publishedAt: true,
         projectId: true,
         technologies: {
@@ -201,6 +202,7 @@ export async function getTasksCatalog(query) {
       category: task.category,
       type: task.type,
       difficulty: task.difficulty,
+      deadline: task.deadline ? task.deadline.toISOString().slice(0, 10) : null,
       technologies: task.technologies?.map((tt) => ({
         id: tt.technology.id,
         slug: tt.technology.slug,
@@ -275,6 +277,7 @@ export async function getProjectTasks({
         category: true,
         type: true,
         difficulty: true,
+        deadline: true,
         publishedAt: true,
         projectId: true,
         project: {
@@ -312,6 +315,7 @@ export async function getProjectTasks({
       category: task.category,
       type: task.type,
       difficulty: task.difficulty,
+      deadline: task.deadline ? task.deadline.toISOString().slice(0, 10) : null,
       published_at: task.publishedAt,
       project: task.projectId ? { project_id: task.project.id, title: task.project.title } : null,
       company: {

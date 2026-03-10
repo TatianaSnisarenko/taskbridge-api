@@ -1,4 +1,63 @@
 ﻿export const meSchemas = {
+  MyApplicationItem: {
+    type: 'object',
+    properties: {
+      application_id: {
+        type: 'string',
+        format: 'uuid',
+        example: '9a49a4c5-4f53-4e8b-87f3-8fce10f58d2f',
+      },
+      status: { type: 'string', enum: ['APPLIED', 'ACCEPTED', 'REJECTED'], example: 'APPLIED' },
+      created_at: { type: 'string', format: 'date-time' },
+      task: {
+        type: 'object',
+        properties: {
+          task_id: {
+            type: 'string',
+            format: 'uuid',
+            example: '21f01069-2f1f-47ea-bf23-6fbe5b27f2f5',
+          },
+          title: { type: 'string', example: 'Implement advanced task filters API' },
+          status: {
+            type: 'string',
+            enum: [
+              'DRAFT',
+              'PUBLISHED',
+              'IN_PROGRESS',
+              'DISPUTE',
+              'COMPLETION_REQUESTED',
+              'COMPLETED',
+              'FAILED',
+              'CLOSED',
+              'DELETED',
+            ],
+          },
+          deadline: { type: 'string', format: 'date', nullable: true, example: '2026-08-20' },
+          project: { $ref: '#/components/schemas/TaskProject', nullable: true },
+        },
+      },
+      company: {
+        type: 'object',
+        properties: {
+          user_id: {
+            type: 'string',
+            format: 'uuid',
+            example: 'b2de0ab8-5cc1-4b79-9e79-9b7bf2b9981c',
+          },
+          company_name: { type: 'string', nullable: true, example: 'NovaTech Labs' },
+        },
+      },
+    },
+  },
+  GetMyApplicationsResponse: {
+    type: 'object',
+    properties: {
+      items: { type: 'array', items: { $ref: '#/components/schemas/MyApplicationItem' } },
+      page: { type: 'integer', example: 1 },
+      size: { type: 'integer', example: 20 },
+      total: { type: 'integer', example: 1 },
+    },
+  },
   MyTaskItem: {
     type: 'object',
     properties: {
@@ -8,6 +67,7 @@
         type: 'string',
         enum: ['IN_PROGRESS', 'DISPUTE', 'COMPLETION_REQUESTED', 'COMPLETED'],
       },
+      deadline: { type: 'string', format: 'date', nullable: true, example: '2026-08-15' },
       published_at: { type: 'string', format: 'date-time', nullable: true },
       completed_at: { type: 'string', format: 'date-time', nullable: true },
       project: { $ref: '#/components/schemas/TaskProject', nullable: true },
@@ -41,6 +101,7 @@
       status: { type: 'string', enum: ['ACTIVE', 'ARCHIVED'] },
       visibility: { type: 'string', enum: ['PUBLIC', 'UNLISTED'] },
       max_talents: { type: 'integer', minimum: 1 },
+      deadline: { type: 'string', format: 'date', nullable: true, example: '2026-09-01' },
       created_at: { type: 'string', format: 'date-time' },
       updated_at: { type: 'string', format: 'date-time' },
       company: { $ref: '#/components/schemas/TaskCompany' },
@@ -294,6 +355,7 @@
             enum: ['JUNIOR', 'MIDDLE', 'SENIOR', 'ANY'],
           },
           type: { type: 'string', enum: ['PAID', 'UNPAID', 'VOLUNTEER', 'EXPERIENCE'] },
+          deadline: { type: 'string', format: 'date', nullable: true, example: '2026-08-15' },
           is_deleted: {
             type: 'boolean',
             description: 'True if the task has been soft-deleted',

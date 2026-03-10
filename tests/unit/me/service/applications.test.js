@@ -60,6 +60,7 @@ describe('me.service - applications', () => {
             id: 't1',
             title: 'Backend Developer',
             status: 'PUBLISHED',
+            deadline: new Date('2026-08-20'),
             project: {
               id: 'p1',
               title: 'E-commerce Platform',
@@ -93,6 +94,7 @@ describe('me.service - applications', () => {
           task_id: 't1',
           title: 'Backend Developer',
           status: 'PUBLISHED',
+          deadline: '2026-08-20',
           project: {
             project_id: 'p1',
             title: 'E-commerce Platform',

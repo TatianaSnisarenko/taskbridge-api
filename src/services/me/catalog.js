@@ -30,6 +30,7 @@ export async function getMyApplications({ userId, page = 1, size = 20 }) {
             id: true,
             title: true,
             status: true,
+            deadline: true,
             project: {
               select: {
                 id: true,
@@ -71,6 +72,7 @@ export async function getMyApplications({ userId, page = 1, size = 20 }) {
         task_id: app.task.id,
         title: app.task.title,
         status: app.task.status,
+        deadline: app.task.deadline ? app.task.deadline.toISOString().slice(0, 10) : null,
         project: app.task.project
           ? {
               project_id: app.task.project.id,
@@ -120,6 +122,7 @@ export async function getMyTasks({ userId, page = 1, size = 20, status }) {
         id: true,
         title: true,
         status: true,
+        deadline: true,
         publishedAt: true,
         completedAt: true,
         project: {
@@ -158,6 +161,7 @@ export async function getMyTasks({ userId, page = 1, size = 20, status }) {
         task_id: task.id,
         title: task.title,
         status: task.status,
+        deadline: task.deadline ? task.deadline.toISOString().slice(0, 10) : null,
         published_at: task.publishedAt ? task.publishedAt.toISOString() : null,
         completed_at: task.completedAt ? task.completedAt.toISOString() : null,
         project: task.project ? { project_id: task.project.id, title: task.project.title } : null,
@@ -219,6 +223,7 @@ export async function getMyProjects({ userId, persona, page = 1, size = 20 }) {
         status: true,
         visibility: true,
         maxTalents: true,
+        deadline: true,
         createdAt: true,
         updatedAt: true,
         owner: {
@@ -251,6 +256,7 @@ export async function getMyProjects({ userId, persona, page = 1, size = 20 }) {
       status: project.status,
       visibility: project.visibility,
       max_talents: project.maxTalents,
+      deadline: project.deadline ? project.deadline.toISOString().slice(0, 10) : null,
       created_at: project.createdAt.toISOString(),
       updated_at: project.updatedAt.toISOString(),
       company: {

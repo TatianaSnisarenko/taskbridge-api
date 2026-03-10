@@ -283,6 +283,7 @@ model Project {
   shortDescription    String            @default("") @map("short_description")
   description         String            @default("")
   maxTalents          Int               @default(1) @map("max_talents")
+  deadline            DateTime?         @db.Date
   publishedTasksCount Int               @default(0) @map("published_tasks_count")
   createdAt           DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt           DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
@@ -338,6 +339,7 @@ model Task {
   communicationLanguage String?        @map("communication_language")
   timezonePreference    String?        @map("timezone_preference")
   applicationDeadline   DateTime?      @map("application_deadline") @db.Date
+  deadline              DateTime?      @db.Date
   visibility            TaskVisibility @default(PUBLIC)
 
   deliverables String[] @default([])

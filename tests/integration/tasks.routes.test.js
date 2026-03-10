@@ -31,6 +31,7 @@ const basePayload = {
   communication_language: 'EN',
   timezone_preference: 'Europe/Any',
   application_deadline: '2026-02-20',
+  deadline: '2026-03-20',
   visibility: 'PUBLIC',
   deliverables: ['PR with code', 'Tests'],
   requirements: ['REST', 'Pagination'],

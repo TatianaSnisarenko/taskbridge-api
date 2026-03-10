@@ -52,6 +52,11 @@ export const createProjectSchema = Joi.object({
     'number.min': 'Max talents must be at least 1',
     'number.max': 'Max talents must not exceed 100',
   }),
+  deadline: Joi.date().iso().messages({
+    'date.base': 'Deadline must be a valid date',
+    'date.format': 'Deadline must be a valid ISO date',
+    'date.iso': 'Deadline must be a valid ISO date',
+  }),
 });
 
 export const updateProjectSchema = Joi.object({
@@ -101,6 +106,11 @@ export const updateProjectSchema = Joi.object({
     'number.integer': 'Max talents must be an integer',
     'number.min': 'Max talents must be at least 1',
     'number.max': 'Max talents must not exceed 100',
+  }),
+  deadline: Joi.date().iso().messages({
+    'date.base': 'Deadline must be a valid date',
+    'date.format': 'Deadline must be a valid ISO date',
+    'date.iso': 'Deadline must be a valid ISO date',
   }),
 });
 

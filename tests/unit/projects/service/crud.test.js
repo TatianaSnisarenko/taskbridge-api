@@ -60,6 +60,7 @@ describe('projects.service - crud', () => {
       visibility: 'PUBLIC',
       status: 'ACTIVE',
       max_talents: 3,
+      deadline: '2026-10-01',
     };
 
     const result = await projectsService.createProject({ userId: 'u1', project });
@@ -77,6 +78,7 @@ describe('projects.service - crud', () => {
         visibility: 'PUBLIC',
         status: 'ACTIVE',
         maxTalents: 3,
+        deadline: '2026-10-01',
       },
       select: { id: true, createdAt: true },
     });
@@ -165,6 +167,7 @@ describe('projects.service - crud', () => {
       visibility: 'PUBLIC',
       status: 'ACTIVE',
       max_talents: 5,
+      deadline: '2026-11-01',
     };
 
     const result = await projectsService.updateProject({
@@ -182,6 +185,7 @@ describe('projects.service - crud', () => {
         visibility: 'PUBLIC',
         status: 'ACTIVE',
         maxTalents: 5,
+        deadline: '2026-11-01',
       },
       select: { id: true, updatedAt: true },
     });

@@ -33,6 +33,7 @@
       visibility: { type: 'string', enum: ['PUBLIC', 'UNLISTED'] },
       status: { type: 'string', enum: ['ACTIVE', 'ARCHIVED'] },
       max_talents: { type: 'integer', minimum: 1, maximum: 100 },
+      deadline: { type: 'string', format: 'date', nullable: true, example: '2026-09-01' },
     },
   },
   CreateProjectResponse: {
@@ -85,6 +86,7 @@
       visibility: { type: 'string', enum: ['PUBLIC', 'UNLISTED'] },
       status: { type: 'string', enum: ['ACTIVE', 'ARCHIVED'] },
       max_talents: { type: 'integer', minimum: 1, maximum: 100 },
+      deadline: { type: 'string', format: 'date', nullable: true, example: '2026-10-01' },
     },
   },
   UpdateProjectResponse: {
@@ -128,6 +130,7 @@
       visibility: { type: 'string', enum: ['PUBLIC', 'UNLISTED'] },
       status: { type: 'string', enum: ['ACTIVE', 'ARCHIVED'] },
       max_talents: { type: 'integer' },
+      deadline: { type: 'string', format: 'date', nullable: true },
       created_at: { type: 'string', format: 'date-time' },
       company: {
         type: 'object',
@@ -205,6 +208,7 @@
       visibility: { type: 'string', enum: ['PUBLIC', 'UNLISTED'] },
       status: { type: 'string', enum: ['ACTIVE', 'ARCHIVED'] },
       max_talents: { type: 'integer' },
+      deadline: { type: 'string', format: 'date', nullable: true },
       created_at: { type: 'string', format: 'date-time' },
       updated_at: { type: 'string', format: 'date-time' },
       deleted_at: { type: 'string', format: 'date-time', nullable: true },

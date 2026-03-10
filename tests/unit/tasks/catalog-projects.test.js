@@ -103,6 +103,7 @@ describe('tasks.catalog-candidates.service', () => {
           category: 'BACKEND',
           type: 'BUG_FIX',
           difficulty: 'MIDDLE',
+          deadline: new Date('2026-08-20'),
           publishedAt: null,
           projectId: 'p1',
           project: { id: 'p1', title: 'Proj' },
@@ -152,6 +153,7 @@ describe('tasks.catalog-candidates.service', () => {
       expect(result.total).toBe(1);
       expect(result.items[0]).toMatchObject({
         task_id: 't1',
+        deadline: '2026-08-20',
         company: { user_id: 'u1', company_name: 'Owner Co' },
       });
     });
@@ -165,6 +167,7 @@ describe('tasks.catalog-candidates.service', () => {
           category: 'FRONTEND',
           type: 'FEATURE_IMPLEMENTATION',
           difficulty: 'SENIOR',
+          deadline: null,
           publishedAt: new Date('2026-02-01T00:00:00Z'),
           projectId: null,
           project: null,
@@ -214,6 +217,7 @@ describe('tasks.catalog-candidates.service', () => {
       );
 
       expect(result.items[0].project).toBeNull();
+      expect(result.items[0].deadline).toBeNull();
       expect(result.items[0].company.company_name).toBeUndefined();
     });
   });
@@ -290,6 +294,7 @@ describe('tasks.catalog-candidates.service', () => {
           category: 'BACKEND',
           type: 'BUG_FIX',
           difficulty: 'JUNIOR',
+          deadline: new Date('2026-09-10'),
           publishedAt: null,
           projectId: null,
           project: null,
@@ -311,6 +316,7 @@ describe('tasks.catalog-candidates.service', () => {
         })
       );
       expect(result.items[0].project).toBeNull();
+      expect(result.items[0].deadline).toBe('2026-09-10');
       expect(result.items[0].company.company_name).toBeUndefined();
     });
   });

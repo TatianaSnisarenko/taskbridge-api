@@ -77,6 +77,7 @@ export async function findTaskWithDetails(taskId) {
       communicationLanguage: true,
       timezonePreference: true,
       applicationDeadline: true,
+      deadline: true,
       visibility: true,
       deliverables: true,
       requirements: true,

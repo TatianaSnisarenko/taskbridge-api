@@ -105,6 +105,7 @@ export async function getMyFavoriteTasks({ userId, page = 1, size = 20 }) {
             category: true,
             difficulty: true,
             type: true,
+            deadline: true,
             deletedAt: true,
             ownerUserId: true,
             owner: {
@@ -138,6 +139,7 @@ export async function getMyFavoriteTasks({ userId, page = 1, size = 20 }) {
         category: fav.task.category,
         difficulty: fav.task.difficulty,
         type: fav.task.type,
+        deadline: fav.task.deadline ? fav.task.deadline.toISOString().slice(0, 10) : null,
         is_deleted: fav.task.deletedAt !== null,
         company: {
           user_id: fav.task.ownerUserId,

@@ -11,6 +11,7 @@ describe('projects.helpers', () => {
         visibility: 'PUBLIC',
         status: 'ACTIVE',
         max_talents: 5,
+        deadline: '2026-09-01',
       };
 
       const result = mapProjectInput(input);
@@ -22,6 +23,7 @@ describe('projects.helpers', () => {
         visibility: 'PUBLIC',
         status: 'ACTIVE',
         maxTalents: 5,
+        deadline: '2026-09-01',
       });
     });
 
@@ -94,6 +96,7 @@ describe('projects.helpers', () => {
         visibility: 'PUBLIC',
         status: 'ACTIVE',
         maxTalents: 3,
+        deadline: new Date('2026-09-01'),
         createdAt: new Date('2026-03-01T10:00:00Z'),
         owner: {
           id: 'user-456',
@@ -135,6 +138,7 @@ describe('projects.helpers', () => {
         visibility: 'PUBLIC',
         status: 'ACTIVE',
         max_talents: 3,
+        deadline: '2026-09-01',
         created_at: '2026-03-01T10:00:00.000Z',
         company: {
           user_id: 'user-456',
