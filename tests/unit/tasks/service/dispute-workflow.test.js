@@ -44,6 +44,65 @@ describe('tasks.service - dispute workflow', () => {
     prismaMock.$transaction.mockImplementation(async (callback) => callback(prismaMock));
   });
 
+  test('openTaskDispute rejects missing task', async () => {
+    prismaMock.task.findUnique.mockResolvedValue(null);
+
+    await expect(
+      tasksService.openTaskDispute({
+        userId: 'owner1',
+        taskId: 't1',
+        reason: 'Developer is inactive for several days',
+      })
+    ).rejects.toMatchObject({
+      status: 404,
+      code: 'NOT_FOUND',
+    });
+  });
+
+  test('openTaskDispute rejects when user is not owner', async () => {
+    prismaMock.task.findUnique.mockResolvedValue({
+      id: 't1',
+      ownerUserId: 'owner2',
+      status: 'IN_PROGRESS',
+      deletedAt: null,
+      acceptedApplicationId: 'a1',
+      acceptedApplication: { developerUserId: 'dev1' },
+    });
+
+    await expect(
+      tasksService.openTaskDispute({
+        userId: 'owner1',
+        taskId: 't1',
+        reason: 'Developer is inactive for several days',
+      })
+    ).rejects.toMatchObject({
+      status: 403,
+      code: 'NOT_OWNER',
+    });
+  });
+
+  test('openTaskDispute rejects when accepted developer is missing', async () => {
+    prismaMock.task.findUnique.mockResolvedValue({
+      id: 't1',
+      ownerUserId: 'owner1',
+      status: 'IN_PROGRESS',
+      deletedAt: null,
+      acceptedApplicationId: null,
+      acceptedApplication: null,
+    });
+
+    await expect(
+      tasksService.openTaskDispute({
+        userId: 'owner1',
+        taskId: 't1',
+        reason: 'Developer is inactive for several days',
+      })
+    ).rejects.toMatchObject({
+      status: 409,
+      code: 'INVALID_STATE',
+    });
+  });
+
   test('requestTaskCompletion works from DISPUTE status', async () => {
     prismaMock.task.findUnique.mockResolvedValue({
       id: 't1',
@@ -148,6 +207,57 @@ describe('tasks.service - dispute workflow', () => {
     ).rejects.toMatchObject({
       status: 409,
       code: 'INVALID_STATE',
+    });
+  });
+
+  test('resolveTaskDispute rejects missing task', async () => {
+    prismaMock.task.findUnique.mockResolvedValue(null);
+
+    await expect(
+      tasksService.resolveTaskDispute({
+        userId: 'admin1',
+        taskId: 't1',
+        action: 'RETURN_TO_PROGRESS',
+        reason: 'Admin decision',
+      })
+    ).rejects.toMatchObject({
+      status: 404,
+      code: 'NOT_FOUND',
+    });
+  });
+
+  test('resolveTaskDispute marks FAILED without archiving when threshold not reached', async () => {
+    prismaMock.task.findUnique.mockResolvedValue({
+      id: 't1',
+      status: 'DISPUTE',
+      deletedAt: null,
+      projectId: 'p1',
+    });
+    prismaMock.task.update.mockResolvedValue({
+      id: 't1',
+      status: 'FAILED',
+      projectId: 'p1',
+    });
+    prismaMock.project.findUnique.mockResolvedValue({
+      id: 'p1',
+      maxTalents: 3,
+      status: 'ACTIVE',
+    });
+    prismaMock.task.count.mockResolvedValueOnce(1).mockResolvedValueOnce(1);
+
+    const result = await tasksService.resolveTaskDispute({
+      userId: 'admin1',
+      taskId: 't1',
+      action: 'MARK_FAILED',
+      reason: 'Admin marked failed after evidence review',
+    });
+
+    expect(prismaMock.project.update).not.toHaveBeenCalled();
+    expect(result).toMatchObject({
+      taskId: 't1',
+      status: 'FAILED',
+      action: 'MARK_FAILED',
+      resolvedBy: 'admin1',
     });
   });
 

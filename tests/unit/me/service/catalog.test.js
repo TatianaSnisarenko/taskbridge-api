@@ -75,7 +75,7 @@ describe('me.service - catalog', () => {
     expect(prismaMock.task.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
-          status: { in: ['IN_PROGRESS', 'COMPLETION_REQUESTED', 'COMPLETED'] },
+          status: { in: ['IN_PROGRESS', 'DISPUTE', 'COMPLETION_REQUESTED', 'COMPLETED'] },
         }),
         orderBy: { updatedAt: 'desc' },
       })
@@ -260,7 +260,12 @@ describe('me.service - catalog', () => {
         expect.objectContaining({
           where: expect.objectContaining({
             status: {
-              in: expect.arrayContaining(['IN_PROGRESS', 'COMPLETION_REQUESTED', 'COMPLETED']),
+              in: expect.arrayContaining([
+                'IN_PROGRESS',
+                'DISPUTE',
+                'COMPLETION_REQUESTED',
+                'COMPLETED',
+              ]),
             },
           }),
         })
