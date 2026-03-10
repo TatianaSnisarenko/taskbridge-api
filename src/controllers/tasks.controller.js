@@ -218,6 +218,34 @@ export const requestTaskCompletion = asyncHandler(async (req, res) => {
   });
 });
 
+export const openTaskDispute = asyncHandler(async (req, res) => {
+  const result = await tasksService.openTaskDispute({
+    userId: req.user.id,
+    taskId: req.params.taskId,
+    reason: req.body.reason,
+  });
+
+  return res.status(200).json({
+    task_id: result.taskId,
+    status: result.status,
+  });
+});
+
+export const resolveTaskDispute = asyncHandler(async (req, res) => {
+  const result = await tasksService.resolveTaskDispute({
+    userId: req.user.id,
+    taskId: req.params.taskId,
+    action: req.body.action,
+    reason: req.body.reason,
+  });
+
+  return res.status(200).json({
+    task_id: result.taskId,
+    status: result.status,
+    action: result.action,
+  });
+});
+
 export const confirmTaskCompletion = asyncHandler(async (req, res) => {
   const result = await tasksService.confirmTaskCompletion({
     userId: req.user.id,

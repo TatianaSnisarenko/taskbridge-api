@@ -15,6 +15,8 @@ const tasksServiceMock = {
   acceptApplication: jest.fn(),
   rejectApplication: jest.fn(),
   requestTaskCompletion: jest.fn(),
+  openTaskDispute: jest.fn(),
+  resolveTaskDispute: jest.fn(),
   confirmTaskCompletion: jest.fn(),
   rejectTaskCompletion: jest.fn(),
   createReview: jest.fn(),
@@ -101,6 +103,65 @@ describe('tasks.controller', () => {
       taskId: 't-1',
     });
     expect(res.status).toHaveBeenCalledWith(200);
+  });
+
+  test('openTaskDispute maps service result to response', async () => {
+    tasksServiceMock.openTaskDispute.mockResolvedValue({
+      taskId: 't-1',
+      status: 'DISPUTE',
+    });
+
+    const req = {
+      user: { id: 'u-1' },
+      params: { taskId: 't-1' },
+      body: { reason: 'Developer is inactive for several days' },
+    };
+    const res = createResponseMock();
+    const next = jest.fn();
+
+    await tasksController.openTaskDispute(req, res, next);
+
+    expect(tasksServiceMock.openTaskDispute).toHaveBeenCalledWith({
+      userId: 'u-1',
+      taskId: 't-1',
+      reason: 'Developer is inactive for several days',
+    });
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith({
+      task_id: 't-1',
+      status: 'DISPUTE',
+    });
+  });
+
+  test('resolveTaskDispute maps service result to response', async () => {
+    tasksServiceMock.resolveTaskDispute.mockResolvedValue({
+      taskId: 't-1',
+      status: 'FAILED',
+      action: 'MARK_FAILED',
+    });
+
+    const req = {
+      user: { id: 'admin-1' },
+      params: { taskId: 't-1' },
+      body: { action: 'MARK_FAILED', reason: 'Admin resolved dispute after review' },
+    };
+    const res = createResponseMock();
+    const next = jest.fn();
+
+    await tasksController.resolveTaskDispute(req, res, next);
+
+    expect(tasksServiceMock.resolveTaskDispute).toHaveBeenCalledWith({
+      userId: 'admin-1',
+      taskId: 't-1',
+      action: 'MARK_FAILED',
+      reason: 'Admin resolved dispute after review',
+    });
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith({
+      task_id: 't-1',
+      status: 'FAILED',
+      action: 'MARK_FAILED',
+    });
   });
 
   test('confirmTaskCompletion maps service result to response', async () => {

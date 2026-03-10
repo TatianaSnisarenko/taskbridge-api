@@ -4,6 +4,8 @@ export {
   acceptApplication,
   rejectApplication,
   startTaskWithDeveloper,
+  openTaskDispute,
+  resolveTaskDispute,
   requestTaskCompletion,
   rejectTaskCompletion,
   confirmTaskCompletion,

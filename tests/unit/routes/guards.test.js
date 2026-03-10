@@ -12,6 +12,7 @@ async function loadProjectsRoutes() {
 
   const requireAuthMock = jest.fn((req, res, next) => next());
   const requireAuthIfOwnerMock = jest.fn((req, res, next) => next());
+  const requireAdminMock = jest.fn((req, res, next) => next());
   const personaMwMock = jest.fn((req, res, next) => next());
   const requirePersonaMock = jest.fn(() => personaMwMock);
   const validateMock = jest.fn(() => (req, res, next) => next());
@@ -23,6 +24,7 @@ async function loadProjectsRoutes() {
   jest.unstable_mockModule('../../src/middleware/auth.middleware.js', () => ({
     requireAuth: requireAuthMock,
     requireAuthIfOwner: requireAuthIfOwnerMock,
+    requireAdmin: requireAdminMock,
   }));
 
   jest.unstable_mockModule('../../src/middleware/persona.middleware.js', () => ({
@@ -81,6 +83,7 @@ async function loadTasksRoutes() {
 
   const requireAuthMock = jest.fn((req, res, next) => next());
   const requireAuthIfOwnerMock = jest.fn((req, res, next) => next());
+  const requireAdminMock = jest.fn((req, res, next) => next());
   const personaMwMock = jest.fn((req, res, next) => next());
   const requirePersonaMock = jest.fn(() => personaMwMock);
   const validateMock = jest.fn(() => (req, res, next) => next());
@@ -92,6 +95,7 @@ async function loadTasksRoutes() {
   jest.unstable_mockModule('../../src/middleware/auth.middleware.js', () => ({
     requireAuth: requireAuthMock,
     requireAuthIfOwner: requireAuthIfOwnerMock,
+    requireAdmin: requireAdminMock,
   }));
 
   jest.unstable_mockModule('../../src/middleware/persona.middleware.js', () => ({
@@ -112,6 +116,8 @@ async function loadTasksRoutes() {
     getTaskApplications: jest.fn(),
     getRecommendedDevelopers: jest.fn(),
     getTaskCandidates: jest.fn(),
+    openTaskDispute: jest.fn(),
+    resolveTaskDispute: jest.fn(),
     requestTaskCompletion: jest.fn(),
     confirmTaskCompletion: jest.fn(),
     rejectTaskCompletion: jest.fn(),
@@ -132,6 +138,8 @@ async function loadTasksRoutes() {
     taskIdParamSchema: {},
     getTasksCatalogSchema: {},
     createReviewSchema: {},
+    createTaskDisputeSchema: {},
+    resolveTaskDisputeSchema: {},
     getTaskReviewsQuerySchema: {},
     rejectTaskCompletionSchema: {},
     getRecommendedDevelopersQuerySchema: {},

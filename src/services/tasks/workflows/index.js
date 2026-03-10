@@ -6,6 +6,8 @@ export {
   startTaskWithDeveloper,
 } from './application.js';
 
+export { openTaskDispute, resolveTaskDispute } from './dispute.js';
+
 export {
   requestTaskCompletion,
   rejectTaskCompletion,

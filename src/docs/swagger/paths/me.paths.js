@@ -131,7 +131,7 @@
           in: 'query',
           schema: {
             type: 'string',
-            enum: ['IN_PROGRESS', 'COMPLETION_REQUESTED', 'COMPLETED'],
+            enum: ['IN_PROGRESS', 'DISPUTE', 'COMPLETION_REQUESTED', 'COMPLETED'],
           },
           description: 'Filter by task status',
         },

@@ -43,6 +43,8 @@ import {
   createTaskApplicationSchema,
   getTasksCatalogSchema,
   createReviewSchema,
+  createTaskDisputeSchema,
+  resolveTaskDisputeSchema,
   rejectTaskCompletionSchema,
   getProjectTasksQuerySchema,
   getRecommendedDevelopersQuerySchema,
@@ -235,6 +237,15 @@ describe('additional Joi schemas', () => {
       }).error
     ).toBeUndefined();
     expect(createReviewSchema.validate({ rating: 5, text: 'Great work' }).error).toBeUndefined();
+    expect(
+      createTaskDisputeSchema.validate({ reason: 'Developer is inactive for several days' }).error
+    ).toBeUndefined();
+    expect(
+      resolveTaskDisputeSchema.validate({
+        action: 'MARK_FAILED',
+        reason: 'Admin reviewed the dispute evidence and made a decision',
+      }).error
+    ).toBeUndefined();
     expect(
       rejectTaskCompletionSchema.validate({ feedback: 'Needs more tests and docs' }).error
     ).toBeUndefined();

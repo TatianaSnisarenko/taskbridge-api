@@ -195,6 +195,7 @@ function isNotificationRelevantForPersona(notif, userId, persona) {
     case 'APPLICATION_ACCEPTED':
     case 'APPLICATION_REJECTED':
     case 'COMPLETION_REQUESTED':
+    case 'TASK_DISPUTE_OPENED':
       return persona === 'developer';
     case 'TASK_COMPLETED':
       return persona === 'company' && notif.task?.ownerUserId === userId;

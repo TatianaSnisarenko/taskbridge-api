@@ -3,7 +3,7 @@ import { ApiError } from '../../utils/ApiError.js';
 
 /**
  * Get chat threads for the current user with pagination
- * Thread exists only for tasks with status IN_PROGRESS or COMPLETED
+ * Thread exists only for tasks with status IN_PROGRESS, DISPUTE, COMPLETED or FAILED
  * Caller must be either the company owner or accepted developer
  */
 export async function getMyThreads({ userId, persona, page = 1, size = 20, search = '' }) {
@@ -25,7 +25,7 @@ export async function getMyThreads({ userId, persona, page = 1, size = 20, searc
         ...personaFilter,
         task: {
           status: {
-            in: ['IN_PROGRESS', 'COMPLETED'],
+            in: ['IN_PROGRESS', 'DISPUTE', 'COMPLETED', 'FAILED'],
           },
           deletedAt: null,
           ...(taskTitleFilter && { title: taskTitleFilter }),
@@ -73,7 +73,7 @@ export async function getMyThreads({ userId, persona, page = 1, size = 20, searc
         ...personaFilter,
         task: {
           status: {
-            in: ['IN_PROGRESS', 'COMPLETED'],
+            in: ['IN_PROGRESS', 'DISPUTE', 'COMPLETED', 'FAILED'],
           },
           deletedAt: null,
           ...(taskTitleFilter && { title: taskTitleFilter }),
@@ -142,7 +142,7 @@ export async function getMyThreads({ userId, persona, page = 1, size = 20, searc
 
 /**
  * Get a single chat thread by ID. User must be a participant in the thread
- * and the associated task must be IN_PROGRESS or COMPLETED.
+ * and the associated task must be IN_PROGRESS, DISPUTE, COMPLETED or FAILED.
  */
 export async function getThreadById({ userId, persona, threadId }) {
   const thread = await prisma.chatThread.findUnique({
@@ -199,7 +199,7 @@ export async function getThreadById({ userId, persona, threadId }) {
     }
   }
 
-  if (!['IN_PROGRESS', 'COMPLETED'].includes(thread.task.status)) {
+  if (!['IN_PROGRESS', 'DISPUTE', 'COMPLETED', 'FAILED'].includes(thread.task.status)) {
     throw new ApiError(403, 'FORBIDDEN', 'Cannot access thread for this task status');
   }
 
@@ -253,7 +253,7 @@ export async function getThreadById({ userId, persona, threadId }) {
 /**
  * Get messages for a chat thread with pagination.
  * Messages are returned in chronological order (oldest first).
- * User must be a participant in the thread and task must be IN_PROGRESS or COMPLETED.
+ * User must be a participant in the thread and task must be IN_PROGRESS, DISPUTE, COMPLETED or FAILED.
  */
 export async function getThreadMessages({ userId, persona, threadId, page = 1, size = 50 }) {
   const skip = (page - 1) * size;
@@ -300,7 +300,7 @@ export async function getThreadMessages({ userId, persona, threadId, page = 1, s
     }
   }
 
-  if (!['IN_PROGRESS', 'COMPLETED'].includes(thread.task.status)) {
+  if (!['IN_PROGRESS', 'DISPUTE', 'COMPLETED', 'FAILED'].includes(thread.task.status)) {
     throw new ApiError(403, 'FORBIDDEN', 'Cannot access messages for this task status');
   }
 

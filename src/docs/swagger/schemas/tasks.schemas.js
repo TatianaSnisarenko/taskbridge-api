@@ -198,6 +198,53 @@ export const tasksSchemas = {
       status: { type: 'string', enum: ['COMPLETION_REQUESTED'] },
     },
   },
+  OpenTaskDisputeRequest: {
+    type: 'object',
+    required: ['reason'],
+    properties: {
+      reason: {
+        type: 'string',
+        minLength: 10,
+        maxLength: 2000,
+        example:
+          'Developer has been inactive for several days and missed delivery checkpoints. Requesting support review.',
+      },
+    },
+  },
+  OpenTaskDisputeResponse: {
+    type: 'object',
+    properties: {
+      task_id: { type: 'string', format: 'uuid', example: '21f01069-2f1f-47ea-bf23-6fbe5b27f2f5' },
+      status: { type: 'string', enum: ['DISPUTE'] },
+    },
+  },
+  ResolveTaskDisputeRequest: {
+    type: 'object',
+    required: ['action', 'reason'],
+    properties: {
+      action: {
+        type: 'string',
+        enum: ['RETURN_TO_PROGRESS', 'MARK_FAILED'],
+      },
+      reason: {
+        type: 'string',
+        minLength: 10,
+        maxLength: 2000,
+        example: 'Admin reviewed the case and returned task to active progress state.',
+      },
+    },
+  },
+  ResolveTaskDisputeResponse: {
+    type: 'object',
+    properties: {
+      task_id: { type: 'string', format: 'uuid', example: '21f01069-2f1f-47ea-bf23-6fbe5b27f2f5' },
+      status: { type: 'string', enum: ['IN_PROGRESS', 'FAILED'] },
+      action: {
+        type: 'string',
+        enum: ['RETURN_TO_PROGRESS', 'MARK_FAILED'],
+      },
+    },
+  },
   ConfirmTaskCompletionResponse: {
     type: 'object',
     properties: {
@@ -364,10 +411,12 @@ export const tasksSchemas = {
           'DRAFT',
           'PUBLISHED',
           'IN_PROGRESS',
+          'DISPUTE',
+          'COMPLETION_REQUESTED',
           'COMPLETED',
+          'FAILED',
           'CLOSED',
           'DELETED',
-          'COMPLETION_REQUESTED',
         ],
       },
       category: {
@@ -400,10 +449,12 @@ export const tasksSchemas = {
           'DRAFT',
           'PUBLISHED',
           'IN_PROGRESS',
+          'DISPUTE',
+          'COMPLETION_REQUESTED',
           'COMPLETED',
+          'FAILED',
           'CLOSED',
           'DELETED',
-          'COMPLETION_REQUESTED',
         ],
       },
       project: { $ref: '#/components/schemas/TaskProject', nullable: true },

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { requireAuth, requireAuthIfOwner } from '../middleware/auth.middleware.js';
+import { requireAuth, requireAuthIfOwner, requireAdmin } from '../middleware/auth.middleware.js';
 import { requirePersona } from '../middleware/persona.middleware.js';
 import { validate } from '../middleware/validate.middleware.js';
 import * as tasksController from '../controllers/tasks.controller.js';
@@ -11,6 +11,8 @@ import {
   taskIdParamSchema,
   getTasksCatalogSchema,
   createReviewSchema,
+  createTaskDisputeSchema,
+  resolveTaskDisputeSchema,
   rejectTaskCompletionSchema,
   getRecommendedDevelopersQuerySchema,
   getTaskCandidatesQuerySchema,
@@ -123,6 +125,24 @@ tasksRouter.get(
   validate(taskIdParamSchema, 'params'),
   validate(getTaskInvitesQuerySchema, 'query'),
   invitesController.getTaskInvites
+);
+
+tasksRouter.post(
+  '/:taskId/dispute',
+  requireAuth,
+  requirePersona('company'),
+  validate(taskIdParamSchema, 'params'),
+  validate(createTaskDisputeSchema),
+  tasksController.openTaskDispute
+);
+
+tasksRouter.post(
+  '/:taskId/dispute/resolve',
+  requireAuth,
+  requireAdmin,
+  validate(taskIdParamSchema, 'params'),
+  validate(resolveTaskDisputeSchema),
+  tasksController.resolveTaskDispute
 );
 
 tasksRouter.post(

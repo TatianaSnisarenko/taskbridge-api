@@ -48,11 +48,11 @@ export const getMyTasksQuerySchema = Joi.object({
     'number.max': 'Size must not exceed 100',
   }),
   status: Joi.string()
-    .valid('IN_PROGRESS', 'COMPLETION_REQUESTED', 'COMPLETED')
+    .valid('IN_PROGRESS', 'DISPUTE', 'COMPLETION_REQUESTED', 'COMPLETED')
     .optional()
     .messages({
       'string.base': 'Status must be a string',
-      'any.only': 'Status must be one of: IN_PROGRESS, COMPLETION_REQUESTED, COMPLETED',
+      'any.only': 'Status must be one of: IN_PROGRESS, DISPUTE, COMPLETION_REQUESTED, COMPLETED',
     }),
 });
 

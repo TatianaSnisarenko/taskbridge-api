@@ -313,6 +313,29 @@ export const rejectTaskCompletionSchema = Joi.object({
   }),
 });
 
+export const createTaskDisputeSchema = Joi.object({
+  reason: Joi.string().trim().min(10).max(2000).required().messages({
+    'string.empty': 'Reason is required',
+    'string.min': 'Reason must be at least 10 characters',
+    'string.max': 'Reason must not exceed 2000 characters',
+    'any.required': 'Reason is required',
+  }),
+});
+
+export const resolveTaskDisputeSchema = Joi.object({
+  action: Joi.string().valid('RETURN_TO_PROGRESS', 'MARK_FAILED').required().messages({
+    'any.only': 'Action must be one of: RETURN_TO_PROGRESS, MARK_FAILED',
+    'any.required': 'Action is required',
+    'string.empty': 'Action is required',
+  }),
+  reason: Joi.string().trim().min(10).max(2000).required().messages({
+    'string.empty': 'Reason is required',
+    'string.min': 'Reason must be at least 10 characters',
+    'string.max': 'Reason must not exceed 2000 characters',
+    'any.required': 'Reason is required',
+  }),
+});
+
 export const getProjectTasksQuerySchema = Joi.object({
   page: Joi.number().integer().min(1).default(1).messages({
     'number.base': 'Page must be a number',
@@ -330,6 +353,7 @@ export const getProjectTasksQuerySchema = Joi.object({
       'DRAFT',
       'PUBLISHED',
       'IN_PROGRESS',
+      'DISPUTE',
       'COMPLETION_REQUESTED',
       'COMPLETED',
       'FAILED',
@@ -339,7 +363,7 @@ export const getProjectTasksQuerySchema = Joi.object({
     .optional()
     .messages({
       'any.only':
-        'Status must be one of: DRAFT, PUBLISHED, IN_PROGRESS, COMPLETION_REQUESTED, COMPLETED, FAILED, CLOSED, DELETED',
+        'Status must be one of: DRAFT, PUBLISHED, IN_PROGRESS, DISPUTE, COMPLETION_REQUESTED, COMPLETED, FAILED, CLOSED, DELETED',
     }),
   include_deleted: Joi.boolean().default(false).messages({
     'boolean.base': 'The include_deleted parameter must be true or false',

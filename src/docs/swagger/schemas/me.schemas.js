@@ -6,7 +6,7 @@
       title: { type: 'string', example: 'Implement advanced task filters API' },
       status: {
         type: 'string',
-        enum: ['IN_PROGRESS', 'COMPLETION_REQUESTED', 'COMPLETED'],
+        enum: ['IN_PROGRESS', 'DISPUTE', 'COMPLETION_REQUESTED', 'COMPLETED'],
       },
       published_at: { type: 'string', format: 'date-time', nullable: true },
       completed_at: { type: 'string', format: 'date-time', nullable: true },
@@ -66,6 +66,7 @@
           'APPLICATION_ACCEPTED',
           'APPLICATION_REJECTED',
           'COMPLETION_REQUESTED',
+          'TASK_DISPUTE_OPENED',
           'TASK_COMPLETED',
           'REVIEW_CREATED',
         ],

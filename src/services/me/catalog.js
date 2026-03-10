@@ -102,7 +102,7 @@ export async function getMyTasks({ userId, page = 1, size = 20, status }) {
     throw new ApiError(403, 'PERSONA_NOT_AVAILABLE', 'Developer profile does not exist');
   }
 
-  const allowedStatuses = ['IN_PROGRESS', 'COMPLETION_REQUESTED', 'COMPLETED'];
+  const allowedStatuses = ['IN_PROGRESS', 'DISPUTE', 'COMPLETION_REQUESTED', 'COMPLETED'];
   const skip = (page - 1) * size;
 
   const where = {

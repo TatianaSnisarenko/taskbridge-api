@@ -58,6 +58,7 @@ function buildTaskSummary(groups) {
         summary.published += count;
         break;
       case 'IN_PROGRESS':
+      case 'DISPUTE':
       case 'COMPLETION_REQUESTED':
         summary.in_progress += count;
         break;

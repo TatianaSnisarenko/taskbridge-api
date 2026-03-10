@@ -25,8 +25,8 @@ export async function requestTaskCompletion({ userId, taskId }) {
       throw new ApiError(404, 'NOT_FOUND', 'Task not found');
     }
 
-    if (task.status !== 'IN_PROGRESS') {
-      throw new ApiError(409, 'INVALID_STATE', 'Task is not in IN_PROGRESS status');
+    if (task.status !== 'IN_PROGRESS' && task.status !== 'DISPUTE') {
+      throw new ApiError(409, 'INVALID_STATE', 'Task is not in IN_PROGRESS or DISPUTE status');
     }
 
     if (!task.acceptedApplicationId || task.acceptedApplication?.developerUserId !== userId) {

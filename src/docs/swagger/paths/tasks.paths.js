@@ -329,7 +329,7 @@ export const tasksPaths = {
   '/api/v1/tasks/{taskId}/completion/request': {
     post: {
       tags: ['Tasks'],
-      summary: 'Request task completion (IN_PROGRESS -> COMPLETION_REQUESTED)',
+      summary: 'Request task completion (IN_PROGRESS/DISPUTE -> COMPLETION_REQUESTED)',
       security: [{ bearerAuth: [] }],
       parameters: [
         {
@@ -358,7 +358,7 @@ export const tasksPaths = {
         401: { description: 'Unauthorized' },
         403: { description: 'Only accepted developer can request completion' },
         404: { description: 'Task not found' },
-        409: { description: 'Task in invalid state (must be IN_PROGRESS)' },
+        409: { description: 'Task in invalid state (must be IN_PROGRESS or DISPUTE)' },
       },
       'x-side-effects': [
         {
@@ -368,6 +368,92 @@ export const tasksPaths = {
           payload: { task_id: 'uuid' },
         },
       ],
+    },
+  },
+  '/api/v1/tasks/{taskId}/dispute': {
+    post: {
+      tags: ['Tasks'],
+      summary: 'Open task dispute (IN_PROGRESS -> DISPUTE)',
+      description:
+        'Company opens a dispute for an in-progress task (for example, developer inactivity). Developer can continue work and submit completion request normally.',
+      security: [{ bearerAuth: [] }],
+      parameters: [
+        {
+          name: 'taskId',
+          in: 'path',
+          required: true,
+          schema: { type: 'string', format: 'uuid' },
+        },
+        {
+          name: 'X-Persona',
+          in: 'header',
+          required: true,
+          schema: { type: 'string', enum: ['company'] },
+        },
+      ],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: { $ref: '#/components/schemas/OpenTaskDisputeRequest' },
+          },
+        },
+      },
+      responses: {
+        200: {
+          description: 'Task moved to dispute status',
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/OpenTaskDisputeResponse' },
+            },
+          },
+        },
+        400: { description: 'Validation error' },
+        401: { description: 'Unauthorized' },
+        403: { description: 'Not task owner' },
+        404: { description: 'Task not found' },
+        409: { description: 'Task in invalid state (must be IN_PROGRESS)' },
+      },
+    },
+  },
+  '/api/v1/tasks/{taskId}/dispute/resolve': {
+    post: {
+      tags: ['Tasks'],
+      summary: 'Resolve task dispute as admin',
+      description:
+        'Admin resolves a disputed task by returning it to IN_PROGRESS or marking it as FAILED.',
+      security: [{ bearerAuth: [] }],
+      parameters: [
+        {
+          name: 'taskId',
+          in: 'path',
+          required: true,
+          schema: { type: 'string', format: 'uuid' },
+        },
+      ],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: { $ref: '#/components/schemas/ResolveTaskDisputeRequest' },
+          },
+        },
+      },
+      responses: {
+        200: {
+          description: 'Dispute resolved',
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/ResolveTaskDisputeResponse' },
+            },
+          },
+        },
+        400: { description: 'Validation error' },
+        401: { description: 'Unauthorized' },
+        403: { description: 'Admin access required' },
+        404: { description: 'Task not found' },
+        409: { description: 'Task in invalid state (must be DISPUTE)' },
+      },
     },
   },
   '/api/v1/tasks/{taskId}/completion/confirm': {

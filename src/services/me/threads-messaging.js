@@ -43,7 +43,7 @@ export async function createMessage({ userId, persona, threadId, text }) {
     }
   }
 
-  if (!['IN_PROGRESS', 'COMPLETED'].includes(thread.task.status)) {
+  if (!['IN_PROGRESS', 'DISPUTE', 'COMPLETED', 'FAILED'].includes(thread.task.status)) {
     throw new ApiError(403, 'FORBIDDEN', 'Cannot send messages for this task status');
   }
 
@@ -141,7 +141,7 @@ export async function markThreadAsRead({ userId, persona, threadId }) {
     }
   }
 
-  if (!['IN_PROGRESS', 'COMPLETED'].includes(thread.task.status)) {
+  if (!['IN_PROGRESS', 'DISPUTE', 'COMPLETED', 'FAILED'].includes(thread.task.status)) {
     throw new ApiError(403, 'FORBIDDEN', 'Cannot mark messages as read for this task status');
   }
 
