@@ -16,7 +16,9 @@ const tasksServiceMock = {
   rejectApplication: jest.fn(),
   requestTaskCompletion: jest.fn(),
   openTaskDispute: jest.fn(),
+  escalateTaskCompletionDispute: jest.fn(),
   resolveTaskDispute: jest.fn(),
+  getTaskDisputes: jest.fn(),
   confirmTaskCompletion: jest.fn(),
   rejectTaskCompletion: jest.fn(),
   createReview: jest.fn(),
@@ -90,6 +92,7 @@ describe('tasks.controller', () => {
     tasksServiceMock.requestTaskCompletion.mockResolvedValue({
       taskId: 't-1',
       status: 'COMPLETION_REQUESTED',
+      responseDeadlineAt: new Date('2026-03-15T12:00:00.000Z'),
     });
 
     const req = { user: { id: 'u-1' }, params: { taskId: 't-1' } };
@@ -103,12 +106,18 @@ describe('tasks.controller', () => {
       taskId: 't-1',
     });
     expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith({
+      task_id: 't-1',
+      status: 'COMPLETION_REQUESTED',
+      response_deadline_at: '2026-03-15T12:00:00.000Z',
+    });
   });
 
   test('openTaskDispute maps service result to response', async () => {
     tasksServiceMock.openTaskDispute.mockResolvedValue({
       taskId: 't-1',
       status: 'DISPUTE',
+      disputeId: 'd-1',
     });
 
     const req = {
@@ -130,6 +139,37 @@ describe('tasks.controller', () => {
     expect(res.json).toHaveBeenCalledWith({
       task_id: 't-1',
       status: 'DISPUTE',
+      dispute_id: 'd-1',
+    });
+  });
+
+  test('escalateTaskCompletionDispute maps service result to response', async () => {
+    tasksServiceMock.escalateTaskCompletionDispute.mockResolvedValue({
+      taskId: 't-1',
+      status: 'DISPUTE',
+      disputeId: 'd-2',
+    });
+
+    const req = {
+      user: { id: 'u-1' },
+      params: { taskId: 't-1' },
+      body: { reason: 'Company did not respond before the confirmation deadline.' },
+    };
+    const res = createResponseMock();
+    const next = jest.fn();
+
+    await tasksController.escalateTaskCompletionDispute(req, res, next);
+
+    expect(tasksServiceMock.escalateTaskCompletionDispute).toHaveBeenCalledWith({
+      userId: 'u-1',
+      taskId: 't-1',
+      reason: 'Company did not respond before the confirmation deadline.',
+    });
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith({
+      task_id: 't-1',
+      status: 'DISPUTE',
+      dispute_id: 'd-2',
     });
   });
 
@@ -216,5 +256,36 @@ describe('tasks.controller', () => {
       review: { rating: 5, text: 'Great work!' },
     });
     expect(res.status).toHaveBeenCalledWith(201);
+  });
+
+  test('getTaskDisputes maps service result to response', async () => {
+    tasksServiceMock.getTaskDisputes.mockResolvedValue({
+      items: [],
+      page: 1,
+      size: 20,
+      total: 0,
+    });
+
+    const req = {
+      query: { page: '1', size: '20', status: 'OPEN', reason_type: 'COMPLETION_NOT_CONFIRMED' },
+    };
+    const res = createResponseMock();
+    const next = jest.fn();
+
+    await tasksController.getTaskDisputes(req, res, next);
+
+    expect(tasksServiceMock.getTaskDisputes).toHaveBeenCalledWith({
+      page: 1,
+      size: 20,
+      status: 'OPEN',
+      reasonType: 'COMPLETION_NOT_CONFIRMED',
+    });
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith({
+      items: [],
+      page: 1,
+      size: 20,
+      total: 0,
+    });
   });
 });

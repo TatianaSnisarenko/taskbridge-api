@@ -198,6 +198,24 @@ export const tasksSchemas = {
     properties: {
       task_id: { type: 'string', format: 'uuid', example: '21f01069-2f1f-47ea-bf23-6fbe5b27f2f5' },
       status: { type: 'string', enum: ['COMPLETION_REQUESTED'] },
+      response_deadline_at: {
+        type: 'string',
+        format: 'date-time',
+        example: '2026-03-31T12:00:00Z',
+      },
+    },
+  },
+  EscalateTaskCompletionDisputeRequest: {
+    type: 'object',
+    required: ['reason'],
+    properties: {
+      reason: {
+        type: 'string',
+        minLength: 10,
+        maxLength: 2000,
+        example:
+          'Company did not respond after the completion confirmation deadline. Requesting moderator review.',
+      },
     },
   },
   OpenTaskDisputeRequest: {
@@ -218,6 +236,11 @@ export const tasksSchemas = {
     properties: {
       task_id: { type: 'string', format: 'uuid', example: '21f01069-2f1f-47ea-bf23-6fbe5b27f2f5' },
       status: { type: 'string', enum: ['DISPUTE'] },
+      dispute_id: {
+        type: 'string',
+        format: 'uuid',
+        example: '8eec3f25-4161-48fc-b9be-379a85f4ed68',
+      },
     },
   },
   ResolveTaskDisputeRequest: {
@@ -226,7 +249,7 @@ export const tasksSchemas = {
     properties: {
       action: {
         type: 'string',
-        enum: ['RETURN_TO_PROGRESS', 'MARK_FAILED'],
+        enum: ['RETURN_TO_PROGRESS', 'MARK_FAILED', 'MARK_COMPLETED'],
       },
       reason: {
         type: 'string',
@@ -240,11 +263,68 @@ export const tasksSchemas = {
     type: 'object',
     properties: {
       task_id: { type: 'string', format: 'uuid', example: '21f01069-2f1f-47ea-bf23-6fbe5b27f2f5' },
-      status: { type: 'string', enum: ['IN_PROGRESS', 'FAILED'] },
+      status: { type: 'string', enum: ['IN_PROGRESS', 'FAILED', 'COMPLETED'] },
       action: {
         type: 'string',
-        enum: ['RETURN_TO_PROGRESS', 'MARK_FAILED'],
+        enum: ['RETURN_TO_PROGRESS', 'MARK_FAILED', 'MARK_COMPLETED'],
       },
+    },
+  },
+  TaskDisputeListItem: {
+    type: 'object',
+    properties: {
+      dispute_id: { type: 'string', format: 'uuid' },
+      task_id: { type: 'string', format: 'uuid' },
+      task_title: { type: 'string' },
+      task_status: {
+        type: 'string',
+        enum: ['DISPUTE', 'COMPLETION_REQUESTED', 'IN_PROGRESS', 'COMPLETED', 'FAILED'],
+      },
+      project_id: { type: 'string', format: 'uuid', nullable: true },
+      company_user_id: { type: 'string', format: 'uuid' },
+      company_name: { type: 'string', nullable: true },
+      developer_user_id: { type: 'string', format: 'uuid', nullable: true },
+      developer_display_name: { type: 'string', nullable: true },
+      initiator_user_id: { type: 'string', format: 'uuid' },
+      initiator_persona: { type: 'string', enum: ['developer', 'company'] },
+      source_status: { type: 'string', enum: ['IN_PROGRESS', 'COMPLETION_REQUESTED'] },
+      reason_type: {
+        type: 'string',
+        enum: ['DEVELOPER_UNRESPONSIVE', 'COMPLETION_NOT_CONFIRMED', 'OTHER'],
+      },
+      reason_text: { type: 'string' },
+      status: { type: 'string', enum: ['OPEN', 'RESOLVED'] },
+      created_at: { type: 'string', format: 'date-time' },
+      updated_at: { type: 'string', format: 'date-time' },
+      resolved_at: { type: 'string', format: 'date-time', nullable: true },
+      resolved_by_user_id: { type: 'string', format: 'uuid', nullable: true },
+      resolution_action: {
+        type: 'string',
+        enum: ['RETURN_TO_PROGRESS', 'MARK_FAILED', 'MARK_COMPLETED'],
+        nullable: true,
+      },
+      resolution_reason: { type: 'string', nullable: true },
+      completion_requested_at: { type: 'string', format: 'date-time', nullable: true },
+      completion_request_expires_at: { type: 'string', format: 'date-time', nullable: true },
+      available_actions: {
+        type: 'array',
+        items: {
+          type: 'string',
+          enum: ['RETURN_TO_PROGRESS', 'MARK_FAILED', 'MARK_COMPLETED'],
+        },
+      },
+    },
+  },
+  TaskDisputesResponse: {
+    type: 'object',
+    properties: {
+      items: {
+        type: 'array',
+        items: { $ref: '#/components/schemas/TaskDisputeListItem' },
+      },
+      page: { type: 'integer', minimum: 1 },
+      size: { type: 'integer', minimum: 1, maximum: 100 },
+      total: { type: 'integer', minimum: 0 },
     },
   },
   ConfirmTaskCompletionResponse: {

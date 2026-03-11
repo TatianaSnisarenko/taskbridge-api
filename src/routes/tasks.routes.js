@@ -1,5 +1,9 @@
 import { Router } from 'express';
-import { requireAuth, requireAuthIfOwner, requireAdmin } from '../middleware/auth.middleware.js';
+import {
+  requireAuth,
+  requireAuthIfOwner,
+  requireAdminOrModerator,
+} from '../middleware/auth.middleware.js';
 import { requirePersona } from '../middleware/persona.middleware.js';
 import { validate } from '../middleware/validate.middleware.js';
 import * as tasksController from '../controllers/tasks.controller.js';
@@ -13,7 +17,9 @@ import {
   createReviewSchema,
   createTaskDisputeSchema,
   resolveTaskDisputeSchema,
+  escalateTaskCompletionDisputeSchema,
   rejectTaskCompletionSchema,
+  getTaskDisputesQuerySchema,
   getRecommendedDevelopersQuerySchema,
   getTaskCandidatesQuerySchema,
   getTaskReviewsQuerySchema,
@@ -42,6 +48,14 @@ tasksRouter.post(
   requirePersona('company'),
   validate(createTaskDraftSchema),
   tasksController.createTaskDraft
+);
+
+tasksRouter.get(
+  '/disputes',
+  requireAuth,
+  requireAdminOrModerator,
+  validate(getTaskDisputesQuerySchema, 'query'),
+  tasksController.getTaskDisputes
 );
 
 tasksRouter.get(
@@ -139,7 +153,7 @@ tasksRouter.post(
 tasksRouter.post(
   '/:taskId/dispute/resolve',
   requireAuth,
-  requireAdmin,
+  requireAdminOrModerator,
   validate(taskIdParamSchema, 'params'),
   validate(resolveTaskDisputeSchema),
   tasksController.resolveTaskDispute
@@ -151,6 +165,15 @@ tasksRouter.post(
   requirePersona('developer'),
   validate(taskIdParamSchema, 'params'),
   tasksController.requestTaskCompletion
+);
+
+tasksRouter.post(
+  '/:taskId/completion/escalate',
+  requireAuth,
+  requirePersona('developer'),
+  validate(taskIdParamSchema, 'params'),
+  validate(escalateTaskCompletionDisputeSchema),
+  tasksController.escalateTaskCompletionDispute
 );
 
 tasksRouter.post(

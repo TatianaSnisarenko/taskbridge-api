@@ -6,7 +6,12 @@ export {
   startTaskWithDeveloper,
 } from './application.js';
 
-export { openTaskDispute, resolveTaskDispute } from './dispute.js';
+export {
+  openTaskDispute,
+  escalateTaskCompletionDispute,
+  resolveTaskDispute,
+  getTaskDisputes,
+} from './dispute.js';
 
 export {
   requestTaskCompletion,

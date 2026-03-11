@@ -1,10 +1,17 @@
 import { prisma } from '../../../db/prisma.js';
 import { ApiError } from '../../../utils/ApiError.js';
+import { env } from '../../../config/env.js';
 import { createNotification } from '../../notifications/index.js';
 import { sendImportantNotificationEmail } from '../../notification-email/index.js';
+import { maybeArchiveProject } from './project-archive.js';
 
 export async function requestTaskCompletion({ userId, taskId }) {
   const result = await prisma.$transaction(async (tx) => {
+    const requestedAt = new Date();
+    const responseDeadlineAt = new Date(
+      requestedAt.getTime() + env.taskCompletionResponseHours * 60 * 60 * 1000
+    );
+
     const task = await tx.task.findUnique({
       where: { id: taskId },
       select: {
@@ -37,8 +44,15 @@ export async function requestTaskCompletion({ userId, taskId }) {
       where: { id: taskId },
       data: {
         status: 'COMPLETION_REQUESTED',
+        completionRequestedAt: requestedAt,
+        completionRequestExpiresAt: responseDeadlineAt,
       },
-      select: { id: true, title: true, status: true },
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        completionRequestExpiresAt: true,
+      },
     });
 
     await createNotification({
@@ -56,6 +70,7 @@ export async function requestTaskCompletion({ userId, taskId }) {
       taskId: updated.id,
       taskTitle: updated.title,
       status: updated.status,
+      responseDeadlineAt: updated.completionRequestExpiresAt,
       companyUserId: task.ownerUserId,
     };
   });
@@ -87,7 +102,11 @@ export async function requestTaskCompletion({ userId, taskId }) {
     });
   }
 
-  return { taskId: result.taskId, status: result.status };
+  return {
+    taskId: result.taskId,
+    status: result.status,
+    responseDeadlineAt: result.responseDeadlineAt,
+  };
 }
 
 export async function rejectTaskCompletion({ userId, taskId, feedback }) {
@@ -131,12 +150,23 @@ export async function rejectTaskCompletion({ userId, taskId, feedback }) {
       throw new ApiError(409, 'INVALID_STATE', 'Accepted developer not found');
     }
 
+    const openDispute = await tx.taskDispute.findFirst({
+      where: {
+        taskId: task.id,
+        status: 'OPEN',
+      },
+      select: { id: true },
+      orderBy: { createdAt: 'desc' },
+    });
+
     const newRejectionCount = task.rejectionCount + 1;
     const maxRejections = 3;
     const isFinalRejection = newRejectionCount >= maxRejections;
 
     const updateData = {
       rejectionCount: newRejectionCount,
+      completionRequestedAt: null,
+      completionRequestExpiresAt: null,
     };
 
     if (isFinalRejection) {
@@ -159,36 +189,25 @@ export async function rejectTaskCompletion({ userId, taskId, feedback }) {
       },
     });
 
-    if (isFinalRejection && updated.projectId) {
-      const project = await tx.project.findUnique({
-        where: { id: updated.projectId },
-        select: { id: true, maxTalents: true, status: true },
+    if (openDispute) {
+      await tx.taskDispute.update({
+        where: { id: openDispute.id },
+        data: {
+          status: 'RESOLVED',
+          resolutionAction: isFinalRejection ? 'MARK_FAILED' : 'RETURN_TO_PROGRESS',
+          resolutionReason:
+            feedback ||
+            (isFinalRejection
+              ? 'Company rejected completion and task reached final failed state.'
+              : 'Company rejected completion and returned task to active progress.'),
+          resolvedByUserId: userId,
+          resolvedAt: new Date(),
+        },
       });
+    }
 
-      if (project && project.status === 'ACTIVE') {
-        const completedCount = await tx.task.count({
-          where: {
-            projectId: updated.projectId,
-            status: 'COMPLETED',
-            deletedAt: null,
-          },
-        });
-
-        const failedCount = await tx.task.count({
-          where: {
-            projectId: updated.projectId,
-            status: 'FAILED',
-            deletedAt: null,
-          },
-        });
-
-        if (completedCount + failedCount >= project.maxTalents) {
-          await tx.project.update({
-            where: { id: updated.projectId },
-            data: { status: 'ARCHIVED' },
-          });
-        }
-      }
+    if (isFinalRejection) {
+      await maybeArchiveProject(tx, updated.projectId);
     }
 
     if (task.chatThread?.id) {
@@ -284,6 +303,15 @@ export async function confirmTaskCompletion({ userId, taskId }) {
       throw new ApiError(409, 'INVALID_STATE', 'Accepted developer not found');
     }
 
+    const openDispute = await tx.taskDispute.findFirst({
+      where: {
+        taskId: task.id,
+        status: 'OPEN',
+      },
+      select: { id: true },
+      orderBy: { createdAt: 'desc' },
+    });
+
     const completedAt = new Date();
 
     const updated = await tx.task.update({
@@ -291,41 +319,26 @@ export async function confirmTaskCompletion({ userId, taskId }) {
       data: {
         status: 'COMPLETED',
         completedAt,
+        completionRequestedAt: null,
+        completionRequestExpiresAt: null,
       },
       select: { id: true, title: true, status: true, completedAt: true, projectId: true },
     });
 
-    if (updated.projectId) {
-      const project = await tx.project.findUnique({
-        where: { id: updated.projectId },
-        select: { id: true, maxTalents: true, status: true },
+    if (openDispute) {
+      await tx.taskDispute.update({
+        where: { id: openDispute.id },
+        data: {
+          status: 'RESOLVED',
+          resolutionAction: 'MARK_COMPLETED',
+          resolutionReason: 'Completion confirmed by company owner.',
+          resolvedByUserId: userId,
+          resolvedAt: completedAt,
+        },
       });
-
-      if (project && project.status === 'ACTIVE') {
-        const completedCount = await tx.task.count({
-          where: {
-            projectId: updated.projectId,
-            status: 'COMPLETED',
-            deletedAt: null,
-          },
-        });
-
-        const failedCount = await tx.task.count({
-          where: {
-            projectId: updated.projectId,
-            status: 'FAILED',
-            deletedAt: null,
-          },
-        });
-
-        if (completedCount + failedCount >= project.maxTalents) {
-          await tx.project.update({
-            where: { id: updated.projectId },
-            data: { status: 'ARCHIVED' },
-          });
-        }
-      }
     }
+
+    await maybeArchiveProject(tx, updated.projectId);
 
     await createNotification({
       client: tx,

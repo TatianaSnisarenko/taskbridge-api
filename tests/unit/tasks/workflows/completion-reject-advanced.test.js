@@ -13,6 +13,10 @@ const prismaMock = {
     update: jest.fn(),
     count: jest.fn(),
   },
+  taskDispute: {
+    findFirst: jest.fn(),
+    update: jest.fn(),
+  },
   taskTechnology: {
     createMany: jest.fn(),
     deleteMany: jest.fn(),
@@ -88,6 +92,8 @@ describe('tasks.service - workflows completion reject advanced', () => {
     prismaMock.taskTechnology.deleteMany.mockResolvedValue({ count: 0 });
   });
 
+  prismaMock.taskDispute.findFirst.mockResolvedValue(null);
+  prismaMock.taskDispute.update.mockResolvedValue({});
   describe('rejectTaskCompletion', () => {
     test('rejects completion on third attempt (marks as FAILED)', async () => {
       const failedAt = new Date('2026-03-10T18:00:00Z');

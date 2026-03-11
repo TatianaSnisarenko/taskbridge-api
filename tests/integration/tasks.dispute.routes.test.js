@@ -76,13 +76,26 @@ describe('tasks dispute routes', () => {
       .send({ reason: 'Developer has been inactive for 5 days without updates.' });
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({
+    expect(res.body).toMatchObject({
       task_id: task.id,
       status: 'DISPUTE',
+      dispute_id: expect.any(String),
     });
 
     const updatedTask = await prisma.task.findUnique({ where: { id: task.id } });
     expect(updatedTask.status).toBe('DISPUTE');
+
+    const dispute = await prisma.taskDispute.findUnique({
+      where: { id: res.body.dispute_id },
+    });
+    expect(dispute).toMatchObject({
+      taskId: task.id,
+      initiatorUserId: company.id,
+      initiatorPersona: 'company',
+      sourceStatus: 'IN_PROGRESS',
+      reasonType: 'DEVELOPER_UNRESPONSIVE',
+      status: 'OPEN',
+    });
 
     const notification = await prisma.notification.findFirst({
       where: {
@@ -128,6 +141,17 @@ describe('tasks dispute routes', () => {
       },
     });
 
+    await prisma.taskDispute.create({
+      data: {
+        taskId: task.id,
+        initiatorUserId: company.id,
+        initiatorPersona: 'company',
+        sourceStatus: 'IN_PROGRESS',
+        reasonType: 'DEVELOPER_UNRESPONSIVE',
+        reasonText: 'Developer is inactive and company opened dispute.',
+      },
+    });
+
     const res = await request(app)
       .post(`/api/v1/tasks/${task.id}/dispute/resolve`)
       .set('Authorization', `Bearer ${adminToken}`)
@@ -145,5 +169,153 @@ describe('tasks dispute routes', () => {
 
     const updatedTask = await prisma.task.findUnique({ where: { id: task.id } });
     expect(updatedTask.status).toBe('IN_PROGRESS');
+  });
+
+  test('POST /tasks/:taskId/completion/escalate lets developer escalate overdue confirmation', async () => {
+    const company = await createUser({ companyProfile: { companyName: 'TeamUp' } });
+    const developer = await createUser({ developerProfile: { displayName: 'Dev' } });
+    const developerToken = buildAccessToken({ userId: developer.id, email: developer.email });
+
+    const task = await prisma.task.create({
+      data: {
+        ownerUserId: company.id,
+        status: 'COMPLETION_REQUESTED',
+        completionRequestedAt: new Date('2026-03-01T10:00:00Z'),
+        completionRequestExpiresAt: new Date('2026-03-02T10:00:00Z'),
+        publishedAt: new Date('2026-02-14T10:00:00Z'),
+        title: 'Overdue completion request',
+        description: 'Task waiting for company confirmation for too long.',
+        category: 'BACKEND',
+        type: 'PAID',
+        difficulty: 'JUNIOR',
+        estimatedEffortHours: 5,
+        expectedDuration: 'DAYS_1_7',
+        communicationLanguage: 'EN',
+        timezonePreference: 'UTC',
+        applicationDeadline: new Date('2026-03-01'),
+        visibility: 'PUBLIC',
+        deliverables: ['Code'],
+        requirements: ['Reqs'],
+        niceToHave: ['Nice'],
+      },
+    });
+
+    const application = await prisma.application.create({
+      data: {
+        taskId: task.id,
+        developerUserId: developer.id,
+        status: 'ACCEPTED',
+      },
+    });
+
+    await prisma.task.update({
+      where: { id: task.id },
+      data: { acceptedApplicationId: application.id },
+    });
+
+    const res = await request(app)
+      .post(`/api/v1/tasks/${task.id}/completion/escalate`)
+      .set('Authorization', `Bearer ${developerToken}`)
+      .set('X-Persona', 'developer')
+      .send({ reason: 'Company did not respond after the completion confirmation deadline.' });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      task_id: task.id,
+      status: 'DISPUTE',
+      dispute_id: expect.any(String),
+    });
+
+    const dispute = await prisma.taskDispute.findUnique({ where: { id: res.body.dispute_id } });
+    expect(dispute).toMatchObject({
+      taskId: task.id,
+      initiatorUserId: developer.id,
+      initiatorPersona: 'developer',
+      sourceStatus: 'COMPLETION_REQUESTED',
+      reasonType: 'COMPLETION_NOT_CONFIRMED',
+      status: 'OPEN',
+    });
+  });
+
+  test('GET /tasks/disputes returns disputes for moderator', async () => {
+    const moderator = await createUser({ developerProfile: { displayName: 'Moderator' } });
+    await prisma.user.update({
+      where: { id: moderator.id },
+      data: { roles: ['USER', 'MODERATOR'] },
+    });
+    const moderatorToken = buildAccessToken({ userId: moderator.id, email: moderator.email });
+
+    const company = await createUser({ companyProfile: { companyName: 'TeamUp' } });
+    const developer = await createUser({ developerProfile: { displayName: 'Dev' } });
+
+    const task = await prisma.task.create({
+      data: {
+        ownerUserId: company.id,
+        status: 'DISPUTE',
+        completionRequestedAt: new Date('2026-03-01T10:00:00Z'),
+        completionRequestExpiresAt: new Date('2026-03-02T10:00:00Z'),
+        publishedAt: new Date('2026-02-14T10:00:00Z'),
+        title: 'Dispute list task',
+        description: 'Task included in moderator dispute queue.',
+        category: 'BACKEND',
+        type: 'PAID',
+        difficulty: 'JUNIOR',
+        estimatedEffortHours: 5,
+        expectedDuration: 'DAYS_1_7',
+        communicationLanguage: 'EN',
+        timezonePreference: 'UTC',
+        applicationDeadline: new Date('2026-03-01'),
+        visibility: 'PUBLIC',
+        deliverables: ['Code'],
+        requirements: ['Reqs'],
+        niceToHave: ['Nice'],
+      },
+    });
+
+    const application = await prisma.application.create({
+      data: {
+        taskId: task.id,
+        developerUserId: developer.id,
+        status: 'ACCEPTED',
+      },
+    });
+
+    await prisma.task.update({
+      where: { id: task.id },
+      data: { acceptedApplicationId: application.id },
+    });
+
+    await prisma.taskDispute.create({
+      data: {
+        taskId: task.id,
+        initiatorUserId: developer.id,
+        initiatorPersona: 'developer',
+        sourceStatus: 'COMPLETION_REQUESTED',
+        reasonType: 'COMPLETION_NOT_CONFIRMED',
+        reasonText: 'Company did not respond after completion was requested.',
+      },
+    });
+
+    const res = await request(app)
+      .get('/api/v1/tasks/disputes?status=OPEN')
+      .set('Authorization', `Bearer ${moderatorToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.total).toBe(1);
+    expect(res.body.items[0]).toMatchObject({
+      task_id: task.id,
+      task_title: 'Dispute list task',
+      task_status: 'DISPUTE',
+      company_user_id: company.id,
+      company_name: 'TeamUp',
+      developer_user_id: developer.id,
+      developer_display_name: 'Dev',
+      initiator_user_id: developer.id,
+      initiator_persona: 'developer',
+      source_status: 'COMPLETION_REQUESTED',
+      reason_type: 'COMPLETION_NOT_CONFIRMED',
+      status: 'OPEN',
+      available_actions: ['RETURN_TO_PROGRESS', 'MARK_FAILED', 'MARK_COMPLETED'],
+    });
   });
 });

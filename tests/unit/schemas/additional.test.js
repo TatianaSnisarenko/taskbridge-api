@@ -45,7 +45,9 @@ import {
   createReviewSchema,
   createTaskDisputeSchema,
   resolveTaskDisputeSchema,
+  escalateTaskCompletionDisputeSchema,
   rejectTaskCompletionSchema,
+  getTaskDisputesQuerySchema,
   getProjectTasksQuerySchema,
   getRecommendedDevelopersQuerySchema,
   getTaskCandidatesQuerySchema,
@@ -249,7 +251,20 @@ describe('additional Joi schemas', () => {
       }).error
     ).toBeUndefined();
     expect(
+      escalateTaskCompletionDisputeSchema.validate({
+        reason: 'Company did not respond before the completion confirmation deadline.',
+      }).error
+    ).toBeUndefined();
+    expect(
       rejectTaskCompletionSchema.validate({ feedback: 'Needs more tests and docs' }).error
+    ).toBeUndefined();
+    expect(
+      getTaskDisputesQuerySchema.validate({
+        page: 1,
+        size: 20,
+        status: 'OPEN',
+        reason_type: 'COMPLETION_NOT_CONFIRMED',
+      }).error
     ).toBeUndefined();
     expect(getProjectTasksQuerySchema.validate({ status: 'PUBLISHED' }).error).toBeUndefined();
     expect(getRecommendedDevelopersQuerySchema.validate({ limit: 3 }).error).toBeUndefined();

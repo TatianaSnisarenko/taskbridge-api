@@ -34,4 +34,5 @@ export const env = {
   cloudinaryApiKey: process.env.CLOUDINARY_API_KEY,
   cloudinaryApiSecret: process.env.CLOUDINARY_API_SECRET,
   platformReviewCooldownDays: Number(process.env.PLATFORM_REVIEW_COOLDOWN_DAYS ?? 30),
+  taskCompletionResponseHours: Number(process.env.TASK_COMPLETION_RESPONSE_HOURS ?? 72),
 };

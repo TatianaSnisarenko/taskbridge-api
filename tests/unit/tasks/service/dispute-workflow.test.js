@@ -7,6 +7,13 @@ const prismaMock = {
     update: jest.fn(),
     count: jest.fn(),
   },
+  taskDispute: {
+    findFirst: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+    count: jest.fn(),
+    findMany: jest.fn(),
+  },
   project: {
     findUnique: jest.fn(),
     update: jest.fn(),
@@ -42,6 +49,9 @@ describe('tasks.service - dispute workflow', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     prismaMock.$transaction.mockImplementation(async (callback) => callback(prismaMock));
+    prismaMock.taskDispute.findFirst.mockResolvedValue(null);
+    prismaMock.taskDispute.create.mockResolvedValue({ id: 'd1' });
+    prismaMock.taskDispute.update.mockResolvedValue({});
   });
 
   test('openTaskDispute rejects missing task', async () => {
@@ -116,6 +126,7 @@ describe('tasks.service - dispute workflow', () => {
       id: 't1',
       title: 'Test Task',
       status: 'COMPLETION_REQUESTED',
+      completionRequestExpiresAt: new Date('2026-03-15T12:00:00.000Z'),
     });
     prismaMock.user.findUnique.mockResolvedValue({
       id: 'owner1',
@@ -132,6 +143,7 @@ describe('tasks.service - dispute workflow', () => {
     expect(result).toEqual({
       taskId: 't1',
       status: 'COMPLETION_REQUESTED',
+      responseDeadlineAt: new Date('2026-03-15T12:00:00.000Z'),
     });
   });
 
@@ -170,6 +182,7 @@ describe('tasks.service - dispute workflow', () => {
       id: 't1',
       status: 'DISPUTE',
     });
+    prismaMock.taskDispute.create.mockResolvedValue({ id: 'd1' });
 
     const result = await tasksService.openTaskDispute({
       userId: 'owner1',
@@ -186,6 +199,71 @@ describe('tasks.service - dispute workflow', () => {
     expect(result).toEqual({
       taskId: 't1',
       status: 'DISPUTE',
+      disputeId: 'd1',
+    });
+  });
+
+  test('escalateTaskCompletionDispute rejects when company response deadline has not passed', async () => {
+    prismaMock.task.findUnique.mockResolvedValue({
+      id: 't1',
+      ownerUserId: 'owner1',
+      status: 'COMPLETION_REQUESTED',
+      deletedAt: null,
+      completionRequestExpiresAt: new Date(Date.now() + 60_000),
+      acceptedApplicationId: 'a1',
+      acceptedApplication: { developerUserId: 'dev1' },
+    });
+
+    await expect(
+      tasksService.escalateTaskCompletionDispute({
+        userId: 'dev1',
+        taskId: 't1',
+        reason: 'Company is not responding.',
+      })
+    ).rejects.toMatchObject({
+      status: 409,
+      code: 'COMPLETION_RESPONSE_PENDING',
+    });
+  });
+
+  test('escalateTaskCompletionDispute creates open dispute after deadline', async () => {
+    prismaMock.task.findUnique.mockResolvedValue({
+      id: 't1',
+      ownerUserId: 'owner1',
+      status: 'COMPLETION_REQUESTED',
+      deletedAt: null,
+      completionRequestExpiresAt: new Date(Date.now() - 60_000),
+      acceptedApplicationId: 'a1',
+      acceptedApplication: { developerUserId: 'dev1' },
+    });
+    prismaMock.task.update.mockResolvedValue({ id: 't1', status: 'DISPUTE' });
+    prismaMock.taskDispute.create.mockResolvedValue({ id: 'd2' });
+
+    const result = await tasksService.escalateTaskCompletionDispute({
+      userId: 'dev1',
+      taskId: 't1',
+      reason: 'Company is not responding after completion request.',
+    });
+
+    expect(prismaMock.task.update).toHaveBeenCalledWith({
+      where: { id: 't1' },
+      data: { status: 'DISPUTE' },
+      select: { id: true, status: true },
+    });
+    expect(prismaMock.taskDispute.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        taskId: 't1',
+        initiatorUserId: 'dev1',
+        initiatorPersona: 'developer',
+        sourceStatus: 'COMPLETION_REQUESTED',
+        reasonType: 'COMPLETION_NOT_CONFIRMED',
+      }),
+      select: { id: true },
+    });
+    expect(result).toEqual({
+      taskId: 't1',
+      status: 'DISPUTE',
+      disputeId: 'd2',
     });
   });
 
@@ -195,7 +273,11 @@ describe('tasks.service - dispute workflow', () => {
       status: 'IN_PROGRESS',
       deletedAt: null,
       projectId: null,
+      ownerUserId: 'owner1',
+      acceptedApplicationId: 'a1',
+      acceptedApplication: { developerUserId: 'dev1' },
     });
+    prismaMock.taskDispute.findFirst.mockResolvedValue(null);
 
     await expect(
       tasksService.resolveTaskDispute({
@@ -232,7 +314,11 @@ describe('tasks.service - dispute workflow', () => {
       status: 'DISPUTE',
       deletedAt: null,
       projectId: 'p1',
+      ownerUserId: 'owner1',
+      acceptedApplicationId: 'a1',
+      acceptedApplication: { developerUserId: 'dev1' },
     });
+    prismaMock.taskDispute.findFirst.mockResolvedValue({ id: 'd1' });
     prismaMock.task.update.mockResolvedValue({
       id: 't1',
       status: 'FAILED',
@@ -267,7 +353,11 @@ describe('tasks.service - dispute workflow', () => {
       status: 'DISPUTE',
       deletedAt: null,
       projectId: null,
+      ownerUserId: 'owner1',
+      acceptedApplicationId: 'a1',
+      acceptedApplication: { developerUserId: 'dev1' },
     });
+    prismaMock.taskDispute.findFirst.mockResolvedValue({ id: 'd1' });
     prismaMock.task.update.mockResolvedValue({
       id: 't1',
       status: 'IN_PROGRESS',
@@ -295,7 +385,11 @@ describe('tasks.service - dispute workflow', () => {
       status: 'DISPUTE',
       deletedAt: null,
       projectId: 'p1',
+      ownerUserId: 'owner1',
+      acceptedApplicationId: 'a1',
+      acceptedApplication: { developerUserId: 'dev1' },
     });
+    prismaMock.taskDispute.findFirst.mockResolvedValue({ id: 'd1' });
     prismaMock.task.update.mockResolvedValue({
       id: 't1',
       status: 'FAILED',

@@ -215,6 +215,7 @@ export const requestTaskCompletion = asyncHandler(async (req, res) => {
   return res.status(200).json({
     task_id: result.taskId,
     status: result.status,
+    response_deadline_at: result.responseDeadlineAt.toISOString(),
   });
 });
 
@@ -228,6 +229,21 @@ export const openTaskDispute = asyncHandler(async (req, res) => {
   return res.status(200).json({
     task_id: result.taskId,
     status: result.status,
+    dispute_id: result.disputeId,
+  });
+});
+
+export const escalateTaskCompletionDispute = asyncHandler(async (req, res) => {
+  const result = await tasksService.escalateTaskCompletionDispute({
+    userId: req.user.id,
+    taskId: req.params.taskId,
+    reason: req.body.reason,
+  });
+
+  return res.status(200).json({
+    task_id: result.taskId,
+    status: result.status,
+    dispute_id: result.disputeId,
   });
 });
 
@@ -297,6 +313,17 @@ export const getTaskReviews = asyncHandler(async (req, res) => {
     taskId: req.params.taskId,
     page: req.query.page,
     size: req.query.size,
+  });
+
+  return res.status(200).json(result);
+});
+
+export const getTaskDisputes = asyncHandler(async (req, res) => {
+  const result = await tasksService.getTaskDisputes({
+    page: parseInt(req.query.page) || 1,
+    size: parseInt(req.query.size) || 20,
+    status: req.query.status,
+    reasonType: req.query.reason_type,
   });
 
   return res.status(200).json(result);

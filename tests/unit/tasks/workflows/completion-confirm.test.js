@@ -13,6 +13,10 @@ const prismaMock = {
     update: jest.fn(),
     count: jest.fn(),
   },
+  taskDispute: {
+    findFirst: jest.fn(),
+    update: jest.fn(),
+  },
   taskTechnology: {
     createMany: jest.fn(),
     deleteMany: jest.fn(),
@@ -86,6 +90,8 @@ describe('tasks.service - workflows completion confirm', () => {
     });
     prismaMock.taskTechnology.createMany.mockResolvedValue({ count: 0 });
     prismaMock.taskTechnology.deleteMany.mockResolvedValue({ count: 0 });
+    prismaMock.taskDispute.findFirst.mockResolvedValue(null);
+    prismaMock.taskDispute.update.mockResolvedValue({});
   });
 
   describe('confirmTaskCompletion', () => {

@@ -76,6 +76,23 @@ enum TaskStatus {
   DELETED
 }
 
+enum TaskDisputeStatus {
+  OPEN
+  RESOLVED
+}
+
+enum TaskDisputeReasonType {
+  DEVELOPER_UNRESPONSIVE
+  COMPLETION_NOT_CONFIRMED
+  OTHER
+}
+
+enum TaskDisputeResolutionAction {
+  RETURN_TO_PROGRESS
+  MARK_FAILED
+  MARK_COMPLETED
+}
+
 enum ApplicationStatus {
   APPLIED
   ACCEPTED
@@ -189,7 +206,9 @@ model User {
 
   platformReviews PlatformReview[] @relation("PlatformReviewAuthor")
 
-  taskFavorites TaskFavorite[] @relation("TaskFavoriteUser")
+  taskFavorites         TaskFavorite[] @relation("TaskFavoriteUser")
+  initiatedTaskDisputes TaskDispute[]  @relation("TaskDisputeInitiator")
+  resolvedTaskDisputes  TaskDispute[]  @relation("TaskDisputeResolver")
 
   @@map("users")
 }
@@ -349,7 +368,9 @@ model Task {
 
   acceptedApplicationId String? @unique @map("accepted_application_id") @db.Uuid
 
-  rejectionCount Int @default(0) @map("rejection_count")
+  rejectionCount             Int       @default(0) @map("rejection_count")
+  completionRequestedAt      DateTime? @map("completion_requested_at") @db.Timestamptz(6)
+  completionRequestExpiresAt DateTime? @map("completion_request_expires_at") @db.Timestamptz(6)
 
   createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
@@ -365,6 +386,7 @@ model Task {
   acceptedApplication Application?     @relation("AcceptedApplication", fields: [acceptedApplicationId], references: [id])
   chatThread          ChatThread?
   reviews             Review[]
+  disputes            TaskDispute[]
   technologies        TaskTechnology[]
   invites             TaskInvite[]
 
@@ -377,6 +399,33 @@ model Task {
   @@index([deletedAt, createdAt(sort: Desc)])
   @@index([projectId, deletedAt, createdAt(sort: Desc)])
   @@map("tasks")
+}
+
+model TaskDispute {
+  id               String                       @id @default(uuid()) @db.Uuid
+  taskId           String                       @map("task_id") @db.Uuid
+  initiatorUserId  String                       @map("initiator_user_id") @db.Uuid
+  initiatorPersona Persona                      @map("initiator_persona")
+  sourceStatus     TaskStatus                   @map("source_status")
+  reasonType       TaskDisputeReasonType        @map("reason_type")
+  reasonText       String                       @map("reason_text") @db.VarChar(2000)
+  status           TaskDisputeStatus            @default(OPEN)
+  resolutionAction TaskDisputeResolutionAction? @map("resolution_action")
+  resolutionReason String?                      @map("resolution_reason") @db.VarChar(2000)
+  resolvedByUserId String?                      @map("resolved_by_user_id") @db.Uuid
+  createdAt        DateTime                     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime                     @updatedAt @map("updated_at") @db.Timestamptz(6)
+  resolvedAt       DateTime?                    @map("resolved_at") @db.Timestamptz(6)
+
+  task       Task  @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  initiator  User  @relation("TaskDisputeInitiator", fields: [initiatorUserId], references: [id], onDelete: Cascade)
+  resolvedBy User? @relation("TaskDisputeResolver", fields: [resolvedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt(sort: Desc)])
+  @@index([taskId, createdAt(sort: Desc)])
+  @@index([initiatorUserId, createdAt(sort: Desc)])
+  @@index([resolvedByUserId, createdAt(sort: Desc)])
+  @@map("task_disputes")
 }
 
 model Application {

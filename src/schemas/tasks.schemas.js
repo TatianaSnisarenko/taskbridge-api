@@ -333,17 +333,53 @@ export const createTaskDisputeSchema = Joi.object({
 });
 
 export const resolveTaskDisputeSchema = Joi.object({
-  action: Joi.string().valid('RETURN_TO_PROGRESS', 'MARK_FAILED').required().messages({
-    'any.only': 'Action must be one of: RETURN_TO_PROGRESS, MARK_FAILED',
-    'any.required': 'Action is required',
-    'string.empty': 'Action is required',
-  }),
+  action: Joi.string()
+    .valid('RETURN_TO_PROGRESS', 'MARK_FAILED', 'MARK_COMPLETED')
+    .required()
+    .messages({
+      'any.only': 'Action must be one of: RETURN_TO_PROGRESS, MARK_FAILED, MARK_COMPLETED',
+      'any.required': 'Action is required',
+      'string.empty': 'Action is required',
+    }),
   reason: Joi.string().trim().min(10).max(2000).required().messages({
     'string.empty': 'Reason is required',
     'string.min': 'Reason must be at least 10 characters',
     'string.max': 'Reason must not exceed 2000 characters',
     'any.required': 'Reason is required',
   }),
+});
+
+export const escalateTaskCompletionDisputeSchema = Joi.object({
+  reason: Joi.string().trim().min(10).max(2000).required().messages({
+    'string.empty': 'Reason is required',
+    'string.min': 'Reason must be at least 10 characters',
+    'string.max': 'Reason must not exceed 2000 characters',
+    'any.required': 'Reason is required',
+  }),
+});
+
+export const getTaskDisputesQuerySchema = Joi.object({
+  page: Joi.number().integer().min(1).default(1).messages({
+    'number.base': 'Page must be a number',
+    'number.integer': 'Page must be an integer',
+    'number.min': 'Page must be at least 1',
+  }),
+  size: Joi.number().integer().min(1).max(100).default(20).messages({
+    'number.base': 'Size must be a number',
+    'number.integer': 'Size must be an integer',
+    'number.min': 'Size must be at least 1',
+    'number.max': 'Size must not exceed 100',
+  }),
+  status: Joi.string().valid('OPEN', 'RESOLVED').optional().messages({
+    'any.only': 'Status must be one of: OPEN, RESOLVED',
+  }),
+  reason_type: Joi.string()
+    .valid('DEVELOPER_UNRESPONSIVE', 'COMPLETION_NOT_CONFIRMED', 'OTHER')
+    .optional()
+    .messages({
+      'any.only':
+        'Reason type must be one of: DEVELOPER_UNRESPONSIVE, COMPLETION_NOT_CONFIRMED, OTHER',
+    }),
 });
 
 export const getProjectTasksQuerySchema = Joi.object({

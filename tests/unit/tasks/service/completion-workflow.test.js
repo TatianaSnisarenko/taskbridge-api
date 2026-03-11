@@ -12,6 +12,10 @@ const prismaMock = {
     update: jest.fn(),
     count: jest.fn(),
   },
+  taskDispute: {
+    findFirst: jest.fn(),
+    update: jest.fn(),
+  },
   taskTechnology: {
     createMany: jest.fn(),
     deleteMany: jest.fn(),
@@ -83,6 +87,8 @@ describe('tasks.service - completion workflow', () => {
     });
     prismaMock.taskTechnology.createMany.mockResolvedValue({ count: 0 });
     prismaMock.taskTechnology.deleteMany.mockResolvedValue({ count: 0 });
+    prismaMock.taskDispute.findFirst.mockResolvedValue(null);
+    prismaMock.taskDispute.update.mockResolvedValue({});
   });
 
   describe('requestTaskCompletion', () => {
@@ -178,6 +184,7 @@ describe('tasks.service - completion workflow', () => {
         id: 't1',
         title: 'Test Task',
         status: 'COMPLETION_REQUESTED',
+        completionRequestExpiresAt: new Date('2026-03-15T12:00:00.000Z'),
       });
       prismaMock.user.findUnique.mockResolvedValue({
         id: 'owner1',
@@ -195,8 +202,15 @@ describe('tasks.service - completion workflow', () => {
         where: { id: 't1' },
         data: {
           status: 'COMPLETION_REQUESTED',
+          completionRequestedAt: expect.any(Date),
+          completionRequestExpiresAt: expect.any(Date),
         },
-        select: { id: true, title: true, status: true },
+        select: {
+          id: true,
+          title: true,
+          status: true,
+          completionRequestExpiresAt: true,
+        },
       });
 
       expect(notificationsServiceMock.createNotification).toHaveBeenCalledWith({
@@ -213,6 +227,7 @@ describe('tasks.service - completion workflow', () => {
       expect(result).toEqual({
         taskId: 't1',
         status: 'COMPLETION_REQUESTED',
+        responseDeadlineAt: new Date('2026-03-15T12:00:00.000Z'),
       });
     });
   });
@@ -352,6 +367,8 @@ describe('tasks.service - completion workflow', () => {
         data: {
           status: 'COMPLETED',
           completedAt: expect.any(Date),
+          completionRequestedAt: null,
+          completionRequestExpiresAt: null,
         },
         select: { id: true, title: true, status: true, completedAt: true, projectId: true },
       });

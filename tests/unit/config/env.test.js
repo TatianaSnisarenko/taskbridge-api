@@ -57,6 +57,7 @@ describe('env config', () => {
       REFRESH_TOKEN_TTL_DAYS: '10',
       EMAIL_PORT: '2525',
       EMAIL_SECURE: 'false',
+      TASK_COMPLETION_RESPONSE_HOURS: '96',
     });
 
     expect(env.cookieSecure).toBe(true);
@@ -65,6 +66,7 @@ describe('env config', () => {
     expect(env.refreshTokenTtlDays).toBe(10);
     expect(env.emailPort).toBe(2525);
     expect(env.emailSecure).toBe(false);
+    expect(env.taskCompletionResponseHours).toBe(96);
   });
 
   test('uses defaults for optional values', async () => {
@@ -80,6 +82,7 @@ describe('env config', () => {
       APP_BASE_URL: undefined,
       EMAIL_VERIFICATION_TTL_HOURS: undefined,
       VERIFICATION_TOKEN_RETENTION_DAYS: undefined,
+      TASK_COMPLETION_RESPONSE_HOURS: undefined,
     });
 
     expect(env.port).toBe(3000);
@@ -93,5 +96,6 @@ describe('env config', () => {
     expect(env.appBaseUrl).toBe('http://localhost:3000');
     expect(env.emailVerificationTtlHours).toBe(24);
     expect(env.verificationTokenRetentionDays).toBe(7);
+    expect(env.taskCompletionResponseHours).toBe(72);
   });
 });

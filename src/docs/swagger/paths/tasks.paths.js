@@ -371,9 +371,54 @@ export const tasksPaths = {
           type: 'COMPLETION_REQUESTED',
           recipient: 'task.owner_user_id',
           actor: 'developer',
-          payload: { task_id: 'uuid' },
+          payload: { task_id: 'uuid', response_deadline_at: '2026-03-31T12:00:00Z' },
         },
       ],
+    },
+  },
+  '/api/v1/tasks/disputes': {
+    get: {
+      tags: ['Tasks'],
+      summary: 'List task disputes for admin or moderator review',
+      security: [{ bearerAuth: [] }],
+      parameters: [
+        {
+          name: 'page',
+          in: 'query',
+          schema: { type: 'integer', minimum: 1, default: 1 },
+        },
+        {
+          name: 'size',
+          in: 'query',
+          schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
+        },
+        {
+          name: 'status',
+          in: 'query',
+          schema: { type: 'string', enum: ['OPEN', 'RESOLVED'] },
+        },
+        {
+          name: 'reason_type',
+          in: 'query',
+          schema: {
+            type: 'string',
+            enum: ['DEVELOPER_UNRESPONSIVE', 'COMPLETION_NOT_CONFIRMED', 'OTHER'],
+          },
+        },
+      ],
+      responses: {
+        200: {
+          description: 'Paginated dispute queue',
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/TaskDisputesResponse' },
+            },
+          },
+        },
+        400: { description: 'Validation error' },
+        401: { description: 'Unauthorized' },
+        403: { description: 'Admin or moderator access required' },
+      },
     },
   },
   '/api/v1/tasks/{taskId}/dispute': {
@@ -422,12 +467,61 @@ export const tasksPaths = {
       },
     },
   },
+  '/api/v1/tasks/{taskId}/completion/escalate': {
+    post: {
+      tags: ['Tasks'],
+      summary: 'Escalate overdue completion request to dispute',
+      description:
+        'Accepted developer escalates the task to dispute after the company response deadline has passed for a completion request.',
+      security: [{ bearerAuth: [] }],
+      parameters: [
+        {
+          name: 'taskId',
+          in: 'path',
+          required: true,
+          schema: { type: 'string', format: 'uuid' },
+        },
+        {
+          name: 'X-Persona',
+          in: 'header',
+          required: true,
+          schema: { type: 'string', enum: ['developer'] },
+        },
+      ],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: { $ref: '#/components/schemas/EscalateTaskCompletionDisputeRequest' },
+          },
+        },
+      },
+      responses: {
+        200: {
+          description: 'Task escalated to dispute',
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/OpenTaskDisputeResponse' },
+            },
+          },
+        },
+        400: { description: 'Validation error' },
+        401: { description: 'Unauthorized' },
+        403: { description: 'Only accepted developer can escalate this dispute' },
+        404: { description: 'Task not found' },
+        409: {
+          description:
+            'Task is not awaiting completion confirmation, response deadline has not passed yet, or an open dispute already exists',
+        },
+      },
+    },
+  },
   '/api/v1/tasks/{taskId}/dispute/resolve': {
     post: {
       tags: ['Tasks'],
       summary: 'Resolve task dispute as admin or moderator',
       description:
-        'Admin or moderator resolves a disputed task by returning it to IN_PROGRESS or marking it as FAILED.',
+        'Admin or moderator resolves an open task dispute by returning it to IN_PROGRESS, marking it as FAILED, or marking it as COMPLETED.',
       security: [{ bearerAuth: [] }],
       parameters: [
         {
@@ -458,7 +552,7 @@ export const tasksPaths = {
         401: { description: 'Unauthorized' },
         403: { description: 'Admin or moderator access required' },
         404: { description: 'Task not found' },
-        409: { description: 'Task in invalid state (must be DISPUTE)' },
+        409: { description: 'Task does not have an open dispute' },
       },
     },
   },
