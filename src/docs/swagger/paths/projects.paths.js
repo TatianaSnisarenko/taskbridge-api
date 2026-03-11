@@ -355,6 +355,89 @@
       },
     },
   },
+  '/api/v1/projects/reports': {
+    get: {
+      tags: ['Projects'],
+      summary: 'List project reports for moderation',
+      security: [{ bearerAuth: [] }],
+      parameters: [
+        {
+          name: 'page',
+          in: 'query',
+          schema: { type: 'integer', minimum: 1, default: 1 },
+        },
+        {
+          name: 'size',
+          in: 'query',
+          schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
+        },
+        {
+          name: 'status',
+          in: 'query',
+          schema: { type: 'string', enum: ['OPEN', 'RESOLVED'] },
+        },
+        {
+          name: 'reason',
+          in: 'query',
+          schema: {
+            type: 'string',
+            enum: ['SPAM', 'SCAM', 'INAPPROPRIATE_CONTENT', 'MISLEADING', 'OTHER'],
+          },
+        },
+      ],
+      responses: {
+        200: {
+          description: 'Project reports queue',
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/GetProjectReportsResponse' },
+            },
+          },
+        },
+        400: { description: 'Validation error' },
+        401: { description: 'Unauthorized' },
+        403: { description: 'Admin or moderator access required' },
+      },
+    },
+  },
+  '/api/v1/projects/reports/{reportId}/resolve': {
+    patch: {
+      tags: ['Projects'],
+      summary: 'Resolve project report as moderator/admin',
+      security: [{ bearerAuth: [] }],
+      parameters: [
+        {
+          name: 'reportId',
+          in: 'path',
+          required: true,
+          schema: { type: 'string', format: 'uuid' },
+        },
+      ],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: { $ref: '#/components/schemas/ResolveProjectReportRequest' },
+          },
+        },
+      },
+      responses: {
+        200: {
+          description: 'Project report resolved',
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/ResolveProjectReportResponse' },
+            },
+          },
+        },
+        400: { description: 'Validation error' },
+        401: { description: 'Unauthorized' },
+        403: { description: 'Admin or moderator access required' },
+        404: { description: 'Report not found' },
+        409: { description: 'Report already resolved' },
+      },
+    },
+  },
   '/api/v1/projects/{projectId}/reviews': {
     get: {
       tags: ['Projects'],

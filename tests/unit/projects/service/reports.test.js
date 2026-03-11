@@ -16,6 +16,10 @@ const prismaMock = {
   },
   projectReport: {
     create: jest.fn(),
+    findMany: jest.fn(),
+    count: jest.fn(),
+    findUnique: jest.fn(),
+    update: jest.fn(),
   },
   projectTechnology: {
     createMany: jest.fn(),
@@ -187,6 +191,163 @@ describe('projects.service - reports', () => {
           report: { reason: 'SPAM' },
         })
       ).rejects.toEqual(dbError);
+    });
+  });
+
+  describe('getProjectReports', () => {
+    test('returns paginated reports with filters', async () => {
+      const items = [{ id: 'rp1', reason: 'SCAM', status: 'OPEN' }];
+      prismaMock.projectReport.findMany.mockResolvedValue(items);
+      prismaMock.projectReport.count.mockResolvedValue(1);
+
+      const result = await projectsService.getProjectReports({
+        page: 2,
+        size: 10,
+        status: 'OPEN',
+        reason: 'SCAM',
+      });
+
+      expect(prismaMock.projectReport.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { status: 'OPEN', reason: 'SCAM' },
+          skip: 10,
+          take: 10,
+        })
+      );
+      expect(prismaMock.projectReport.count).toHaveBeenCalledWith({
+        where: { status: 'OPEN', reason: 'SCAM' },
+      });
+      expect(result).toEqual({
+        items,
+        page: 2,
+        size: 10,
+        total: 1,
+      });
+    });
+  });
+
+  describe('resolveProjectReport', () => {
+    test('throws 404 when report is missing', async () => {
+      prismaMock.projectReport.findUnique.mockResolvedValue(null);
+
+      await expect(
+        projectsService.resolveProjectReport({
+          userId: 'm1',
+          reportId: 'rp404',
+          action: 'DISMISS',
+        })
+      ).rejects.toMatchObject({ status: 404, code: 'NOT_FOUND' });
+    });
+
+    test('throws 409 when report already resolved', async () => {
+      prismaMock.projectReport.findUnique.mockResolvedValue({
+        id: 'rp1',
+        projectId: 'p1',
+        status: 'RESOLVED',
+        project: { id: 'p1', deletedAt: null },
+      });
+
+      await expect(
+        projectsService.resolveProjectReport({
+          userId: 'm1',
+          reportId: 'rp1',
+          action: 'DELETE',
+        })
+      ).rejects.toMatchObject({ status: 409, code: 'ALREADY_RESOLVED' });
+    });
+
+    test('DELETE action archives project, deletes tasks and resolves report', async () => {
+      const resolvedAt = new Date('2026-03-12T11:00:00Z');
+      prismaMock.projectReport.findUnique.mockResolvedValue({
+        id: 'rp1',
+        projectId: 'p1',
+        status: 'OPEN',
+        project: { id: 'p1', deletedAt: null },
+      });
+      prismaMock.project.update.mockResolvedValue({ id: 'p1' });
+      prismaMock.task.updateMany.mockResolvedValue({ count: 2 });
+      prismaMock.projectReport.update.mockResolvedValue({
+        id: 'rp1',
+        status: 'RESOLVED',
+        resolutionAction: 'DELETE',
+        resolvedAt,
+      });
+
+      const result = await projectsService.resolveProjectReport({
+        userId: 'm1',
+        reportId: 'rp1',
+        action: 'DELETE',
+        note: 'Violation confirmed',
+      });
+
+      expect(prismaMock.project.update).toHaveBeenCalledWith({
+        where: { id: 'p1' },
+        data: {
+          deletedAt: expect.any(Date),
+          status: 'ARCHIVED',
+        },
+      });
+      expect(prismaMock.task.updateMany).toHaveBeenCalledWith({
+        where: {
+          projectId: 'p1',
+          deletedAt: null,
+        },
+        data: {
+          status: 'DELETED',
+          deletedAt: expect.any(Date),
+        },
+      });
+      expect(prismaMock.projectReport.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'rp1' },
+          data: expect.objectContaining({
+            status: 'RESOLVED',
+            resolutionAction: 'DELETE',
+            resolutionNote: 'Violation confirmed',
+            resolvedByUserId: 'm1',
+          }),
+        })
+      );
+      expect(result).toEqual({
+        reportId: 'rp1',
+        status: 'RESOLVED',
+        action: 'DELETE',
+        resolvedAt,
+      });
+    });
+
+    test('DISMISS action resolves without archive path', async () => {
+      const resolvedAt = new Date('2026-03-12T11:10:00Z');
+      prismaMock.projectReport.findUnique.mockResolvedValue({
+        id: 'rp2',
+        projectId: 'p2',
+        status: 'OPEN',
+        project: { id: 'p2', deletedAt: null },
+      });
+      prismaMock.projectReport.update.mockResolvedValue({
+        id: 'rp2',
+        status: 'RESOLVED',
+        resolutionAction: 'DISMISS',
+        resolvedAt,
+      });
+
+      const result = await projectsService.resolveProjectReport({
+        userId: 'm2',
+        reportId: 'rp2',
+        action: 'DISMISS',
+      });
+
+      expect(prismaMock.project.update).not.toHaveBeenCalled();
+      expect(prismaMock.task.updateMany).not.toHaveBeenCalled();
+      expect(prismaMock.projectReport.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            resolutionAction: 'DISMISS',
+            resolutionNote: '',
+          }),
+        })
+      );
+      expect(result.action).toBe('DISMISS');
     });
   });
 });

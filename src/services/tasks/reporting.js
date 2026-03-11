@@ -1,14 +1,14 @@
 import { prisma } from '../../db/prisma.js';
 import { ApiError } from '../../utils/ApiError.js';
-import { findProjectForReport } from '../../db/queries/projects.queries.js';
+import { findTaskForReport } from '../../db/queries/tasks.queries.js';
 
-export async function reportProject({ userId, persona, projectId, report }) {
-  await findProjectForReport(projectId);
+export async function reportTask({ userId, persona, taskId, report }) {
+  await findTaskForReport(taskId);
 
   try {
-    const created = await prisma.projectReport.create({
+    const created = await prisma.taskReport.create({
       data: {
-        projectId,
+        taskId,
         reporterUserId: userId,
         reporterPersona: persona,
         reason: report.reason,
@@ -20,13 +20,13 @@ export async function reportProject({ userId, persona, projectId, report }) {
     return { reportId: created.id, createdAt: created.createdAt };
   } catch (error) {
     if (error.code === 'P2002') {
-      throw new ApiError(409, 'ALREADY_REPORTED', 'You have already reported this project');
+      throw new ApiError(409, 'ALREADY_REPORTED', 'You have already reported this task');
     }
     throw error;
   }
 }
 
-export async function getProjectReports({ page = 1, size = 20, status, reason }) {
+export async function getTaskReports({ page = 1, size = 20, status, reason }) {
   const take = Number(size);
   const skip = (Number(page) - 1) * take;
 
@@ -39,13 +39,13 @@ export async function getProjectReports({ page = 1, size = 20, status, reason })
   }
 
   const [reports, total] = await prisma.$transaction([
-    prisma.projectReport.findMany({
+    prisma.taskReport.findMany({
       where,
       skip,
       take,
       orderBy: { createdAt: 'desc' },
       include: {
-        project: {
+        task: {
           select: {
             id: true,
             title: true,
@@ -68,7 +68,7 @@ export async function getProjectReports({ page = 1, size = 20, status, reason })
         },
       },
     }),
-    prisma.projectReport.count({ where }),
+    prisma.taskReport.count({ where }),
   ]);
 
   return {
@@ -79,11 +79,11 @@ export async function getProjectReports({ page = 1, size = 20, status, reason })
   };
 }
 
-export async function resolveProjectReport({ userId, reportId, action, note }) {
-  const report = await prisma.projectReport.findUnique({
+export async function resolveTaskReport({ userId, reportId, action, note }) {
+  const report = await prisma.taskReport.findUnique({
     where: { id: reportId },
     include: {
-      project: {
+      task: {
         select: {
           id: true,
           deletedAt: true,
@@ -103,20 +103,9 @@ export async function resolveProjectReport({ userId, reportId, action, note }) {
   const resolvedAt = new Date();
 
   const updatedReport = await prisma.$transaction(async (tx) => {
-    if (action === 'DELETE' && !report.project.deletedAt) {
-      await tx.project.update({
-        where: { id: report.projectId },
-        data: {
-          deletedAt: resolvedAt,
-          status: 'ARCHIVED',
-        },
-      });
-
-      await tx.task.updateMany({
-        where: {
-          projectId: report.projectId,
-          deletedAt: null,
-        },
+    if (action === 'DELETE' && !report.task.deletedAt) {
+      await tx.task.update({
+        where: { id: report.taskId },
         data: {
           status: 'DELETED',
           deletedAt: resolvedAt,
@@ -124,7 +113,7 @@ export async function resolveProjectReport({ userId, reportId, action, note }) {
       });
     }
 
-    return tx.projectReport.update({
+    return tx.taskReport.update({
       where: { id: reportId },
       data: {
         status: 'RESOLVED',

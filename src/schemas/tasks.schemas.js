@@ -5,6 +5,9 @@ const TASK_TYPES = ['PAID', 'UNPAID', 'VOLUNTEER', 'EXPERIENCE'];
 const TASK_DIFFICULTY = ['JUNIOR', 'MIDDLE', 'SENIOR', 'ANY'];
 const TASK_DURATION = ['DAYS_1_7', 'DAYS_8_14', 'DAYS_15_30', 'DAYS_30_PLUS'];
 const TASK_VISIBILITY = ['PUBLIC', 'UNLISTED'];
+const REPORT_REASONS = ['SPAM', 'SCAM', 'INAPPROPRIATE_CONTENT', 'MISLEADING', 'OTHER'];
+const REPORT_STATUSES = ['OPEN', 'RESOLVED'];
+const REPORT_ACTIONS = ['DISMISS', 'DELETE'];
 
 const taskNotesFieldOptional = (label) =>
   Joi.array()
@@ -380,6 +383,69 @@ export const getTaskDisputesQuerySchema = Joi.object({
       'any.only':
         'Reason type must be one of: DEVELOPER_UNRESPONSIVE, COMPLETION_NOT_CONFIRMED, OTHER',
     }),
+});
+
+export const reportTaskSchema = Joi.object({
+  reason: Joi.string()
+    .valid(...REPORT_REASONS)
+    .required()
+    .messages({
+      'string.empty': 'Reason is required',
+      'any.only': 'Reason must be one of: SPAM, SCAM, INAPPROPRIATE_CONTENT, MISLEADING, OTHER',
+      'any.required': 'Reason is required',
+    }),
+  comment: Joi.string().trim().max(1000).messages({
+    'string.max': 'Comment must not exceed 1000 characters',
+  }),
+});
+
+export const getTaskReportsQuerySchema = Joi.object({
+  page: Joi.number().integer().min(1).default(1).messages({
+    'number.base': 'Page must be a number',
+    'number.integer': 'Page must be an integer',
+    'number.min': 'Page must be at least 1',
+  }),
+  size: Joi.number().integer().min(1).max(100).default(20).messages({
+    'number.base': 'Size must be a number',
+    'number.integer': 'Size must be an integer',
+    'number.min': 'Size must be at least 1',
+    'number.max': 'Size must not exceed 100',
+  }),
+  status: Joi.string()
+    .valid(...REPORT_STATUSES)
+    .optional()
+    .messages({
+      'any.only': 'Status must be one of: OPEN, RESOLVED',
+    }),
+  reason: Joi.string()
+    .valid(...REPORT_REASONS)
+    .optional()
+    .messages({
+      'any.only': 'Reason must be one of: SPAM, SCAM, INAPPROPRIATE_CONTENT, MISLEADING, OTHER',
+    }),
+});
+
+export const reportIdParamSchema = Joi.object({
+  reportId: Joi.string().guid({ version: 'uuidv4' }).required().messages({
+    'string.empty': 'Report id is required',
+    'string.guid': 'Report id must be a valid UUID',
+    'any.required': 'Report id is required',
+  }),
+});
+
+export const resolveTaskReportSchema = Joi.object({
+  action: Joi.string()
+    .valid(...REPORT_ACTIONS)
+    .required()
+    .messages({
+      'string.empty': 'Action is required',
+      'any.only': 'Action must be one of: DISMISS, DELETE',
+      'any.required': 'Action is required',
+    }),
+  note: Joi.string().trim().min(3).max(2000).optional().messages({
+    'string.min': 'Note must be at least 3 characters',
+    'string.max': 'Note must not exceed 2000 characters',
+  }),
 });
 
 export const getProjectTasksQuerySchema = Joi.object({

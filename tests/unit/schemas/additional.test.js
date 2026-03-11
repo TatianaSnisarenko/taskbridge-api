@@ -35,6 +35,9 @@ import {
   getProjectsQuerySchema,
   reportProjectParamsSchema,
   reportProjectSchema,
+  getProjectReportsQuerySchema,
+  resolveProjectReportParamsSchema,
+  resolveProjectReportSchema,
 } from '../../../src/schemas/projects.schemas.js';
 import {
   createTaskDraftSchema,
@@ -48,6 +51,10 @@ import {
   escalateTaskCompletionDisputeSchema,
   rejectTaskCompletionSchema,
   getTaskDisputesQuerySchema,
+  reportTaskSchema,
+  getTaskReportsQuerySchema,
+  reportIdParamSchema,
+  resolveTaskReportSchema,
   getProjectTasksQuerySchema,
   getRecommendedDevelopersQuerySchema,
   getTaskCandidatesQuerySchema,
@@ -194,6 +201,17 @@ describe('additional Joi schemas', () => {
     ).toBeUndefined();
     expect(reportProjectSchema.validate({ reason: 'SPAM', comment: 'bad' }).error).toBeUndefined();
     expect(reportProjectSchema.validate({ reason: 'BAD' }).error).toBeDefined();
+    expect(
+      getProjectReportsQuerySchema.validate({ status: 'OPEN', reason: 'SCAM' }).error
+    ).toBeUndefined();
+    expect(
+      resolveProjectReportParamsSchema.validate({
+        reportId: '550e8400-e29b-41d4-a716-446655440000',
+      }).error
+    ).toBeUndefined();
+    expect(
+      resolveProjectReportSchema.validate({ action: 'DELETE', note: 'Valid note' }).error
+    ).toBeUndefined();
   });
 
   test('tasks schemas validate key query/body contracts', () => {
@@ -265,6 +283,18 @@ describe('additional Joi schemas', () => {
         status: 'OPEN',
         reason_type: 'COMPLETION_NOT_CONFIRMED',
       }).error
+    ).toBeUndefined();
+    expect(
+      reportTaskSchema.validate({ reason: 'SPAM', comment: 'bad content' }).error
+    ).toBeUndefined();
+    expect(
+      getTaskReportsQuerySchema.validate({ status: 'RESOLVED', reason: 'MISLEADING' }).error
+    ).toBeUndefined();
+    expect(
+      reportIdParamSchema.validate({ reportId: '550e8400-e29b-41d4-a716-446655440000' }).error
+    ).toBeUndefined();
+    expect(
+      resolveTaskReportSchema.validate({ action: 'DISMISS', note: 'Not enough evidence' }).error
     ).toBeUndefined();
     expect(getProjectTasksQuerySchema.validate({ status: 'PUBLISHED' }).error).toBeUndefined();
     expect(getRecommendedDevelopersQuerySchema.validate({ limit: 3 }).error).toBeUndefined();

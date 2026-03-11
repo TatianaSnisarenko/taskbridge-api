@@ -6,6 +6,7 @@ async function loadProjectsRoutes() {
   const routerMock = {
     get: jest.fn().mockReturnThis(),
     post: jest.fn().mockReturnThis(),
+    patch: jest.fn().mockReturnThis(),
     put: jest.fn().mockReturnThis(),
     delete: jest.fn().mockReturnThis(),
   };
@@ -43,6 +44,8 @@ async function loadProjectsRoutes() {
     updateProject: jest.fn(),
     deleteProject: jest.fn(),
     reportProject: jest.fn(),
+    getProjectReports: jest.fn(),
+    resolveProjectReport: jest.fn(),
   }));
 
   jest.unstable_mockModule('../../src/schemas/projects.schemas.js', () => ({
@@ -52,8 +55,11 @@ async function loadProjectsRoutes() {
     getProjectQuerySchema: {},
     getProjectsQuerySchema: {},
     getProjectReviewsQuerySchema: {},
+    getProjectReportsQuerySchema: {},
     reportProjectParamsSchema: {},
     reportProjectSchema: {},
+    resolveProjectReportParamsSchema: {},
+    resolveProjectReportSchema: {},
     updateProjectParamsSchema: {},
     updateProjectSchema: {},
   }));
@@ -77,6 +83,7 @@ async function loadTasksRoutes() {
   const routerMock = {
     get: jest.fn().mockReturnThis(),
     post: jest.fn().mockReturnThis(),
+    patch: jest.fn().mockReturnThis(),
     put: jest.fn().mockReturnThis(),
     delete: jest.fn().mockReturnThis(),
   };
@@ -120,6 +127,9 @@ async function loadTasksRoutes() {
     escalateTaskCompletionDispute: jest.fn(),
     resolveTaskDispute: jest.fn(),
     getTaskDisputes: jest.fn(),
+    reportTask: jest.fn(),
+    getTaskReports: jest.fn(),
+    resolveTaskReport: jest.fn(),
     requestTaskCompletion: jest.fn(),
     confirmTaskCompletion: jest.fn(),
     rejectTaskCompletion: jest.fn(),
@@ -142,6 +152,10 @@ async function loadTasksRoutes() {
     createReviewSchema: {},
     createTaskDisputeSchema: {},
     resolveTaskDisputeSchema: {},
+    reportTaskSchema: {},
+    getTaskReportsQuerySchema: {},
+    reportIdParamSchema: {},
+    resolveTaskReportSchema: {},
     escalateTaskCompletionDisputeSchema: {},
     getTaskDisputesQuerySchema: {},
     getTaskReviewsQuerySchema: {},

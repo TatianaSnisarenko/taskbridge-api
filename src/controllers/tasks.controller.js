@@ -328,3 +328,74 @@ export const getTaskDisputes = asyncHandler(async (req, res) => {
 
   return res.status(200).json(result);
 });
+
+export const reportTask = asyncHandler(async (req, res) => {
+  const result = await tasksService.reportTask({
+    userId: req.user.id,
+    persona: req.persona,
+    taskId: req.params.taskId,
+    report: req.body,
+  });
+
+  return res.status(201).json({
+    report_id: result.reportId,
+    created_at: result.createdAt.toISOString(),
+  });
+});
+
+export const getTaskReports = asyncHandler(async (req, res) => {
+  const result = await tasksService.getTaskReports({
+    page: req.query.page,
+    size: req.query.size,
+    status: req.query.status,
+    reason: req.query.reason,
+  });
+
+  return res.status(200).json({
+    items: result.items.map((item) => ({
+      report_id: item.id,
+      target_type: 'task',
+      target_id: item.taskId,
+      target: {
+        id: item.task.id,
+        title: item.task.title,
+        status: item.task.status,
+        deleted_at: item.task.deletedAt ? item.task.deletedAt.toISOString() : null,
+        owner_user_id: item.task.ownerUserId,
+      },
+      reporter: {
+        user_id: item.reporter.id,
+        email: item.reporter.email,
+        persona: item.reporterPersona,
+      },
+      reason: item.reason,
+      comment: item.comment || '',
+      status: item.status,
+      resolution_action: item.resolutionAction || null,
+      resolution_note: item.resolutionNote || '',
+      resolved_by_user_id: item.resolvedByUserId || null,
+      resolved_by_email: item.resolvedBy?.email || null,
+      resolved_at: item.resolvedAt ? item.resolvedAt.toISOString() : null,
+      created_at: item.createdAt.toISOString(),
+    })),
+    page: result.page,
+    size: result.size,
+    total: result.total,
+  });
+});
+
+export const resolveTaskReport = asyncHandler(async (req, res) => {
+  const result = await tasksService.resolveTaskReport({
+    userId: req.user.id,
+    reportId: req.params.reportId,
+    action: req.body.action,
+    note: req.body.note,
+  });
+
+  return res.status(200).json({
+    report_id: result.reportId,
+    status: result.status,
+    action: result.action,
+    resolved_at: result.resolvedAt.toISOString(),
+  });
+});

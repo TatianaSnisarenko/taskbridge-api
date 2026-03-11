@@ -74,6 +74,63 @@ export const reportProject = asyncHandler(async (req, res) => {
   });
 });
 
+export const getProjectReports = asyncHandler(async (req, res) => {
+  const result = await projectsService.getProjectReports({
+    page: req.query.page,
+    size: req.query.size,
+    status: req.query.status,
+    reason: req.query.reason,
+  });
+
+  return res.status(200).json({
+    items: result.items.map((item) => ({
+      report_id: item.id,
+      target_type: 'project',
+      target_id: item.projectId,
+      target: {
+        id: item.project.id,
+        title: item.project.title,
+        status: item.project.status,
+        deleted_at: item.project.deletedAt ? item.project.deletedAt.toISOString() : null,
+        owner_user_id: item.project.ownerUserId,
+      },
+      reporter: {
+        user_id: item.reporter.id,
+        email: item.reporter.email,
+        persona: item.reporterPersona,
+      },
+      reason: item.reason,
+      comment: item.comment || '',
+      status: item.status,
+      resolution_action: item.resolutionAction || null,
+      resolution_note: item.resolutionNote || '',
+      resolved_by_user_id: item.resolvedByUserId || null,
+      resolved_by_email: item.resolvedBy?.email || null,
+      resolved_at: item.resolvedAt ? item.resolvedAt.toISOString() : null,
+      created_at: item.createdAt.toISOString(),
+    })),
+    page: result.page,
+    size: result.size,
+    total: result.total,
+  });
+});
+
+export const resolveProjectReport = asyncHandler(async (req, res) => {
+  const result = await projectsService.resolveProjectReport({
+    userId: req.user.id,
+    reportId: req.params.reportId,
+    action: req.body.action,
+    note: req.body.note,
+  });
+
+  return res.status(200).json({
+    report_id: result.reportId,
+    status: result.status,
+    action: result.action,
+    resolved_at: result.resolvedAt.toISOString(),
+  });
+});
+
 export const getProjectTasks = asyncHandler(async (req, res) => {
   const result = await tasksService.getProjectTasks({
     projectId: req.params.projectId,

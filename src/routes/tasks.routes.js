@@ -17,6 +17,10 @@ import {
   createReviewSchema,
   createTaskDisputeSchema,
   resolveTaskDisputeSchema,
+  reportTaskSchema,
+  getTaskReportsQuerySchema,
+  reportIdParamSchema,
+  resolveTaskReportSchema,
   escalateTaskCompletionDisputeSchema,
   rejectTaskCompletionSchema,
   getTaskDisputesQuerySchema,
@@ -56,6 +60,23 @@ tasksRouter.get(
   requireAdminOrModerator,
   validate(getTaskDisputesQuerySchema, 'query'),
   tasksController.getTaskDisputes
+);
+
+tasksRouter.get(
+  '/reports',
+  requireAuth,
+  requireAdminOrModerator,
+  validate(getTaskReportsQuerySchema, 'query'),
+  tasksController.getTaskReports
+);
+
+tasksRouter.patch(
+  '/reports/:reportId/resolve',
+  requireAuth,
+  requireAdminOrModerator,
+  validate(reportIdParamSchema, 'params'),
+  validate(resolveTaskReportSchema),
+  tasksController.resolveTaskReport
 );
 
 tasksRouter.get(
@@ -139,6 +160,15 @@ tasksRouter.get(
   validate(taskIdParamSchema, 'params'),
   validate(getTaskInvitesQuerySchema, 'query'),
   invitesController.getTaskInvites
+);
+
+tasksRouter.post(
+  '/:taskId/reports',
+  requireAuth,
+  requirePersona(),
+  validate(taskIdParamSchema, 'params'),
+  validate(reportTaskSchema),
+  tasksController.reportTask
 );
 
 tasksRouter.post(

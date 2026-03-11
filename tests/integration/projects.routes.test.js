@@ -257,6 +257,129 @@ describe('projects routes', () => {
     });
   });
 
+  describe('project reports moderation', () => {
+    test('GET /projects/reports returns reports for moderator', async () => {
+      const owner = await createUser({ companyProfile: { companyName: 'TeamUp' } });
+      const reporter = await createUser({ developerProfile: { displayName: 'Reporter' } });
+      const moderator = await createUser({ emailVerified: true });
+      await prisma.user.update({
+        where: { id: moderator.id },
+        data: { roles: ['USER', 'MODERATOR'] },
+      });
+
+      const token = buildAccessToken({ userId: moderator.id, email: moderator.email });
+
+      const project = await prisma.project.create({
+        data: {
+          ownerUserId: owner.id,
+          title: 'Project under moderation',
+          shortDescription: 'Short',
+          description: 'Description',
+          technologies: ['Node.js'],
+          visibility: 'PUBLIC',
+        },
+      });
+
+      await prisma.projectReport.create({
+        data: {
+          projectId: project.id,
+          reporterUserId: reporter.id,
+          reporterPersona: 'developer',
+          reason: 'SPAM',
+          comment: 'Spam content',
+        },
+      });
+
+      const res = await request(app)
+        .get('/api/v1/projects/reports?status=OPEN')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.items).toHaveLength(1);
+      expect(res.body.items[0]).toMatchObject({
+        target_type: 'project',
+        target_id: project.id,
+        reason: 'SPAM',
+        status: 'OPEN',
+      });
+    });
+
+    test('PATCH /projects/reports/:reportId/resolve with DELETE archives and soft-deletes project', async () => {
+      const owner = await createUser({ companyProfile: { companyName: 'TeamUp' } });
+      const reporter = await createUser({ developerProfile: { displayName: 'Reporter' } });
+      const moderator = await createUser({ emailVerified: true });
+      await prisma.user.update({
+        where: { id: moderator.id },
+        data: { roles: ['USER', 'MODERATOR'] },
+      });
+
+      const token = buildAccessToken({ userId: moderator.id, email: moderator.email });
+
+      const project = await prisma.project.create({
+        data: {
+          ownerUserId: owner.id,
+          title: 'Project for delete resolution',
+          shortDescription: 'Short',
+          description: 'Description',
+          technologies: ['Node.js'],
+          visibility: 'PUBLIC',
+        },
+      });
+
+      const task = await prisma.task.create({
+        data: {
+          ownerUserId: owner.id,
+          projectId: project.id,
+          title: 'Task in project',
+          description: 'Task description',
+          status: 'PUBLISHED',
+          visibility: 'PUBLIC',
+          category: 'BACKEND',
+          type: 'PAID',
+          difficulty: 'JUNIOR',
+        },
+      });
+
+      const report = await prisma.projectReport.create({
+        data: {
+          projectId: project.id,
+          reporterUserId: reporter.id,
+          reporterPersona: 'developer',
+          reason: 'SCAM',
+        },
+      });
+
+      const res = await request(app)
+        .patch(`/api/v1/projects/reports/${report.id}/resolve`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ action: 'DELETE', note: 'Confirmed by moderator' });
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({
+        report_id: report.id,
+        status: 'RESOLVED',
+        action: 'DELETE',
+        resolved_at: expect.any(String),
+      });
+
+      const updatedProject = await prisma.project.findUnique({ where: { id: project.id } });
+      expect(updatedProject.status).toBe('ARCHIVED');
+      expect(updatedProject.deletedAt).toBeInstanceOf(Date);
+
+      const updatedTask = await prisma.task.findUnique({ where: { id: task.id } });
+      expect(updatedTask.status).toBe('DELETED');
+      expect(updatedTask.deletedAt).toBeInstanceOf(Date);
+
+      const updatedReport = await prisma.projectReport.findUnique({ where: { id: report.id } });
+      expect(updatedReport).toMatchObject({
+        status: 'RESOLVED',
+        resolutionAction: 'DELETE',
+        resolvedByUserId: moderator.id,
+      });
+      expect(updatedReport.resolvedAt).toBeInstanceOf(Date);
+    });
+  });
+
   describe('GET /projects/{projectId}/tasks', () => {
     test('returns published public tasks for public users', async () => {
       const owner = await createUser({ companyProfile: { companyName: 'TeamUp' } });

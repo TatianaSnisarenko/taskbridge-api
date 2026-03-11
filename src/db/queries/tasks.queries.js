@@ -113,6 +113,19 @@ export async function findTaskWithDetails(taskId) {
   });
 }
 
+export async function findTaskForReport(taskId) {
+  const task = await prisma.task.findUnique({
+    where: { id: taskId },
+    select: { id: true, deletedAt: true, status: true },
+  });
+
+  if (!task || task.deletedAt || task.status === 'DELETED') {
+    throw new ApiError(404, 'NOT_FOUND', 'Task not found');
+  }
+
+  return task;
+}
+
 /**
  * Find task for candidate retrieval operations
  * Includes technologies and accepted application info

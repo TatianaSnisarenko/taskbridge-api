@@ -421,6 +421,137 @@ export const tasksPaths = {
       },
     },
   },
+  '/api/v1/tasks/reports': {
+    get: {
+      tags: ['Tasks'],
+      summary: 'List task reports for moderation',
+      security: [{ bearerAuth: [] }],
+      parameters: [
+        {
+          name: 'page',
+          in: 'query',
+          schema: { type: 'integer', minimum: 1, default: 1 },
+        },
+        {
+          name: 'size',
+          in: 'query',
+          schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
+        },
+        {
+          name: 'status',
+          in: 'query',
+          schema: { type: 'string', enum: ['OPEN', 'RESOLVED'] },
+        },
+        {
+          name: 'reason',
+          in: 'query',
+          schema: {
+            type: 'string',
+            enum: ['SPAM', 'SCAM', 'INAPPROPRIATE_CONTENT', 'MISLEADING', 'OTHER'],
+          },
+        },
+      ],
+      responses: {
+        200: {
+          description: 'Task reports queue',
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/GetTaskReportsResponse' },
+            },
+          },
+        },
+        400: { description: 'Validation error' },
+        401: { description: 'Unauthorized' },
+        403: { description: 'Admin or moderator access required' },
+      },
+    },
+  },
+  '/api/v1/tasks/reports/{reportId}/resolve': {
+    patch: {
+      tags: ['Tasks'],
+      summary: 'Resolve task report as moderator/admin',
+      security: [{ bearerAuth: [] }],
+      parameters: [
+        {
+          name: 'reportId',
+          in: 'path',
+          required: true,
+          schema: { type: 'string', format: 'uuid' },
+        },
+      ],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: { $ref: '#/components/schemas/ResolveTaskReportRequest' },
+          },
+        },
+      },
+      responses: {
+        200: {
+          description: 'Task report resolved',
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/ResolveTaskReportResponse' },
+            },
+          },
+        },
+        400: { description: 'Validation error' },
+        401: { description: 'Unauthorized' },
+        403: { description: 'Admin or moderator access required' },
+        404: { description: 'Report not found' },
+        409: { description: 'Report already resolved' },
+      },
+    },
+  },
+  '/api/v1/tasks/{taskId}/reports': {
+    post: {
+      tags: ['Tasks'],
+      summary: 'Report a task',
+      security: [{ bearerAuth: [] }],
+      parameters: [
+        {
+          name: 'taskId',
+          in: 'path',
+          required: true,
+          schema: { type: 'string', format: 'uuid' },
+        },
+        {
+          name: 'X-Persona',
+          in: 'header',
+          required: true,
+          schema: { type: 'string', enum: ['developer', 'company'] },
+          description: 'Report as developer or company persona',
+        },
+      ],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: { $ref: '#/components/schemas/ReportTaskRequest' },
+            example: {
+              reason: 'SPAM',
+              comment: 'This task appears to be spam.',
+            },
+          },
+        },
+      },
+      responses: {
+        201: {
+          description: 'Task report created',
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/ReportTaskResponse' },
+            },
+          },
+        },
+        400: { description: 'Validation error' },
+        401: { description: 'Unauthorized' },
+        404: { description: 'Task not found' },
+        409: { description: 'Already reported' },
+      },
+    },
+  },
   '/api/v1/tasks/{taskId}/dispute': {
     post: {
       tags: ['Tasks'],

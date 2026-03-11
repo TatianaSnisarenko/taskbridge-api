@@ -274,4 +274,76 @@
       created_at: { type: 'string', format: 'date-time', example: '2026-03-07T17:20:00Z' },
     },
   },
+  ProjectReportQueueItem: {
+    type: 'object',
+    properties: {
+      report_id: { type: 'string', format: 'uuid' },
+      target_type: { type: 'string', enum: ['project'] },
+      target_id: { type: 'string', format: 'uuid' },
+      target: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          title: { type: 'string' },
+          status: { type: 'string', enum: ['ACTIVE', 'ARCHIVED'] },
+          deleted_at: { type: 'string', format: 'date-time', nullable: true },
+          owner_user_id: { type: 'string', format: 'uuid' },
+        },
+      },
+      reporter: {
+        type: 'object',
+        properties: {
+          user_id: { type: 'string', format: 'uuid' },
+          email: { type: 'string', format: 'email' },
+          persona: { type: 'string', enum: ['developer', 'company'] },
+        },
+      },
+      reason: {
+        type: 'string',
+        enum: ['SPAM', 'SCAM', 'INAPPROPRIATE_CONTENT', 'MISLEADING', 'OTHER'],
+      },
+      comment: { type: 'string', maxLength: 1000 },
+      status: { type: 'string', enum: ['OPEN', 'RESOLVED'] },
+      resolution_action: { type: 'string', enum: ['DISMISS', 'DELETE'], nullable: true },
+      resolution_note: { type: 'string', maxLength: 2000 },
+      resolved_by_user_id: { type: 'string', format: 'uuid', nullable: true },
+      resolved_by_email: { type: 'string', format: 'email', nullable: true },
+      resolved_at: { type: 'string', format: 'date-time', nullable: true },
+      created_at: { type: 'string', format: 'date-time' },
+    },
+  },
+  GetProjectReportsResponse: {
+    type: 'object',
+    properties: {
+      items: {
+        type: 'array',
+        items: { $ref: '#/components/schemas/ProjectReportQueueItem' },
+      },
+      page: { type: 'integer', minimum: 1, example: 1 },
+      size: { type: 'integer', minimum: 1, maximum: 100, example: 20 },
+      total: { type: 'integer', minimum: 0, example: 12 },
+    },
+  },
+  ResolveProjectReportRequest: {
+    type: 'object',
+    required: ['action'],
+    properties: {
+      action: { type: 'string', enum: ['DISMISS', 'DELETE'], example: 'DELETE' },
+      note: {
+        type: 'string',
+        minLength: 3,
+        maxLength: 2000,
+        example: 'Confirmed violation after moderation review.',
+      },
+    },
+  },
+  ResolveProjectReportResponse: {
+    type: 'object',
+    properties: {
+      report_id: { type: 'string', format: 'uuid' },
+      status: { type: 'string', enum: ['RESOLVED'] },
+      action: { type: 'string', enum: ['DISMISS', 'DELETE'] },
+      resolved_at: { type: 'string', format: 'date-time' },
+    },
+  },
 };

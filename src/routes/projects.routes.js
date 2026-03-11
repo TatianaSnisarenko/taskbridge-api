@@ -1,5 +1,9 @@
 import { Router } from 'express';
-import { requireAuth, requireAuthIfOwner } from '../middleware/auth.middleware.js';
+import {
+  requireAuth,
+  requireAuthIfOwner,
+  requireAdminOrModerator,
+} from '../middleware/auth.middleware.js';
 import { requirePersona } from '../middleware/persona.middleware.js';
 import { validate } from '../middleware/validate.middleware.js';
 import * as projectsController from '../controllers/projects.controller.js';
@@ -9,8 +13,11 @@ import {
   getProjectParamsSchema,
   getProjectQuerySchema,
   getProjectsQuerySchema,
+  getProjectReportsQuerySchema,
   reportProjectParamsSchema,
   reportProjectSchema,
+  resolveProjectReportParamsSchema,
+  resolveProjectReportSchema,
   updateProjectParamsSchema,
   updateProjectSchema,
   getProjectReviewsQuerySchema,
@@ -31,6 +38,23 @@ projectsRouter.get(
     return next();
   },
   projectsController.getProjects
+);
+
+projectsRouter.get(
+  '/reports',
+  requireAuth,
+  requireAdminOrModerator,
+  validate(getProjectReportsQuerySchema, 'query'),
+  projectsController.getProjectReports
+);
+
+projectsRouter.patch(
+  '/reports/:reportId/resolve',
+  requireAuth,
+  requireAdminOrModerator,
+  validate(resolveProjectReportParamsSchema, 'params'),
+  validate(resolveProjectReportSchema),
+  projectsController.resolveProjectReport
 );
 
 projectsRouter.get(

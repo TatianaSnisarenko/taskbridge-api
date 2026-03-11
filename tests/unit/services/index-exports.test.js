@@ -55,6 +55,8 @@ describe('service barrel index exports', () => {
     expect(projects.createProject).toEqual(expect.any(Function));
     expect(projects.getProjects).toEqual(expect.any(Function));
     expect(projects.reportProject).toEqual(expect.any(Function));
+    expect(projects.getProjectReports).toEqual(expect.any(Function));
+    expect(projects.resolveProjectReport).toEqual(expect.any(Function));
 
     expect(tasks.createTaskDraft).toEqual(expect.any(Function));
     expect(tasks.getTaskById).toEqual(expect.any(Function));
@@ -64,6 +66,9 @@ describe('service barrel index exports', () => {
     expect(tasks.resolveTaskDispute).toEqual(expect.any(Function));
     expect(tasks.getTaskDisputes).toEqual(expect.any(Function));
     expect(tasks.getTaskCandidates).toEqual(expect.any(Function));
+    expect(tasks.reportTask).toEqual(expect.any(Function));
+    expect(tasks.getTaskReports).toEqual(expect.any(Function));
+    expect(tasks.resolveTaskReport).toEqual(expect.any(Function));
 
     expect(taskWorkflows.applyToTask).toEqual(expect.any(Function));
     expect(taskWorkflows.openTaskDispute).toEqual(expect.any(Function));

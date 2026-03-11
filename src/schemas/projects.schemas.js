@@ -3,6 +3,8 @@ import Joi from 'joi';
 const PROJECT_VISIBILITY = ['PUBLIC', 'UNLISTED'];
 const PROJECT_STATUS = ['ACTIVE', 'ARCHIVED'];
 const PROJECT_REPORT_REASONS = ['SPAM', 'SCAM', 'INAPPROPRIATE_CONTENT', 'MISLEADING', 'OTHER'];
+const CONTENT_REPORT_STATUS = ['OPEN', 'RESOLVED'];
+const CONTENT_REPORT_ACTIONS = ['DISMISS', 'DELETE'];
 
 export const createProjectSchema = Joi.object({
   title: Joi.string().trim().min(3).max(120).required().messages({
@@ -202,6 +204,55 @@ export const reportProjectSchema = Joi.object({
     }),
   comment: Joi.string().trim().max(1000).messages({
     'string.max': 'Comment must not exceed 1000 characters',
+  }),
+});
+
+export const getProjectReportsQuerySchema = Joi.object({
+  page: Joi.number().integer().min(1).default(1).messages({
+    'number.base': 'Page must be a number',
+    'number.integer': 'Page must be an integer',
+    'number.min': 'Page must be at least 1',
+  }),
+  size: Joi.number().integer().min(1).max(100).default(20).messages({
+    'number.base': 'Size must be a number',
+    'number.integer': 'Size must be an integer',
+    'number.min': 'Size must be at least 1',
+    'number.max': 'Size must not exceed 100',
+  }),
+  status: Joi.string()
+    .valid(...CONTENT_REPORT_STATUS)
+    .optional()
+    .messages({
+      'any.only': 'Status must be one of: OPEN, RESOLVED',
+    }),
+  reason: Joi.string()
+    .valid(...PROJECT_REPORT_REASONS)
+    .optional()
+    .messages({
+      'any.only': 'Reason must be one of: SPAM, SCAM, INAPPROPRIATE_CONTENT, MISLEADING, OTHER',
+    }),
+});
+
+export const resolveProjectReportParamsSchema = Joi.object({
+  reportId: Joi.string().guid({ version: 'uuidv4' }).required().messages({
+    'string.empty': 'Report id is required',
+    'string.guid': 'Report id must be a valid UUID',
+    'any.required': 'Report id is required',
+  }),
+});
+
+export const resolveProjectReportSchema = Joi.object({
+  action: Joi.string()
+    .valid(...CONTENT_REPORT_ACTIONS)
+    .required()
+    .messages({
+      'string.empty': 'Action is required',
+      'any.only': 'Action must be one of: DISMISS, DELETE',
+      'any.required': 'Action is required',
+    }),
+  note: Joi.string().trim().min(3).max(2000).optional().messages({
+    'string.min': 'Note must be at least 3 characters',
+    'string.max': 'Note must not exceed 2000 characters',
   }),
 });
 
