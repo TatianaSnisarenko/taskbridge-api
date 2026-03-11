@@ -150,6 +150,7 @@ enum ProjectReportReason {
 enum UserRole {
   USER
   ADMIN
+  MODERATOR
 }
 
 model User {
@@ -158,6 +159,7 @@ model User {
   passwordHash  String   @map("password_hash")
   emailVerified Boolean  @default(false) @map("email_verified")
   role          UserRole @default(USER)
+  roles         String[] @default([])
   createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -198,6 +200,8 @@ model VerificationToken {
   userId    String           @map("user_id") @db.Uuid
   type      VerificationType
   tokenHash String           @unique @map("token_hash")
+  role      UserRole         @default(USER)
+  roles     String[]         @default([])
   expiresAt DateTime         @map("expires_at") @db.Timestamptz(6)
   usedAt    DateTime?        @map("used_at") @db.Timestamptz(6)
   email     String?

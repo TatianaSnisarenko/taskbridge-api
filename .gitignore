@@ -41,3 +41,4 @@ prisma/dev.db-journal
 .idea
 .vscode
 dev-notes
+.copilotignore
