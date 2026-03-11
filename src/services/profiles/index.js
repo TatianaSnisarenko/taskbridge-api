@@ -4,6 +4,7 @@ export {
   getDeveloperProfileByUserId,
   uploadDeveloperAvatar,
   deleteDeveloperAvatar,
+  getDevelopersCatalog,
 } from './developer.js';
 export {
   createCompanyProfile,

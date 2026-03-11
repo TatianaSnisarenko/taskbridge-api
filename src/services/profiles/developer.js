@@ -244,3 +244,96 @@ export async function deleteDeveloperAvatar({ userId }) {
     updatedAt: updated.updatedAt,
   };
 }
+
+export async function getDevelopersCatalog({
+  page = 1,
+  size = 20,
+  technology_type,
+  technology_ids = [],
+}) {
+  const skip = (page - 1) * size;
+
+  const where = {};
+
+  if (technology_type) {
+    where.AND = where.AND || [];
+    where.AND.push({
+      technologies: {
+        some: {
+          technology: { type: technology_type },
+        },
+      },
+    });
+  }
+
+  if (technology_ids.length > 0) {
+    where.AND = where.AND || [];
+    where.AND.push({
+      technologies: {
+        some: {
+          technologyId: { in: technology_ids },
+        },
+      },
+    });
+  }
+
+  const technologySelect = {
+    id: true,
+    slug: true,
+    name: true,
+    type: true,
+  };
+
+  const [items, total] = await Promise.all([
+    prisma.developerProfile.findMany({
+      where,
+      select: {
+        userId: true,
+        displayName: true,
+        jobTitle: true,
+        bio: true,
+        experienceLevel: true,
+        location: true,
+        availability: true,
+        avatarUrl: true,
+        avgRating: true,
+        reviewsCount: true,
+        technologies: {
+          include: {
+            technology: {
+              select: technologySelect,
+            },
+          },
+        },
+      },
+      skip,
+      take: size,
+      orderBy: { avgRating: 'desc' },
+    }),
+    prisma.developerProfile.count({ where }),
+  ]);
+
+  return {
+    items: items.map((profile) => ({
+      user_id: profile.userId,
+      display_name: profile.displayName,
+      primary_role: profile.jobTitle,
+      bio: profile.bio,
+      experience_level: profile.experienceLevel,
+      location: profile.location,
+      availability: profile.availability,
+      avatar_url: profile.avatarUrl,
+      avg_rating: profile.avgRating !== null ? Number(profile.avgRating) : null,
+      reviews_count: profile.reviewsCount,
+      technologies: profile.technologies.map((dt) => ({
+        id: dt.technology.id,
+        slug: dt.technology.slug,
+        name: dt.technology.name,
+        type: dt.technology.type,
+      })),
+    })),
+    page,
+    size,
+    total,
+  };
+}

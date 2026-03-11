@@ -173,3 +173,14 @@ export const deleteCompanyLogo = asyncHandler(async (req, res) => {
     updated_at: result.updatedAt.toISOString(),
   });
 });
+
+export const getDevelopers = asyncHandler(async (req, res) => {
+  const result = await profilesService.getDevelopersCatalog({
+    page: req.query.page,
+    size: req.query.size,
+    technology_type: req.query.technology_type,
+    technology_ids: req.query.technology_ids ? [].concat(req.query.technology_ids) : [],
+  });
+
+  return res.status(200).json(result);
+});

@@ -161,6 +161,43 @@ export const getUserReviewsSchema = Joi.object({
   }),
 });
 
+export const getDevelopersQuerySchema = Joi.object({
+  page: Joi.number().integer().min(1).default(1).messages({
+    'number.base': 'Page must be a number',
+    'number.integer': 'Page must be an integer',
+    'number.min': 'Page must be at least 1',
+  }),
+  size: Joi.number().integer().min(1).max(100).default(20).messages({
+    'number.base': 'Size must be a number',
+    'number.integer': 'Size must be an integer',
+    'number.min': 'Size must be at least 1',
+    'number.max': 'Size must not exceed 100',
+  }),
+  technology_type: Joi.string()
+    .valid(...TASK_CATEGORIES)
+    .optional()
+    .messages({
+      'any.only':
+        'Technology type must be one of: BACKEND, FRONTEND, DEVOPS, QA, DATA, MOBILE, OTHER, FULLSTACK, AI_ML, UI_UX_DESIGN, PRODUCT_MANAGEMENT, BUSINESS_ANALYSIS, CYBERSECURITY, GAME_DEV, EMBEDDED, TECH_WRITING',
+    }),
+  technology_ids: Joi.array()
+    .items(
+      Joi.string().guid({ version: 'uuidv4' }).messages({
+        'string.guid': 'Each technology ID must be a valid UUID',
+      })
+    )
+    .single()
+    .unique()
+    .max(20)
+    .optional()
+    .messages({
+      'array.base':
+        'Technology IDs must be provided as a query array (repeat technology_ids) or a single UUID',
+      'array.unique': 'Technology IDs must be unique',
+      'array.max': 'Technology IDs must not exceed 20 items',
+    }),
+});
+
 export const uploadAvatarSchema = Joi.object({
   file: Joi.object({
     fieldname: Joi.string(),

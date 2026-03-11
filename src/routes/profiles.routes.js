@@ -11,11 +11,18 @@ import {
   getDeveloperProfileParamsSchema,
   updateCompanyProfileSchema,
   updateDeveloperProfileSchema,
+  getDevelopersQuerySchema,
 } from '../schemas/profiles.schemas.js';
 
 const upload = multer({ storage: multer.memoryStorage() });
 
 export const profilesRouter = Router();
+
+profilesRouter.get(
+  '/developers',
+  validate(getDevelopersQuerySchema, 'query'),
+  profilesController.getDevelopers
+);
 
 profilesRouter.post(
   '/developer',

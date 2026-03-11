@@ -346,4 +346,78 @@ describe('profiles routes', () => {
       expect(profile.logoPublicId).toBeNull();
     });
   });
+
+  describe('GET /profiles/developers', () => {
+    test('accepts single technology_ids UUID in query', async () => {
+      const technology = await prisma.technology.create({
+        data: {
+          slug: `tech-${Date.now()}`,
+          name: 'Node.js',
+          type: 'BACKEND',
+        },
+      });
+
+      const res = await request(app)
+        .get('/api/v1/profiles/developers')
+        .query({ technology_ids: technology.id });
+
+      expect(res.status).toBe(200);
+      expect(res.body).toMatchObject({
+        items: expect.any(Array),
+        page: 1,
+        size: 20,
+        total: expect.any(Number),
+      });
+    });
+
+    test('accepts repeatable technology_ids query params (swagger style)', async () => {
+      const technology = await prisma.technology.create({
+        data: {
+          slug: `tech-json-${Date.now()}`,
+          name: 'React',
+          type: 'FRONTEND',
+        },
+      });
+
+      const technology2 = await prisma.technology.create({
+        data: {
+          slug: `tech-json-2-${Date.now()}`,
+          name: 'Vue',
+          type: 'FRONTEND',
+        },
+      });
+
+      const res = await request(app)
+        .get('/api/v1/profiles/developers')
+        .query({ technology_ids: [technology.id, technology2.id] });
+
+      expect(res.status).toBe(200);
+      expect(res.body).toMatchObject({
+        items: expect.any(Array),
+        page: 1,
+        size: 20,
+        total: expect.any(Number),
+      });
+    });
+
+    test('rejects JSON-like array string in technology_ids query', async () => {
+      const res = await request(app)
+        .get('/api/v1/profiles/developers')
+        .query({ technology_ids: '["aa91275a-e663-42bf-9cd5-3a51f5feac4e"]' });
+
+      expect(res.status).toBe(400);
+      expect(res.body).toMatchObject({
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Validation failed',
+          details: expect.arrayContaining([
+            expect.objectContaining({
+              field: 'technology_ids',
+              issue: 'Each technology ID must be a valid UUID',
+            }),
+          ]),
+        },
+      });
+    });
+  });
 });

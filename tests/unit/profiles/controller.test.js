@@ -12,6 +12,7 @@ const profilesServiceMock = {
   deleteDeveloperAvatar: jest.fn(),
   uploadCompanyLogo: jest.fn(),
   deleteCompanyLogo: jest.fn(),
+  getDevelopersCatalog: jest.fn(),
 };
 
 jest.unstable_mockModule('../../src/services/profiles/index.js', () => profilesServiceMock);
@@ -357,6 +358,111 @@ describe('profiles.controller', () => {
     expect(profilesServiceMock.deleteCompanyLogo).toHaveBeenCalledWith({
       userId: 'u-1',
     });
+    expect(res.status).toHaveBeenCalledWith(200);
+  });
+
+  test('getDevelopers passes query params to service and returns result', async () => {
+    const mockResult = {
+      items: [{ user_id: 'u-1', display_name: 'Alice', avg_rating: 4.8, technologies: [] }],
+      page: 1,
+      size: 20,
+      total: 1,
+    };
+    profilesServiceMock.getDevelopersCatalog.mockResolvedValue(mockResult);
+
+    const req = {
+      query: {
+        page: 1,
+        size: 20,
+        technology_type: 'BACKEND',
+        technology_ids: ['uuid-1', 'uuid-2'],
+      },
+    };
+    const res = createResponseMock();
+    const next = jest.fn();
+
+    await profilesController.getDevelopers(req, res, next);
+
+    expect(profilesServiceMock.getDevelopersCatalog).toHaveBeenCalledWith({
+      page: 1,
+      size: 20,
+      technology_type: 'BACKEND',
+      technology_ids: ['uuid-1', 'uuid-2'],
+    });
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith(mockResult);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  test('getDevelopers converts single technology_ids string to array', async () => {
+    profilesServiceMock.getDevelopersCatalog.mockResolvedValue({
+      items: [],
+      page: 1,
+      size: 20,
+      total: 0,
+    });
+
+    const req = {
+      query: {
+        page: 1,
+        size: 10,
+        technology_ids: 'uuid-single',
+      },
+    };
+    const res = createResponseMock();
+    const next = jest.fn();
+
+    await profilesController.getDevelopers(req, res, next);
+
+    expect(profilesServiceMock.getDevelopersCatalog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        technology_ids: ['uuid-single'],
+      })
+    );
+  });
+
+  test('getDevelopers defaults technology_ids to empty array when not provided', async () => {
+    profilesServiceMock.getDevelopersCatalog.mockResolvedValue({
+      items: [],
+      page: 1,
+      size: 20,
+      total: 0,
+    });
+
+    const req = {
+      query: { page: 1, size: 20 },
+    };
+    const res = createResponseMock();
+    const next = jest.fn();
+
+    await profilesController.getDevelopers(req, res, next);
+
+    expect(profilesServiceMock.getDevelopersCatalog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        technology_ids: [],
+      })
+    );
+  });
+
+  test('getDevelopers passes technology_type when provided', async () => {
+    profilesServiceMock.getDevelopersCatalog.mockResolvedValue({
+      items: [],
+      page: 1,
+      size: 20,
+      total: 0,
+    });
+
+    const req = {
+      query: { technology_type: 'FRONTEND' },
+    };
+    const res = createResponseMock();
+    const next = jest.fn();
+
+    await profilesController.getDevelopers(req, res, next);
+
+    expect(profilesServiceMock.getDevelopersCatalog).toHaveBeenCalledWith(
+      expect.objectContaining({ technology_type: 'FRONTEND' })
+    );
     expect(res.status).toHaveBeenCalledWith(200);
   });
 });

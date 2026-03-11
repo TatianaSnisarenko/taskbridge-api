@@ -349,4 +349,65 @@ export const profilesSchemas = {
       updated_at: { type: 'string', format: 'date-time' },
     },
   },
+  DeveloperCatalogItem: {
+    type: 'object',
+    properties: {
+      user_id: { type: 'string', format: 'uuid', example: '5f1c3ce6-cd67-46f5-95a8-c086ecf3e9b2' },
+      display_name: { type: 'string', minLength: 2, maxLength: 100, example: 'Olena Kovalenko' },
+      primary_role: {
+        type: 'string',
+        minLength: 2,
+        maxLength: 100,
+        example: 'Senior Backend Engineer',
+      },
+      bio: {
+        type: 'string',
+        minLength: 10,
+        maxLength: 2000,
+        example: 'Experienced backend developer focused on clean APIs.',
+      },
+      experience_level: {
+        type: 'string',
+        enum: ['STUDENT', 'JUNIOR', 'MIDDLE', 'SENIOR'],
+        nullable: true,
+      },
+      location: {
+        type: 'string',
+        minLength: 2,
+        maxLength: 100,
+        example: 'Warsaw, PL',
+        nullable: true,
+      },
+      availability: {
+        type: 'string',
+        enum: ['FEW_HOURS_WEEK', 'PART_TIME', 'FULL_TIME'],
+        nullable: true,
+      },
+      avatar_url: {
+        type: 'string',
+        format: 'uri',
+        nullable: true,
+        example:
+          'https://res.cloudinary.com/example/image/upload/v123/teamup/dev-avatars/test.webp',
+      },
+      avg_rating: { type: 'number', format: 'float', nullable: true, example: 4.7 },
+      reviews_count: { type: 'integer', example: 12 },
+      technologies: {
+        type: 'array',
+        items: { $ref: '#/components/schemas/TechnologyObject' },
+      },
+    },
+  },
+  GetDevelopersCatalogResponse: {
+    type: 'object',
+    properties: {
+      items: {
+        type: 'array',
+        items: { $ref: '#/components/schemas/DeveloperCatalogItem' },
+      },
+      page: { type: 'integer', example: 1 },
+      size: { type: 'integer', example: 20 },
+      total: { type: 'integer', example: 42 },
+    },
+  },
 };

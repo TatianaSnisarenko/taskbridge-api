@@ -47,8 +47,14 @@ export const tasksPaths = {
         {
           name: 'technology_ids',
           in: 'query',
-          schema: { type: 'string', format: 'uuid' },
-          description: 'Filter by technology ID (repeatable query parameter)',
+          schema: {
+            type: 'array',
+            items: { type: 'string', format: 'uuid' },
+          },
+          style: 'form',
+          explode: true,
+          description:
+            'Filter by technology IDs (repeatable query parameter, e.g. ?technology_ids=uuid1&technology_ids=uuid2)',
         },
         {
           name: 'tech_match',

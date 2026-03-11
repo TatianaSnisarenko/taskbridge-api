@@ -1,4 +1,5 @@
-﻿export const profilesPaths = {
+﻿import { TECHNOLOGY_TYPE_ENUM } from '../constants.js';
+export const profilesPaths = {
   '/api/v1/profiles/developer': {
     post: {
       tags: ['Profiles'],
@@ -462,6 +463,65 @@
         },
         500: {
           description: 'Delete failed',
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/ErrorResponse' },
+            },
+          },
+        },
+      },
+    },
+  },
+  '/api/v1/profiles/developers': {
+    get: {
+      tags: ['Profiles'],
+      summary: 'Get developers catalog',
+      description:
+        'Returns a paginated list of developer profiles sorted by rating (highest first). Supports filtering by technology type and specific technology IDs.',
+      parameters: [
+        {
+          name: 'page',
+          in: 'query',
+          schema: { type: 'integer', minimum: 1, default: 1 },
+          description: 'Page number',
+        },
+        {
+          name: 'size',
+          in: 'query',
+          schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
+          description: 'Items per page',
+        },
+        {
+          name: 'technology_type',
+          in: 'query',
+          schema: { type: 'string', enum: TECHNOLOGY_TYPE_ENUM },
+          description: 'Filter developers who have at least one technology of this type',
+        },
+        {
+          name: 'technology_ids',
+          in: 'query',
+          style: 'form',
+          explode: true,
+          schema: {
+            type: 'array',
+            items: { type: 'string', format: 'uuid' },
+            maxItems: 20,
+          },
+          description:
+            'Filter by specific technology IDs. Use repeatable query params: ?technology_ids=<uuid>&technology_ids=<uuid2>. A single UUID is also accepted.',
+        },
+      ],
+      responses: {
+        200: {
+          description: 'Paginated list of developer profiles',
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/GetDevelopersCatalogResponse' },
+            },
+          },
+        },
+        400: {
+          description: 'Validation error',
           content: {
             'application/json': {
               schema: { $ref: '#/components/schemas/ErrorResponse' },
