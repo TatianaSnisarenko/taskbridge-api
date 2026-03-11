@@ -3,6 +3,9 @@ import { env } from '../config/env.js';
 import { ApiError } from '../utils/ApiError.js';
 import { prisma } from '../db/prisma.js';
 
+const ADMIN_ROLE = 'ADMIN';
+const MODERATOR_ROLE = 'MODERATOR';
+
 function extractBearerToken(header) {
   if (!header || typeof header !== 'string') return null;
   const match = header.match(/^Bearer\s+(.+)$/i);
@@ -16,6 +19,18 @@ function mapAuthUser(payload) {
     id,
     email: payload?.email,
   };
+}
+
+function hasAnyRole(userRoles, allowedRoles) {
+  if (!Array.isArray(userRoles)) return false;
+  return allowedRoles.some((role) => userRoles.includes(role));
+}
+
+async function loadUserRoles(userId) {
+  return prisma.user.findUnique({
+    where: { id: userId },
+    select: { roles: true },
+  });
 }
 
 export function requireAuth(req, res, next) {
@@ -97,21 +112,65 @@ export async function requireAdmin(req, res, next) {
   }
 
   try {
-    const user = await prisma.user.findUnique({
-      where: { id: req.user.id },
-      select: { role: true },
-    });
+    const user = await loadUserRoles(req.user.id);
 
     if (!user) {
       return next(new ApiError(401, 'USER_NOT_FOUND', 'User not found'));
     }
 
-    if (user.role !== 'ADMIN') {
+    if (!hasAnyRole(user.roles, [ADMIN_ROLE])) {
       return next(new ApiError(403, 'FORBIDDEN', 'Admin access required'));
     }
 
     return next();
   } catch {
     return next(new ApiError(500, 'INTERNAL_ERROR', 'Failed to verify admin role'));
+  }
+}
+
+export async function requireAdminOrModerator(req, res, next) {
+  if (!req.user?.id) {
+    return next(new ApiError(401, 'AUTH_REQUIRED', 'Authentication required'));
+  }
+
+  try {
+    const user = await loadUserRoles(req.user.id);
+
+    if (!user) {
+      return next(new ApiError(401, 'USER_NOT_FOUND', 'User not found'));
+    }
+
+    if (!hasAnyRole(user.roles, [ADMIN_ROLE, MODERATOR_ROLE])) {
+      return next(new ApiError(403, 'FORBIDDEN', 'Admin or moderator access required'));
+    }
+
+    return next();
+  } catch {
+    return next(new ApiError(500, 'INTERNAL_ERROR', 'Failed to verify access role'));
+  }
+}
+
+/**
+ * Loads admin/moderator status into req.user.isAdminOrModerator
+ * Attach after optionalAuth or requireAuth to enrich request context
+ */
+export async function loadAdminOrModeratorStatus(req, res, next) {
+  if (!req.user?.id) {
+    // No authenticated user - skip
+    req.user = req.user || {};
+    req.user.isAdminOrModerator = false;
+    return next();
+  }
+
+  try {
+    const user = await loadUserRoles(req.user.id);
+    req.user.isAdminOrModerator = user
+      ? hasAnyRole(user.roles, [ADMIN_ROLE, MODERATOR_ROLE])
+      : false;
+    return next();
+  } catch {
+    // On error, default to false privilege
+    req.user.isAdminOrModerator = false;
+    return next();
   }
 }

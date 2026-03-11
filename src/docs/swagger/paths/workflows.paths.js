@@ -230,4 +230,72 @@
       },
     },
   },
+  '/api/v1/users/{userId}/moderator': {
+    patch: {
+      tags: ['Users'],
+      summary: 'Grant or revoke moderator role',
+      description: 'Admin-only endpoint to grant or revoke MODERATOR role for a user.',
+      security: [{ bearerAuth: [] }],
+      parameters: [
+        {
+          name: 'userId',
+          in: 'path',
+          required: true,
+          schema: { type: 'string', format: 'uuid' },
+          description: 'User UUID',
+        },
+      ],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              required: ['enabled'],
+              properties: {
+                enabled: {
+                  type: 'boolean',
+                  description: 'true to grant MODERATOR, false to revoke MODERATOR',
+                },
+              },
+            },
+            examples: {
+              grantModerator: {
+                summary: 'Grant moderator role',
+                value: { enabled: true },
+              },
+              revokeModerator: {
+                summary: 'Revoke moderator role',
+                value: { enabled: false },
+              },
+            },
+          },
+        },
+      },
+      responses: {
+        200: {
+          description: 'Moderator role updated',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  user_id: { type: 'string', format: 'uuid' },
+                  roles: {
+                    type: 'array',
+                    items: { type: 'string', enum: ['USER', 'MODERATOR', 'ADMIN'] },
+                  },
+                  moderator_enabled: { type: 'boolean' },
+                },
+              },
+            },
+          },
+        },
+        400: { description: 'Validation error' },
+        401: { description: 'Unauthorized' },
+        403: { description: 'Admin access required' },
+        404: { description: 'User not found' },
+      },
+    },
+  },
 };

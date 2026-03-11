@@ -1,6 +1,5 @@
 import { asyncHandler } from '../utils/asyncHandler.js';
 import * as platformReviewsService from '../services/platform-reviews.service.js';
-import { prisma } from '../db/prisma.js';
 
 /**
  * POST /api/platform-reviews
@@ -21,23 +20,13 @@ export const createPlatformReview = asyncHandler(async (req, res) => {
  * Get list of platform reviews
  */
 export const getPlatformReviews = asyncHandler(async (req, res) => {
-  // Check if user is admin
-  let isAdmin = false;
-  if (req.user?.id) {
-    const user = await prisma.user.findUnique({
-      where: { id: req.user.id },
-      select: { role: true },
-    });
-    isAdmin = user?.role === 'ADMIN';
-  }
-
   const result = await platformReviewsService.getPlatformReviews({
     status: req.query.status,
     limit: req.query.limit,
     offset: req.query.offset,
     sort: req.query.sort,
     userId: req.user?.id,
-    isAdmin,
+    isAdmin: req.user?.isAdminOrModerator || false,
   });
 
   return res.status(200).json(result);
@@ -48,20 +37,10 @@ export const getPlatformReviews = asyncHandler(async (req, res) => {
  * Get single platform review by ID
  */
 export const getPlatformReview = asyncHandler(async (req, res) => {
-  // Check if user is admin
-  let isAdmin = false;
-  if (req.user?.id) {
-    const user = await prisma.user.findUnique({
-      where: { id: req.user.id },
-      select: { role: true },
-    });
-    isAdmin = user?.role === 'ADMIN';
-  }
-
   const result = await platformReviewsService.getPlatformReview({
     reviewId: req.params.reviewId,
     userId: req.user?.id,
-    isAdmin,
+    isAdmin: req.user?.isAdminOrModerator || false,
   });
 
   return res.status(200).json(result);
@@ -72,17 +51,10 @@ export const getPlatformReview = asyncHandler(async (req, res) => {
  * Update platform review (admin or owner of unapproved review)
  */
 export const updatePlatformReview = asyncHandler(async (req, res) => {
-  // Check if user is admin
-  const user = await prisma.user.findUnique({
-    where: { id: req.user.id },
-    select: { role: true },
-  });
-  const isAdmin = user?.role === 'ADMIN';
-
   const result = await platformReviewsService.updatePlatformReview({
     reviewId: req.params.reviewId,
     userId: req.user.id,
-    isAdmin,
+    isAdmin: req.user?.isAdminOrModerator || false,
     updates: {
       rating: req.body.rating,
       text: req.body.text,

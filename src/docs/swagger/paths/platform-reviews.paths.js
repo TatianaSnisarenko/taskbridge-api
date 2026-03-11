@@ -4,7 +4,7 @@ export const platformReviewsPaths = {
       tags: ['Platform Reviews'],
       summary: 'Get platform reviews',
       description:
-        'Get list of platform reviews. Public users see only approved reviews. Authenticated admins can filter by status.',
+        'Get list of platform reviews. Public users see only approved reviews. Authenticated admins or moderators can filter by status.',
       security: [{}, { bearerAuth: [] }],
       parameters: [
         {
@@ -15,7 +15,7 @@ export const platformReviewsPaths = {
             enum: ['approved', 'pending', 'all'],
             default: 'approved',
           },
-          description: 'Filter by approval status (admin only for pending/all)',
+          description: 'Filter by approval status (admin/moderator only for pending/all)',
         },
         {
           name: 'limit',
@@ -149,7 +149,7 @@ export const platformReviewsPaths = {
       tags: ['Platform Reviews'],
       summary: 'Update platform review',
       description:
-        'Update a platform review. Owners can update their unapproved reviews. Admins can update any review and approve them.',
+        'Update a platform review. Owners can update their unapproved reviews. Admins or moderators can update any review and approve them.',
       security: [{ bearerAuth: [] }],
       parameters: [
         {
@@ -174,7 +174,7 @@ export const platformReviewsPaths = {
                 },
               },
               adminApprove: {
-                summary: 'Admin approves review',
+                summary: 'Admin or moderator approves review',
                 value: {
                   is_approved: true,
                 },
@@ -203,7 +203,7 @@ export const platformReviewsPaths = {
     delete: {
       tags: ['Platform Reviews'],
       summary: 'Delete platform review',
-      description: 'Delete a platform review. Only admins can delete reviews.',
+      description: 'Delete a platform review. Only admins or moderators can delete reviews.',
       security: [{ bearerAuth: [] }],
       parameters: [
         {
@@ -224,7 +224,7 @@ export const platformReviewsPaths = {
           },
         },
         401: { description: 'Unauthorized' },
-        403: { description: 'Access denied - admin only' },
+        403: { description: 'Access denied - admin or moderator only' },
         404: { description: 'Review not found' },
       },
     },
@@ -233,7 +233,8 @@ export const platformReviewsPaths = {
     patch: {
       tags: ['Platform Reviews'],
       summary: 'Approve platform review',
-      description: 'Approve a pending platform review. Only admins can approve reviews.',
+      description:
+        'Approve a pending platform review. Only admins or moderators can approve reviews.',
       security: [{ bearerAuth: [] }],
       parameters: [
         {
@@ -255,7 +256,7 @@ export const platformReviewsPaths = {
         },
         400: { description: 'Review already approved' },
         401: { description: 'Unauthorized' },
-        403: { description: 'Access denied - admin only' },
+        403: { description: 'Access denied - admin or moderator only' },
         404: { description: 'Review not found' },
       },
     },

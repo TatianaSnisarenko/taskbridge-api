@@ -1,5 +1,10 @@
 import { Router } from 'express';
-import { requireAuth, requireAdmin, optionalAuth } from '../middleware/auth.middleware.js';
+import {
+  requireAuth,
+  requireAdminOrModerator,
+  optionalAuth,
+  loadAdminOrModeratorStatus,
+} from '../middleware/auth.middleware.js';
 import { validate } from '../middleware/validate.middleware.js';
 import * as platformReviewsController from '../controllers/platform-reviews.controller.js';
 import {
@@ -15,6 +20,7 @@ export const platformReviewsRouter = Router();
 platformReviewsRouter.get(
   '/',
   optionalAuth,
+  loadAdminOrModeratorStatus,
   validate(getPlatformReviewsSchema, 'query'),
   platformReviewsController.getPlatformReviews
 );
@@ -22,6 +28,7 @@ platformReviewsRouter.get(
 platformReviewsRouter.get(
   '/:reviewId',
   optionalAuth,
+  loadAdminOrModeratorStatus,
   validate(getPlatformReviewByIdParamsSchema, 'params'),
   platformReviewsController.getPlatformReview
 );
@@ -38,6 +45,7 @@ platformReviewsRouter.post(
 platformReviewsRouter.patch(
   '/:reviewId',
   requireAuth,
+  loadAdminOrModeratorStatus,
   validate(getPlatformReviewByIdParamsSchema, 'params'),
   validate(updatePlatformReviewSchema),
   platformReviewsController.updatePlatformReview
@@ -47,7 +55,7 @@ platformReviewsRouter.patch(
 platformReviewsRouter.delete(
   '/:reviewId',
   requireAuth,
-  requireAdmin,
+  requireAdminOrModerator,
   validate(getPlatformReviewByIdParamsSchema, 'params'),
   platformReviewsController.deletePlatformReview
 );
@@ -55,7 +63,7 @@ platformReviewsRouter.delete(
 platformReviewsRouter.patch(
   '/:reviewId/approve',
   requireAuth,
-  requireAdmin,
+  requireAdminOrModerator,
   validate(getPlatformReviewByIdParamsSchema, 'params'),
   platformReviewsController.approvePlatformReview
 );

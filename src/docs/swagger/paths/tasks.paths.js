@@ -425,9 +425,9 @@ export const tasksPaths = {
   '/api/v1/tasks/{taskId}/dispute/resolve': {
     post: {
       tags: ['Tasks'],
-      summary: 'Resolve task dispute as admin',
+      summary: 'Resolve task dispute as admin or moderator',
       description:
-        'Admin resolves a disputed task by returning it to IN_PROGRESS or marking it as FAILED.',
+        'Admin or moderator resolves a disputed task by returning it to IN_PROGRESS or marking it as FAILED.',
       security: [{ bearerAuth: [] }],
       parameters: [
         {
@@ -456,7 +456,7 @@ export const tasksPaths = {
         },
         400: { description: 'Validation error' },
         401: { description: 'Unauthorized' },
-        403: { description: 'Admin access required' },
+        403: { description: 'Admin or moderator access required' },
         404: { description: 'Task not found' },
         409: { description: 'Task in invalid state (must be DISPUTE)' },
       },

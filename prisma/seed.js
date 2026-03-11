@@ -719,12 +719,12 @@ async function createAdminIfNeeded() {
   });
 
   if (existingUser) {
-    // Update role to ADMIN if user exists
+    // Update roles to include ADMIN if user exists
     await prisma.user.update({
       where: { id: existingUser.id },
-      data: { role: 'ADMIN' },
+      data: { roles: ['USER', 'ADMIN'] },
     });
-    console.log(`✅ Updated existing user to ADMIN role: ${adminEmail}`);
+    console.log(`✅ Updated existing user roles to include ADMIN: ${adminEmail}`);
   } else {
     // Create new admin user
     const hashedPassword = await hashPassword(adminPassword);
@@ -733,7 +733,7 @@ async function createAdminIfNeeded() {
         email: adminEmail,
         passwordHash: hashedPassword,
         emailVerified: true,
-        role: 'ADMIN',
+        roles: ['USER', 'ADMIN'],
       },
     });
     console.log(`✅ Created new ADMIN user: ${adminEmail}`);

@@ -69,7 +69,7 @@ describe('platform-reviews routes - GET', () => {
       const admin = await createUser({ developerProfile: { displayName: 'Admin User' } });
       await prisma.user.update({
         where: { id: admin.id },
-        data: { role: 'ADMIN' },
+        data: { roles: ['USER', 'ADMIN'] },
       });
       const adminToken = buildAccessToken({ userId: admin.id, email: admin.email });
 

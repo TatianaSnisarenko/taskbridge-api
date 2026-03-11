@@ -31,6 +31,7 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
     { name: 'Health' },
     { name: 'Auth' },
     { name: 'Me' },
+    { name: 'Users' },
     { name: 'Profiles' },
     { name: 'Projects' },
     { name: 'Tasks' },
