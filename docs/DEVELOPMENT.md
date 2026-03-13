@@ -1,771 +1,290 @@
 # Development Guide
 
-[← Back to README](../README.md)
+[Back to README](../README.md)
 
-This guide covers everything you need to set up and develop the TeamUp IT Backend locally.
-
-## Related Docs
-
-- [Swagger Structure](SWAGGER_STRUCTURE.md) - OpenAPI modular layout and extension rules
+This guide covers local setup, environment variables, database workflows, testing, and development conventions that are visible in the repository today.
 
 ## Prerequisites
 
-### Required
+Required:
 
-- **Node.js** 20 or higher ([Download](https://nodejs.org/))
-- **npm** 9+ (comes with Node.js)
-- **Docker** and **Docker Compose** ([Download](https://www.docker.com/products/docker-desktop/))
+- Node.js 20+
+- npm 9+
+- Docker and Docker Compose
 
-### Optional
+Optional:
 
-- **PostgreSQL 16** (if not using Docker)
-- **Prisma Studio** (included, for database GUI)
-- **Git** (for version control)
+- local PostgreSQL 16 instead of Docker
+- Prisma Studio for database inspection
 
-### Verify Installation
+## Initial setup
 
-```bash
-node --version  # Should be v20.x.x or higher
-npm --version   # Should be 9.x.x or higher
-docker --version
-docker compose version
-```
-
----
-
-## Initial Setup
-
-### 1. Clone the Repository
+### 1. Install dependencies
 
 ```bash
 git clone <repository-url>
 cd diploma-project-backend
-```
-
-### 2. Install Dependencies
-
-```bash
 npm install
 ```
 
-This will install all production and development dependencies, including:
-
-- Express, Prisma, Joi (production)
-- ESLint, Prettier, Jest, Husky (development)
-
-### 3. Set Up Environment Variables
+### 2. Create local environment file
 
 ```bash
 cp .env.example .env
 ```
 
-Edit `.env` and configure for local development:
+On Windows PowerShell:
 
-```bash
-# Server
-PORT=3000
-NODE_ENV=development
-
-# Database (Docker defaults)
-DATABASE_URL="postgresql://teamup:teamup@localhost:5432/teamup?schema=public"
-
-# JWT (generate a strong random secret)
-JWT_ACCESS_SECRET="dev-secret-change-in-production"
-ACCESS_TOKEN_TTL_SECONDS=900
-
-# Refresh Token
-REFRESH_TOKEN_TTL_DAYS=30
-COOKIE_SECURE=false      # Set to true only with HTTPS
-COOKIE_SAMESITE=lax
-
-# CORS (your frontend URL)
-CLIENT_ORIGIN=http://localhost:5173,http://localhost:3000
-
-# Email (optional for local dev - can use mailtrap.io)
-EMAIL_ADDRESS=dev@example.com
-EMAIL_PASSWORD=password
-EMAIL_HOST=smtp.mailtrap.io
-EMAIL_PORT=2525
-EMAIL_SECURE=false
-EMAIL_NOTIFICATIONS_ENABLED=false
-
-# Application URLs
-APP_BASE_URL=http://localhost:3000
-FRONTEND_BASE_URL=http://localhost:5173
-
-# Email Verification
-EMAIL_VERIFICATION_TTL_HOURS=24
-VERIFICATION_TOKEN_RETENTION_DAYS=7
-
-# Password Reset
-PASSWORD_RESET_TOKEN_TTL_MINUTES=30
-
-# Cloudinary (optional - for avatar/logo uploads)
-CLOUDINARY_CLOUD_NAME=your_cloud_name
-CLOUDINARY_API_KEY=123456789012345
-CLOUDINARY_API_SECRET=your_secret
-
-# Platform Reviews
-PLATFORM_REVIEW_COOLDOWN_DAYS=30
+```powershell
+Copy-Item .env.example .env
 ```
 
-### 4. Start PostgreSQL Database
+### 3. Start PostgreSQL
 
-Using Docker (recommended):
+Recommended:
 
 ```bash
 docker compose up -d db
 ```
 
-This starts PostgreSQL in a container with:
+This starts PostgreSQL 16 with the defaults already used by `.env.example`:
 
-- Database name: `teamup`
-- Username: `teamup`
-- Password: `teamup`
-- Port: `5432`
+- database: `teamup`
+- username: `teamup`
+- password: `teamup`
+- port: `5432`
 
-**Verify it's running:**
-
-```bash
-docker ps
-```
-
-You should see `teamup-postgres` container running.
-
-### 5. Generate Prisma Client
+### 4. Generate Prisma client and apply migrations
 
 ```bash
 npm run prisma:generate
-```
-
-This generates the Prisma Client based on your schema.
-
-### 6. Run Database Migrations
-
-```bash
 npm run prisma:migrate:dev
 ```
 
-This applies all pending migrations to create the database schema.
-
-On first run, you'll see migrations being applied for:
-
-- Initial tables (users, profiles, projects, tasks)
-- Verification tokens
-- Chat system
-- Technology catalog
-- Task invites
-
-### 7. Seed the Database (Optional)
-
-Populate the database with demo data:
+### 5. Seed local data
 
 ```bash
 npm run db:seed
 ```
 
-This creates:
-
-- Sample users (developers and companies)
-- Sample projects and tasks
-- Technology catalog
-- Sample applications and reviews
-
-**Credentials for demo users:**
-
-```
-Developer: developer@example.com / password123
-Company: company@example.com / password123
-```
-
-### 8. Start the Development Server
+### 6. Start the API
 
 ```bash
 npm run dev
 ```
 
-The server starts at `http://localhost:3000` with auto-reload (nodemon).
+Useful local URLs:
 
-**Available endpoints:**
+- API: http://localhost:3000/api/v1
+- Swagger UI: http://localhost:3000/api/v1/docs
+- Health: http://localhost:3000/api/v1/health
 
-- Health check: `GET http://localhost:3000/api/v1/health`
-- Swagger docs: `http://localhost:3000/api/v1/docs`
+## Environment variables
 
----
+The runtime configuration is defined in `src/config/env.js`.
 
-## Environment Variables Reference
+### Core application settings
 
-### Server Configuration
+| Variable            | Required | Default                 | Notes                        |
+| ------------------- | -------- | ----------------------- | ---------------------------- |
+| `NODE_ENV`          | no       | `development`           | environment name             |
+| `PORT`              | no       | `3000`                  | HTTP port                    |
+| `DATABASE_URL`      | yes      | -                       | PostgreSQL connection string |
+| `APP_BASE_URL`      | no       | `http://localhost:3000` | used for Swagger and emails  |
+| `FRONTEND_BASE_URL` | no       | `http://localhost:5173` | frontend links in emails     |
+| `CLIENT_ORIGIN`     | no       | `http://localhost:5173` | CORS allow list source       |
 
-| Variable   | Description      | Default       | Required |
-| ---------- | ---------------- | ------------- | -------- |
-| `PORT`     | Server port      | `3000`        | No       |
-| `NODE_ENV` | Environment mode | `development` | Yes      |
+### Authentication and cookie settings
 
-### Database
+| Variable                   | Required | Default |
+| -------------------------- | -------- | ------- |
+| `JWT_ACCESS_SECRET`        | yes      | -       |
+| `ACCESS_TOKEN_TTL_SECONDS` | no       | `900`   |
+| `REFRESH_TOKEN_TTL_DAYS`   | no       | `30`    |
+| `COOKIE_SECURE`            | no       | `false` |
+| `COOKIE_SAMESITE`          | no       | `lax`   |
 
-| Variable       | Description                  | Required |
-| -------------- | ---------------------------- | -------- |
-| `DATABASE_URL` | PostgreSQL connection string | Yes      |
+### Email settings
 
-Format: `postgresql://USER:PASSWORD@HOST:PORT/DATABASE?schema=public`
+These are required by the current env loader even if outbound notifications are disabled.
 
-### JWT & Authentication
+| Variable                      | Required |
+| ----------------------------- | -------- |
+| `EMAIL_ADDRESS`               | yes      |
+| `EMAIL_PASSWORD`              | yes      |
+| `EMAIL_HOST`                  | yes      |
+| `EMAIL_PORT`                  | no       |
+| `EMAIL_SECURE`                | no       |
+| `EMAIL_NOTIFICATIONS_ENABLED` | no       |
 
-| Variable                   | Description                      | Default        | Required |
-| -------------------------- | -------------------------------- | -------------- | -------- |
-| `JWT_ACCESS_SECRET`        | Secret for signing access tokens | -              | Yes      |
-| `ACCESS_TOKEN_TTL_SECONDS` | Access token lifetime            | `900` (15 min) | No       |
-| `REFRESH_TOKEN_TTL_DAYS`   | Refresh token lifetime           | `30`           | No       |
-| `COOKIE_SECURE`            | Require HTTPS for cookies        | `false`        | No       |
-| `COOKIE_SAMESITE`          | Cookie SameSite policy           | `lax`          | No       |
+### Media and workflow settings
 
-### CORS
+| Variable                            | Required | Notes                         |
+| ----------------------------------- | -------- | ----------------------------- |
+| `CLOUDINARY_CLOUD_NAME`             | no       | image upload support          |
+| `CLOUDINARY_API_KEY`                | no       | image upload support          |
+| `CLOUDINARY_API_SECRET`             | no       | image upload support          |
+| `PLATFORM_REVIEW_COOLDOWN_DAYS`     | no       | review cooldown               |
+| `TASK_COMPLETION_RESPONSE_HOURS`    | no       | completion confirmation SLA   |
+| `EMAIL_VERIFICATION_TTL_HOURS`      | no       | verification token lifetime   |
+| `PASSWORD_RESET_TOKEN_TTL_MINUTES`  | no       | reset token lifetime          |
+| `VERIFICATION_TOKEN_RETENTION_DAYS` | no       | cleanup retention window      |
+| `ADMIN_EMAIL`                       | no       | optional seed admin bootstrap |
+| `ADMIN_PASSWORD`                    | no       | optional seed admin bootstrap |
 
-| Variable        | Description                     | Required |
-| --------------- | ------------------------------- | -------- |
-| `CLIENT_ORIGIN` | Comma-separated allowed origins | Yes      |
+## Docker workflows
 
-Example: `http://localhost:5173,https://app.example.com`
-
-### Email (SMTP)
-
-| Variable                      | Description          | Required           |
-| ----------------------------- | -------------------- | ------------------ |
-| `EMAIL_ADDRESS`               | SMTP sender email    | For email features |
-| `EMAIL_PASSWORD`              | SMTP password        | For email features |
-| `EMAIL_HOST`                  | SMTP server host     | For email features |
-| `EMAIL_PORT`                  | SMTP server port     | For email features |
-| `EMAIL_SECURE`                | Use TLS/SSL          | For email features |
-| `EMAIL_NOTIFICATIONS_ENABLED` | Enable email sending | No                 |
-
-**For local development**, use [Mailtrap](https://mailtrap.io/) or similar service.
-
-### Application URLs
-
-| Variable                            | Description                  | Required |
-| ----------------------------------- | ---------------------------- | -------- |
-| `APP_BASE_URL`                      | Backend base URL             | Yes      |
-| `FRONTEND_BASE_URL`                 | Frontend base URL            | Yes      |
-| `EMAIL_VERIFICATION_TTL_HOURS`      | Email verification token TTL | No       |
-| `VERIFICATION_TOKEN_RETENTION_DAYS` | Keep used tokens for         | No       |
-| `PASSWORD_RESET_TOKEN_TTL_MINUTES`  | Password reset token TTL     | No       |
-
-### Cloudinary (Optional)
-
-| Variable                | Description           | Required          |
-| ----------------------- | --------------------- | ----------------- |
-| `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name | For image uploads |
-| `CLOUDINARY_API_KEY`    | Cloudinary API key    | For image uploads |
-| `CLOUDINARY_API_SECRET` | Cloudinary API secret | For image uploads |
-
----
-
-## Database Management
-
-### Prisma Studio
-
-Open a visual database editor:
+### Database-only workflow
 
 ```bash
-npm run prisma:studio
+docker compose up -d db
 ```
 
-Access at `http://localhost:5555`
+This is the simplest local setup and is the recommended option for day-to-day development.
 
-**Features:**
-
-- Browse all tables
-- Edit records directly
-- View relationships
-- Execute queries
-
-### Creating Migrations
-
-When you modify `prisma/schema.prisma`:
-
-```bash
-npm run prisma:migrate:dev -- --name <migration_name>
-```
-
-Example:
-
-```bash
-npm run prisma:migrate:dev -- --name add_user_preferences
-```
-
-This will:
-
-1. Generate SQL migration files
-2. Apply migration to database
-3. Regenerate Prisma Client
-
-### Migration Status
-
-Check if all migrations are applied:
-
-```bash
-npm run prisma:migrate:status
-```
-
-### Reset Database
-
-**Warning: This deletes all data!**
-
-```bash
-npx prisma migrate reset
-```
-
-This will:
-
-1. Drop the database
-2. Recreate it
-3. Apply all migrations
-4. Run seed script (if configured)
-
-### Manual Database Operations
-
-#### Clean all data (keep schema):
-
-```bash
-npm run db:clean
-```
-
-#### Re-seed:
-
-```bash
-npm run db:seed:clean
-```
-
-This combines clean + seed.
-
-### Connecting with External Tools
-
-Use these credentials with DBeaver, pgAdmin, or TablePlus:
-
-- **Host:** `localhost`
-- **Port:** `5432`
-- **Database:** `teamup`
-- **Username:** `teamup`
-- **Password:** `teamup`
-
----
-
-## Running the Project
-
-### Development Mode
-
-Auto-reload on file changes:
-
-```bash
-npm run dev
-```
-
-Uses nodemon to watch for changes in `src/`.
-
-### Production Mode
-
-```bash
-npm start
-```
-
-Runs migrations and starts the server without auto-reload.
-
-### Using Docker Compose
-
-Start everything (database + API):
+### Full development Compose workflow
 
 ```bash
 docker compose up -d
 ```
 
-This will:
+Important note: the `api` service in `docker-compose.yml` runs:
 
-- Start PostgreSQL container
-- Start API container
-- Auto-install dependencies
-- Run migrations
-- Start server on port 3000
+```text
+npm install && npm run prisma:generate && npm run dev
+```
 
-**View logs:**
+It does not run `prisma migrate dev` automatically, so after the first start you should apply migrations manually:
 
 ```bash
-docker compose logs -f api
+docker compose exec api npm run prisma:migrate:dev
 ```
 
-**Stop services:**
+## Database workflows
 
-```bash
-docker compose down
-```
-
----
-
-## Testing
-
-### Run All Tests
-
-```bash
-npm test
-```
-
-Runs both unit and integration tests sequentially.
-
-### Run Unit Tests Only
-
-```bash
-npm run test:unit
-```
-
-Unit tests:
-
-- Test services in isolation
-- Mock database calls
-- Fast execution (<10 seconds)
-
-### Run Integration Tests Only
-
-```bash
-npm run test:integration
-```
-
-Integration tests:
-
-- Test full API endpoints
-- Use Testcontainers (real PostgreSQL)
-- Slower execution (~30-60 seconds)
-
-### Run Tests with Coverage
-
-```bash
-npm run test:coverage
-```
-
-Coverage report generated in `coverage/`:
-
-- Open `coverage/lcov-report/index.html` for detailed view
-
-**Coverage thresholds (enforced in CI):**
-
-- Statements: 90%
-- Branches: 80%
-- Functions: 95%
-- Lines: 90%
-
-### Watch Mode
-
-Not configured by default, but you can add:
-
-```bash
-npm run test:unit -- --watch
-```
-
-### Debugging Tests
-
-Add `console.log()` or use:
-
-```bash
-node --inspect-brk ./node_modules/.bin/jest --runInBand
-```
-
-Then attach your debugger (VS Code, Chrome DevTools).
-
-### Clean Up Test Containers
-
-If tests leave orphaned Docker containers:
-
-```bash
-npm run test:cleanup
-```
-
----
-
-## Code Quality
-
-### Linting
-
-Check code for errors:
-
-```bash
-npm run lint
-```
-
-**Auto-fix issues:**
-
-```bash
-npx eslint . --fix
-```
-
-**ESLint rules:**
-
-- ES2023 syntax
-- ES Modules (`.js` extension required in imports)
-- No console warnings (allowed in this project)
-- Import order enforcement
-
-### Formatting
-
-Format all files:
-
-```bash
-npm run format
-```
-
-Uses Prettier to format:
-
-- JavaScript (`.js`)
-- JSON (`.json`)
-- Markdown (`.md`)
-- YAML (`.yml`, `.yaml`)
-
-**Check formatting without fixing:**
-
-```bash
-npx prettier --check .
-```
-
-### Pre-commit Hooks
-
-Husky + lint-staged automatically format staged files on commit.
-
-**Setup (already done during `npm install`):**
-
-```bash
-npm run prepare
-```
-
-**What happens on commit:**
-
-1. Husky triggers pre-commit hook
-2. Lint-staged runs Prettier on staged files
-3. Formatted files are re-staged
-4. Commit proceeds
-
-**Bypass hooks (not recommended):**
-
-```bash
-git commit --no-verify
-```
-
----
-
-## Development Workflow
-
-### Typical Development Flow
-
-1. **Create a feature branch:**
-
-   ```bash
-   git checkout -b feature/add-user-preferences
-   ```
-
-2. **Make changes:**
-   - Edit code in `src/`
-   - Update Prisma schema if needed
-   - Add tests in `tests/`
-
-3. **If schema changed:**
-
-   ```bash
-   npm run prisma:migrate:dev -- --name add_user_preferences
-   ```
-
-4. **Run tests:**
-
-   ```bash
-   npm run lint
-   npm run test:coverage
-   ```
-
-5. **Commit changes:**
-
-   ```bash
-   git add .
-   git commit -m "feat: add user preferences feature"
-   ```
-
-   Pre-commit hook auto-formats files.
-
-6. **Push and create PR:**
-   ```bash
-   git push origin feature/add-user-preferences
-   ```
-
-### Adding a New Endpoint
-
-1. **Define Joi schema** (`src/schemas/`)
-2. **Create service method** (`src/services/<domain>/`)
-   - For large domains, services are organized as folders (e.g., `tasks/`, `projects/`)
-   - Each folder has an `index.js` that re-exports all modules
-   - Keep individual modules under 400 lines (ESLint enforced)
-   - Consider using query helpers from `src/db/queries/` for common patterns
-3. **Create controller** (`src/controllers/`)
-4. **Add route** (`src/routes/`)
-5. **Write tests**:
-   - Unit test for service (`tests/unit/`)
-   - Unit test for controller (`tests/unit/`)
-   - Integration test for endpoint (`tests/integration/`)
-6. **Update Swagger docs** (if needed)
-
-**Example service structure:**
-
-```
-src/services/
-  myDomain/
-    index.js           # Re-exports all modules
-    crud.js            # Create, read, update, delete operations
-    workflows.js       # Complex state transitions
-    helpers.js         # Shared utilities
-```
-
-**Using query helpers:**
-
-```javascript
-// Instead of duplicating Prisma queries:
-import { findTaskForOwnership } from '../db/queries/tasks.queries.js';
-
-// Use in your service:
-const task = await findTaskForOwnership(taskId, userId);
-```
-
-### Database Schema Changes
-
-1. **Edit** `prisma/schema.prisma`
-2. **Create migration:**
-   ```bash
-   npm run prisma:migrate:dev -- --name descriptive_name
-   ```
-3. **Update seed script** if needed (`prisma/seed.js`)
-4. **Test migration** on clean database:
-   ```bash
-   npx prisma migrate reset
-   ```
-
----
-
-## Troubleshooting
-
-### Port Already in Use
-
-If port 3000 is occupied:
-
-```bash
-# Find process using port 3000
-netstat -ano | findstr :3000
-
-# Kill it (Windows)
-taskkill /PID <PID> /F
-
-# Or change PORT in .env
-PORT=3001
-```
-
-### Database Connection Failed
-
-1. **Check if PostgreSQL is running:**
-
-   ```bash
-   docker ps
-   ```
-
-2. **Restart database:**
-
-   ```bash
-   docker compose restart db
-   ```
-
-3. **Check `DATABASE_URL` in `.env`**
-
-4. **Reset database:**
-   ```bash
-   docker compose down -v
-   docker compose up -d db
-   npm run prisma:migrate:dev
-   ```
-
-### Prisma Client Out of Sync
-
-If you see "Prisma Client is not up to date":
+### Generate Prisma client
 
 ```bash
 npm run prisma:generate
 ```
 
-### Tests Failing
-
-1. **Clean up test containers:**
-
-   ```bash
-   npm run test:cleanup
-   ```
-
-2. **Ensure Docker is running**
-
-3. **Check for port conflicts** (Testcontainers uses random ports)
-
-4. **Run tests individually:**
-   ```bash
-   npm test -- tests/unit/auth.service.test.js
-   ```
-
-### Pre-commit Hook Not Running
+### Create and apply a development migration
 
 ```bash
-# Reinstall Husky
-npm run prepare
-
-# Check .git/hooks/pre-commit exists
-ls .git/hooks/
+npm run prisma:migrate:dev -- --name add_feature_name
 ```
 
----
+### Check migration status
 
-## Useful Commands Reference
+```bash
+npm run prisma:migrate:status
+```
 
-### Development
+### Open Prisma Studio
 
-| Command                    | Description                       |
-| -------------------------- | --------------------------------- |
-| `npm run dev`              | Start dev server with auto-reload |
-| `npm start`                | Start production server           |
-| `npm test`                 | Run all tests                     |
-| `npm run test:unit`        | Run unit tests                    |
-| `npm run test:integration` | Run integration tests             |
-| `npm run test:coverage`    | Run tests with coverage           |
-| `npm run lint`             | Lint code                         |
-| `npm run format`           | Format code                       |
+```bash
+npm run prisma:studio
+```
 
-### Database
+### Clean data without removing schema
 
-| Command                         | Description                |
-| ------------------------------- | -------------------------- |
-| `npm run prisma:generate`       | Generate Prisma Client     |
-| `npm run prisma:migrate:dev`    | Create and apply migration |
-| `npm run prisma:migrate:status` | Check migration status     |
-| `npm run prisma:studio`         | Open Prisma Studio         |
-| `npm run db:seed`               | Seed database              |
-| `npm run db:clean`              | Clean all data             |
-| `npm run db:seed:clean`         | Clean and re-seed          |
+```bash
+npm run db:clean
+```
 
-### Docker
+### Reseed local database
 
-| Command                      | Description             |
-| ---------------------------- | ----------------------- |
-| `docker compose up -d db`    | Start PostgreSQL only   |
-| `docker compose up -d`       | Start all services      |
-| `docker compose down`        | Stop all services       |
-| `docker compose logs -f api` | View API logs           |
-| `docker ps`                  | List running containers |
+```bash
+npm run db:seed
+```
 
----
+The repository currently exposes a `db:seed:clean` script in `package.json`, but the implementation file is not present. Prefer running `db:clean` followed by `db:seed`.
 
-## Next Steps
+## Seed data notes
 
-- Read [Architecture Documentation](ARCHITECTURE.md)
-- Explore [API Documentation](API.md)
-- Check [Deployment Guide](DEPLOYMENT.md)
-- Review [Contributing Guidelines](CONTRIBUTING.md)
+`prisma/seed.js` currently does more than insert a minimal fixture set.
 
----
+It includes:
 
-[← Back to README](../README.md)
+- a broad seeded technology catalog
+- sample companies and developers
+- sample projects, tasks, applications, invites, notifications, chat data, and reviews
+- optional admin user creation when `ADMIN_EMAIL` and `ADMIN_PASSWORD` are defined
+
+## Running tests
+
+### Full suite
+
+```bash
+npm test
+```
+
+### Unit tests only
+
+```bash
+npm run test:unit
+```
+
+### Integration tests only
+
+```bash
+npm run test:integration
+```
+
+### Coverage run
+
+```bash
+npm run test:coverage
+```
+
+## Testing strategy
+
+The repository is structured around two goals:
+
+- unit tests should cover most business logic in isolation
+- integration tests should validate route wiring, auth, middleware, and cross-layer workflows
+
+Integration tests use Testcontainers and a real PostgreSQL instance.
+
+Current global coverage thresholds in Jest are:
+
+- statements: 90
+- branches: 80
+- functions: 95
+- lines: 90
+
+## Linting and formatting
+
+### Lint
+
+```bash
+npm run lint
+```
+
+This runs:
+
+- JavaScript linting
+- English-only documentation/content checks
+- Swagger and Joi consistency validation
+
+### Format
+
+```bash
+npm run format
+```
+
+## Development conventions reflected in the repo
+
+- ES modules only
+- thin controllers and service-oriented business logic
+- Joi validation at route boundaries
+- Prisma as the only ORM layer
+- domain folders for large services
+- soft deletes for tasks and projects
+- Swagger generated from modular fragments
+
+See also:
+
+- [Architecture](ARCHITECTURE.md)
+- [Project Standards](PROJECT_STANDARDS.md)
+- [Swagger Structure](SWAGGER_STRUCTURE.md)

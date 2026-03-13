@@ -1,692 +1,394 @@
-# Architecture Documentation
+# Architecture
 
-[← Back to README](../README.md)
+[Back to README](../README.md)
 
-## System Architecture
+## Overview
 
-TeamUp IT Backend follows a **layered architecture** pattern with strict separation of concerns.
+The backend follows a layered Express architecture with thin controllers, Joi validation at the edge, domain-oriented services, and Prisma for persistence.
 
-```
-┌─────────────────────────────────────────┐
-│           HTTP Client Request           │
-└─────────────────┬───────────────────────┘
-                  │
-                  ▼
-┌─────────────────────────────────────────┐
-│        Express.js Application           │
-├─────────────────────────────────────────┤
-│  Routes (routing + middleware wiring)   │
-└─────────────────┬───────────────────────┘
-                  │
-                  ▼
-┌─────────────────────────────────────────┐
-│            Middleware Layer             │
-├─────────────────────────────────────────┤
-│  • Authentication (JWT validation)      │
-│  • Authorization (Persona checking)     │
-│  • Request Validation (Joi schemas)     │
-│  • Error Handling                       │
-└─────────────────┬───────────────────────┘
-                  │
-                  ▼
-┌─────────────────────────────────────────┐
-│          Controllers Layer              │
-├─────────────────────────────────────────┤
-│  • Extract request data                 │
-│  • Call service methods                 │
-│  • Map response to HTTP format          │
-│  • NO business logic                    │
-└─────────────────┬───────────────────────┘
-                  │
-                  ▼
-┌─────────────────────────────────────────┐
-│           Services Layer                │
-├─────────────────────────────────────────┤
-│  • Business logic                       │
-│  • Transaction orchestration            │
-│  • Data validation                      │
-│  • Authorization checks                 │
-│  • Notifications triggering             │
-└─────────────────┬───────────────────────┘
-                  │
-                  ▼
-┌─────────────────────────────────────────┐
-│         Data Access Layer               │
-├─────────────────────────────────────────┤
-│       Prisma Client (ORM)               │
-└─────────────────┬───────────────────────┘
-                  │
-                  ▼
-┌─────────────────────────────────────────┐
-│          PostgreSQL Database            │
-└─────────────────────────────────────────┘
+## Runtime flow
+
+```text
+HTTP request
+  -> route
+  -> auth / persona / validation middleware
+  -> controller
+  -> service
+  -> db query helpers or Prisma client
+  -> PostgreSQL
 ```
 
-## Key Architectural Decisions
+## Main layers
 
-### 1. Stateless API Design
+### Routes
 
-**Decision:** Use JWT-based authentication instead of session-based authentication.
+Route modules in `src/routes/` define:
 
-**Rationale:**
+- URL structure
+- middleware order
+- auth and persona requirements
+- schema validation
+- controller binding
 
-- Enables horizontal scaling without session store
-- Simplifies deployment across multiple instances
-- Reduces server-side memory usage
-- Allows frontend and backend to be deployed independently
+Examples of domain route modules:
 
-**Implementation:**
+- `auth.routes.js`
+- `projects.routes.js`
+- `tasks.routes.js`
+- `me.routes.js`
+- `platform-reviews.routes.js`
 
-- Short-lived access tokens (15 minutes)
-- Long-lived refresh tokens (30 days) stored in HTTP-only cookies
-- Automatic token rotation on refresh for enhanced security
+### Middleware
 
-### 2. Service Layer Pattern
+The middleware layer contains the shared request gates:
 
-**Decision:** Isolate all business logic in a dedicated service layer.
+- `auth.middleware.js` validates JWT access tokens and loads admin/moderator status when needed
+- `persona.middleware.js` enforces `X-Persona`
+- `validate.middleware.js` applies Joi schemas to params, query, and body
+- `error.middleware.js` maps domain errors to HTTP responses
 
-**Rationale:**
+### Controllers
 
-- Controllers remain thin and focused on HTTP concerns
-- Business logic is testable in isolation
-- Logic can be reused across different controllers
-- Clear separation makes codebase easier to understand and maintain
+Controllers remain HTTP-focused. They extract request input, call a service, and serialize the response.
 
-**Example:**
+Business rules are intentionally kept out of controllers.
 
-```javascript
-// Controller (thin)
-async createTask(req, res) {
-  const task = await tasksService.createTask(req.user.id, req.body);
-  res.status(201).json(task);
-}
+### Services
 
-// Service (contains business logic)
-async createTask(userId, data) {
-  // Validate ownership
-  // Check project permissions
-  // Create task with transaction
-  // Trigger notifications
-  return task;
-}
-```
+The main application logic lives in `src/services/`.
 
-### 3. Modular Service Architecture
+Larger domains are split into focused modules:
 
-**Decision:** Organize services as domain folders with multiple specialized modules instead of monolithic service files.
-
-**Rationale:**
-
-- Prevents service file bloat (enforced by ESLint max-lines rule: 400 lines)
-- Improves code navigation and discoverability
-- Enables focused testing of specific functionality
-- Reduces merge conflicts when multiple developers work on same domain
-- Makes code reviews more manageable
-
-**Structure:**
-
-```
+```text
 src/services/
-  tasks/
-    index.js              # Re-exports all task modules
-    task-drafts.js        # Draft creation and publishing
-    task-catalog.js       # Browse, search, and filter
-    candidates.js         # Candidate matching and recommendations
-    helpers.js            # Shared utilities
-    workflows/
-      application.js      # Apply/accept/reject workflow
-      completion.js       # Task completion workflow
-      review.js           # Review workflow
-  projects/
-    index.js              # Re-exports all project modules
-    lifecycle.js          # Create/update/delete operations
-    catalog.js            # Browse and search
-    reporting.js          # Report projects
-    helpers.js            # Shared utilities
+  auth/
+  invites/
+  me/
+  notifications/
+  notification-email/
   profiles/
-    index.js              # Re-exports all profile modules
-    developer.js          # Developer profile management
-    company.js            # Company profile management
-    reviews.js            # Review system
-    helpers.js            # Profile utilities
+  projects/
+  tasks/
+  technologies/
+  user/
 ```
 
-**Benefits achieved:**
+Examples:
 
-- No service module exceeds 400 lines
-- Clear separation between CRUD, workflows, and utilities
-- Easier to locate specific functionality
-- Better code organization for large domains
+- `tasks/task-drafts.js` manages draft creation, update, publish, close, delete
+- `tasks/candidates.js` ranks developers for company-side hiring workflows
+- `tasks/workflows/*.js` handles apply, accept, reject, completion, dispute, and review transitions
+- `projects/catalog.js` manages public and owner-aware project reads
+- `projects/reporting.js` and `tasks/reporting.js` back moderation queues
+- `me/threads-*.js` supports task-linked chat and read tracking
 
-### 4. Query Helper Abstraction
+### Data access
 
-**Decision:** Extract common Prisma query patterns into reusable helper functions.
+Prisma is the only ORM used in the project.
 
-**Rationale:**
+The repository also centralizes repeated access patterns in `src/db/queries/`:
 
-- Eliminates duplicate query patterns across services (DRY principle)
-- Single source of truth for complex queries
-- Easier to test services (mock query helpers instead of Prisma)
-- Consistent ownership and permission checking
-- Simplified service code focuses on business logic
+- `tasks.queries.js`
+- `projects.queries.js`
+- `profiles.queries.js`
 
-**Structure:**
+This keeps service code focused on workflow and authorization logic instead of repeated query boilerplate.
 
-```
-src/db/
-  prisma.js       # Prisma client instance
-  queries/
-    tasks.queries.js     # Task query helpers
-    projects.queries.js  # Project query helpers (planned)
-    profiles.queries.js  # Profile query helpers (planned)
-```
+## Domain model
 
-**Implementation pattern:**
+The Prisma schema groups into the following functional areas.
 
-```javascript
-// src/db/queries/tasks.queries.js
-/**
- * Find task and verify ownership.
- * Single source of truth - used by 8+ service methods
- */
-export async function findTaskForOwnership(taskId, userId) {
-  const task = await prisma.task.findUnique({
-    where: { id: taskId },
-    select: { id: true, ownerUserId: true, deletedAt: true },
-  });
+### Identity and access
 
-  if (!task || task.deletedAt) {
-    throw new ApiError(404, 'NOT_FOUND', 'Task not found');
-  }
+- `User`
+- `RefreshToken`
+- `VerificationToken`
+- `User.roles` enum array with `USER`, `MODERATOR`, `ADMIN`
 
-  if (task.ownerUserId !== userId) {
-    throw new ApiError(403, 'NOT_OWNER', 'Task does not belong to user');
-  }
+### Personas and public profiles
 
-  return task;
-}
+- `DeveloperProfile`
+- `CompanyProfile`
+- profile image metadata fields
+- aggregate rating and review counters
 
-/**
- * Find task with configurable relations
- */
-export async function findTaskWithDetails(taskId, options = {}) {
-  const { includeOwner, includeTechnologies, includeProject } = options;
+### Work marketplace
 
-  return prisma.task.findUnique({
-    where: { id: taskId },
-    include: {
-      owner: includeOwner ? { include: { companyProfile: true } } : false,
-      technologies: includeTechnologies ? { include: { technology: true } } : false,
-      project: includeProject,
-    },
-  });
-}
-```
+- `Project`
+- `Task`
+- `Application`
+- `TaskInvite`
+- `TaskFavorite`
 
-**Service usage:**
+### Collaboration and feedback
 
-```javascript
-// Before: Duplicated everywhere (15+ times)
-const task = await prisma.task.findUnique({...});
-if (!task || task.deletedAt) throw new ApiError(404, ...);
-if (task.ownerUserId !== userId) throw new ApiError(403, ...);
+- `ChatThread`
+- `ChatMessage`
+- `ChatThreadRead`
+- `Notification`
+- `Review`
+- `PlatformReview`
 
-// After: Clean, reusable, consistent
-import { findTaskForOwnership } from '../db/queries/tasks.queries.js';
-const task = await findTaskForOwnership(taskId, userId);
-```
+### Moderation
 
-### 5. Schema-First Validation
+- `ProjectReport`
+- `TaskReport`
+- `TaskDispute`
 
-**Decision:** Use Joi schemas to validate all inputs before processing.
+### Technology graph
 
-**Rationale:**
+- `Technology`
+- `DeveloperTechnology`
+- `TaskTechnology`
+- `ProjectTechnology`
+- `TechnologySuggestion`
 
-- Centralized validation rules
-- Consistent error messages
-- Prevents invalid data from reaching business logic
-- Self-documenting API contracts
+## Key workflow design choices
 
-**Implementation:**
+### 1. Persona-based route access
 
-- Joi schemas defined in `src/schemas/`
-- Validation middleware applied at route level
-- Clear error messages returned to client
+The API allows one authenticated user to operate as developer or company depending on available profile and selected header.
 
-### 6. Refresh Token Rotation
+This keeps authentication separate from business context.
 
-**Decision:** Rotate refresh tokens on every refresh request.
+### 2. Role-based moderation
 
-**Rationale:**
+Moderation is not handled through persona headers.
 
-- Enhanced security against token theft
-- Compromised tokens have limited validity
-- Implements OAuth 2.0 best practices
+Instead, platform roles stored on `User.roles` drive:
 
-**Implementation:**
+- project report review
+- task report review
+- task dispute resolution
+- platform review approval
+- moderator role management
 
-- Old token revoked immediately
-- New token issued with extended expiry
-- Automatic cleanup of expired tokens via cron job
+### 3. State-driven task lifecycle
 
-### 7. Soft Deletes
+Task behavior is modeled through Prisma enums and service checks.
 
-**Decision:** Use `deletedAt` timestamps instead of hard deletes for tasks and projects.
+Relevant states include:
 
-**Rationale:**
+- `DRAFT`
+- `PUBLISHED`
+- `IN_PROGRESS`
+- `DISPUTE`
+- `COMPLETION_REQUESTED`
+- `COMPLETED`
+- `FAILED`
+- `CLOSED`
+- `DELETED`
 
-- Preserve data integrity and relationships
-- Enable data recovery
-- Maintain historical records for analytics
-- Comply with potential audit requirements
+This makes workflow transitions explicit in both schema and service code.
 
-**Implementation:**
+### 4. Soft deletes for marketplace content
 
-```prisma
-model Task {
-  deletedAt DateTime? @map("deleted_at")
-}
-```
+Projects and tasks use `deletedAt` timestamps instead of immediate hard deletes.
 
-### 8. Composite Unique Constraints
+Benefits:
 
-**Decision:** Enforce uniqueness at database level for critical relationships.
+- preserves references for reviews, reports, and historical records
+- allows owner-only access to deleted records where supported
+- reduces accidental data loss during moderation or editing
 
-**Rationale:**
+### 5. Modular workflow services
 
-- Prevent race conditions
-- Data integrity guaranteed by database
-- No need for distributed locks
-- Atomic operations
+Instead of a single large service file, the project splits logic by use case.
 
-**Examples:**
+Examples:
 
-```prisma
-@@unique([taskId, developerUserId]) // One application per developer per task
-@@unique([ownerUserId, title])      // Unique project titles per owner
-```
+- task catalog vs task draft management
+- candidate ranking vs application handling
+- completion flow vs dispute flow vs review flow
 
-### 9. Event-Driven Notifications
+This matches the ESLint max-line limit applied to service files and makes tests more targeted.
 
-**Decision:** Centralize notification creation in service layer.
+### 6. Scheduled cleanup
 
-**Rationale:**
+`src/jobs/verification-token-cleanup.js` runs verification token cleanup:
 
-- Single source of truth for notification logic
-- Consistent notification format
-- Easy to add notification channels (email, push, etc.)
-- Business logic triggers notifications automatically
+- once on startup
+- daily via cron at 03:00
 
-### 10. Scheduled Cleanup Jobs
+The cleanup removes expired, used, and stale verification tokens.
 
-**Decision:** Use node-cron for periodic data cleanup.
+### 7. Automatic project archiving
 
-**Rationale:**
+Task workflow code can archive a project automatically once the number of completed plus failed tasks reaches `Project.maxTalents`.
 
-- Automatic housekeeping (expired tokens, old notifications)
-- Reduces database bloat
-- No manual intervention required
-- Runs in-process (no external scheduler needed)
+That logic lives in `tasks/workflows/project-archive.js`.
 
-**Implementation:**
+## Read visibility rules
 
-```javascript
-cron.schedule('0 2 * * *', () => {
-  // Clean up expired verification tokens daily at 2 AM
-});
+The repository encodes several access patterns directly in services:
+
+- public task catalog only returns `PUBLISHED` and `PUBLIC` tasks
+- public project catalog only returns active public projects
+- task detail for non-public tasks requires authenticated owner company context
+- archived project detail is visible to the owner and to developers who previously worked on tasks in that project
+- deleted project/task access is restricted to owner flows where explicitly supported
+
+## API documentation architecture
+
+Swagger is built from modular files under `src/docs/swagger/`.
+
+```text
+src/docs/swagger/
+  constants.js
+  paths/
+  schemas/
 ```
 
----
+The Express app mounts Swagger UI at `/api/v1/docs`.
 
-## Database Schema
+## Testing architecture
 
-### Entity Relationship Overview
+The test suite uses two complementary layers.
 
-```
-Users
-├── DeveloperProfile (1:1)
-│   └── DeveloperTechnologies (1:N)
-├── CompanyProfile (1:1)
-├── Projects (1:N)
-│   ├── Tasks (1:N)
-│   └── ProjectTechnologies (1:N)
-└── Reviews (author/target)
+### Unit tests
 
-Tasks
-├── Applications (1:N)
-│   └── AcceptedApplication (1:1)
-├── TaskInvites (1:N)
-├── ChatThread (1:1)
-│   └── ChatMessages (1:N)
-├── TaskTechnologies (1:N)
-└── Reviews (1:N)
+Unit tests cover service, controller, middleware, schema, and utility behavior in isolation.
 
-Technologies
-├── DeveloperTechnologies (N:M)
-├── TaskTechnologies (N:M)
-├── ProjectTechnologies (N:M)
-└── TechnologySuggestions (1:N)
+### Integration tests
 
-Notifications (polymorphic)
-├── User (recipient)
-├── Actor (user who triggered)
-├── Project (optional)
-├── Task (optional)
-└── ChatThread (optional)
+Integration tests exercise the full Express app with PostgreSQL through Testcontainers.
 
-PlatformReviews
-└── User (author)
-```
+Current integration coverage includes:
 
-### Key Entities
+- auth
+- tasks and task workflows
+- project review aggregation
+- platform reviews
+- me routes and chat
+- moderator management
+- technologies
 
-#### User
+## Repository structure reference
 
-Central entity representing both developers and companies.
-
-**Key Fields:**
-
-- Dual profile support (DeveloperProfile OR CompanyProfile)
-- Email verification status
-- Password hash (bcrypt)
-- Relationships to owned projects, tasks, applications, reviews
-
-#### DeveloperProfile
-
-Extended information for developers.
-
-**Features:**
-
-- Skills with proficiency levels
-- Experience level (STUDENT, JUNIOR, MIDDLE, SENIOR)
-- Availability status
-- Aggregate rating from company reviews
-- Avatar upload support (Cloudinary)
-
-#### CompanyProfile
-
-Extended information for companies.
-
-**Features:**
-
-- Company type (STARTUP, SMB, ENTERPRISE, INDIVIDUAL)
-- Team size
-- Verified status
-- Aggregate rating from developer reviews
-- Logo upload support (Cloudinary)
-
-#### Task
-
-Core entity representing work opportunities.
-
-**Lifecycle States:**
-
-- DRAFT → PUBLISHED → IN_PROGRESS → COMPLETION_REQUESTED → COMPLETED
-- Alternative: FAILED, CLOSED, DELETED
-
-**Key Features:**
-
-- Belongs to a project (optional)
-- Technology requirements (required/nice-to-have)
-- One accepted application
-- Automatic state transitions
-- Rejection counter (max 3 attempts)
-
-#### Application
-
-Developer's proposal to work on a task.
-
-**Status Flow:**
-
-- APPLIED → ACCEPTED/REJECTED
-
-**Features:**
-
-- Custom message and execution plan
-- One application per developer per task (enforced by DB)
-- Automatic task state update on acceptance
-
-#### ChatThread
-
-Real-time communication channel for active tasks.
-
-**Features:**
-
-- One thread per task
-- Messages with persona attribution (developer/company)
-- Read tracking per user
-- Ordered by last message timestamp
-
-#### Review
-
-Post-task feedback mechanism.
-
-**Features:**
-
-- 1-5 star rating
-- Optional text feedback
-- Bidirectional (company ↔ developer)
-- Automatically updates aggregate ratings on profiles
-
-#### Technology
-
-Normalized catalog of technologies/skills.
-
-**Features:**
-
-- Type classification (BACKEND, FRONTEND, DEVOPS, etc.)
-- Popularity scoring
-- Community suggestions with approval workflow
-- Used for matching and filtering
-
-#### Notification
-
-Event notification system.
-
-**Notification Types:**
-
-- Application events (created, accepted, rejected)
-- Task events (completion requested, completed)
-- Invite events (created, accepted, declined)
-- Chat messages
-- Reviews
-
-#### PlatformReview
-
-User feedback about the platform itself (not about other users).
-
-**Features:**
-
-- 1-5 star rating
-- Text feedback
-- Approval system (default: unapproved, requires admin approval)
-- Cooldown period between reviews (configurable, default: 30 days)
-- Only approved reviews visible to public
-- Owners can edit unapproved reviews
-- Admins can approve, edit, and delete any review
-
----
-
-## Data Flow Examples
-
-### Task Creation → Completion Flow
-
-```
-1. Company creates task (DRAFT)
-   └─> Task record created
-
-2. Company publishes task
-   └─> Status: DRAFT → PUBLISHED
-   └─> publishedAt timestamp set
-   └─> Project.publishedTasksCount incremented
-
-3. Developer applies
-   └─> Application record created
-   └─> Notification sent to company
-
-4. Company accepts application
-   └─> Application.status: APPLIED → ACCEPTED
-   └─> Task.status: PUBLISHED → IN_PROGRESS
-   └─> Task.acceptedApplicationId set
-   └─> ChatThread created
-   └─> Notification sent to developer
-
-5. Developer requests completion
-   └─> Task.status: IN_PROGRESS → COMPLETION_REQUESTED
-   └─> Notification sent to company
-
-6. Company marks complete
-   └─> Task.status: COMPLETION_REQUESTED → COMPLETED
-   └─> completedAt timestamp set
-   └─> Notification sent to developer
-
-7. Both parties leave reviews
-   └─> Review records created
-   └─> Aggregate ratings recalculated
+```text
+src/
+  app.js
+  server.js
+  config/
+  controllers/
+  db/
+  docs/
+  jobs/
+  middleware/
+  routes/
+  schemas/
+  services/
+  templates/
+  utils/
+prisma/
+  schema.prisma
+  migrations/
+  seed.js
+tests/
+  unit/
+  integration/
 ```
 
-### Authentication Flow
+## Workflow diagrams
 
+### Apply -> accept -> completion -> review
+
+```mermaid
+sequenceDiagram
+  participant Dev as Developer
+  participant API as API
+  participant Co as Company
+  participant DB as PostgreSQL
+
+  Dev->>API: POST /tasks/:taskId/applications
+  API->>DB: create Application(status=APPLIED)
+  API-->>Dev: 201 application created
+
+  Co->>API: POST /applications/:applicationId/accept
+  API->>DB: update Application(status=ACCEPTED)
+  API->>DB: update Task(status=IN_PROGRESS, acceptedApplicationId)
+  API-->>Co: 200 accepted
+
+  Dev->>API: POST /tasks/:taskId/completion/request
+  API->>DB: update Task(status=COMPLETION_REQUESTED, completionRequestedAt, completionRequestExpiresAt)
+  API-->>Dev: 200 completion requested
+
+  alt Company confirms
+    Co->>API: POST /tasks/:taskId/completion/confirm
+    API->>DB: update Task(status=COMPLETED, completedAt)
+    API-->>Co: 200 completed
+  else Company rejects
+    Co->>API: POST /tasks/:taskId/completion/reject
+    API->>DB: update Task(status=IN_PROGRESS or FAILED)
+    API-->>Co: 200 rejected
+  end
+
+  Dev->>API: POST /tasks/:taskId/reviews
+  Co->>API: POST /tasks/:taskId/reviews
+  API->>DB: create Review(s)
 ```
-1. User signs up
-   └─> User record created (emailVerified: false)
-   └─> VerificationToken created
-   └─> Email sent
 
-2. User verifies email
-   └─> Token validated and marked as used
-   └─> User.emailVerified: true
+### Moderation flow for reports and disputes
 
-3. User logs in
-   └─> Credentials validated
-   └─> Access token generated (JWT, 15 min)
-   └─> Refresh token created in DB
-   └─> refresh_token cookie set (HTTP-only)
+```mermaid
+flowchart TD
+  A[Authenticated user] --> B{Action type}
+  B -->|Report task| C[POST /tasks/:taskId/reports]
+  B -->|Report project| D[POST /projects/:projectId/reports]
+  B -->|Open dispute| E[POST /tasks/:taskId/dispute]
+  B -->|Escalate completion| F[POST /tasks/:taskId/completion/escalate]
 
-4. Access token expires
-   └─> Frontend calls /auth/refresh
-   └─> Old refresh token validated & revoked
-   └─> New refresh token created
-   └─> New access token returned
-   └─> New refresh_token cookie set
+  C --> G[TaskReport status OPEN]
+  D --> H[ProjectReport status OPEN]
+  E --> I[Task status DISPUTE + TaskDispute OPEN]
+  F --> I
 
-5. User logs out
-   └─> Refresh token revoked (revokedAt set)
-   └─> Cookie cleared
+  J[ADMIN or MODERATOR] --> K[Review moderation queues]
+  K --> L[GET /tasks/reports, /projects/reports, /tasks/disputes]
+
+  L --> M{Resolve action}
+  M -->|DISMISS| N[Mark report RESOLVED]
+  M -->|DELETE| O[Soft delete reported content + mark RESOLVED]
+  M -->|RETURN_TO_PROGRESS| P[Resolve dispute + task IN_PROGRESS]
+  M -->|MARK_FAILED| Q[Resolve dispute + task FAILED]
+  M -->|MARK_COMPLETED| R[Resolve dispute + task COMPLETED]
 ```
 
----
+### Data model overview (high-level)
 
-## Technology Stack Justification
+```mermaid
+erDiagram
+  USER ||--o| DEVELOPER_PROFILE : has
+  USER ||--o| COMPANY_PROFILE : has
+  USER ||--o{ REFRESH_TOKEN : owns
+  USER ||--o{ VERIFICATION_TOKEN : owns
 
-### Why Prisma?
+  USER ||--o{ PROJECT : owns
+  USER ||--o{ TASK : owns
 
-- Type-safe database access
-- Excellent migration workflow
-- Built-in connection pooling
-- Prevents SQL injection by design
-- Great developer experience
+  PROJECT ||--o{ TASK : contains
 
-### Why JWT + Refresh Tokens?
+  TASK ||--o{ APPLICATION : receives
+  TASK ||--o{ TASK_INVITE : sends
+  TASK ||--o{ REVIEW : has
+  TASK ||--o{ TASK_REPORT : receives
+  TASK ||--o{ TASK_DISPUTE : has
+  TASK ||--o| CHAT_THREAD : has
 
-- Stateless authentication
-- Horizontal scaling friendly
-- Industry standard
-- Secure with rotation
+  CHAT_THREAD ||--o{ CHAT_MESSAGE : contains
+  CHAT_THREAD ||--o{ CHAT_THREAD_READ : tracks
 
-### Why Joi?
+  USER ||--o{ APPLICATION : submits
+  USER ||--o{ TASK_INVITE : receives
+  USER ||--o{ REVIEW : writes_or_receives
+  USER ||--o{ NOTIFICATION : receives
+  USER ||--o{ TASK_REPORT : reports
+  USER ||--o{ PROJECT_REPORT : reports
+  USER ||--o{ PLATFORM_REVIEW : writes
 
-- Schema-based validation
-- Clear error messages
-- Easy to test
-- Works well with Express
+  PROJECT ||--o{ PROJECT_REPORT : receives
 
-### Why Testcontainers?
-
-- True database isolation in tests
-- No shared state between test runs
-- Tests run against real PostgreSQL
-- Catches database-specific bugs
-
-### Why Node-Cron?
-
-- In-process scheduling (no external dependencies)
-- Simple for periodic cleanup tasks
-- Sufficient for current needs
-- Can migrate to external scheduler if needed
-
----
-
-## Security Architecture
-
-### Authentication Security
-
-- Passwords hashed with bcrypt (10 rounds)
-- Access tokens expire in 15 minutes
-- Refresh tokens rotate on every use
-- HTTP-only cookies prevent XSS attacks
-- Expired tokens cleaned up automatically
-
-### Authorization
-
-- JWT payload contains user ID only (minimal exposure)
-- Persona header validates user role per request
-- Service layer checks ownership before mutations
-- Database constraints prevent unauthorized data manipulation
-
-### Input Validation
-
-- All inputs validated with Joi schemas
-- Prisma prevents SQL injection
-- File uploads validated (type, size)
-- Cloudinary handles image sanitization
-
-### CORS
-
-- Whitelist of allowed origins
-- Credentials support enabled for cookies
-- Specific allowed headers (Authorization, X-Persona)
-
----
-
-## Performance Considerations
-
-### Database
-
-- Indexes on frequently queried fields
-- Composite indexes for common query patterns
-- Connection pooling via Prisma
-- Soft deletes with deletedAt filters
-
-### Caching Strategy (Future)
-
-- Redis for frequently accessed data
-- Cache invalidation on mutations
-- Session storage if moving from JWT
-
-### Pagination (Future)
-
-- Cursor-based pagination for large lists
-- Limit default query results
-
----
-
-## Scalability
-
-### Current State
-
-- Stateless API (horizontal scaling ready)
-- Database connection pooling
-- No in-memory session storage
-
-### Future Enhancements
-
-- Load balancer (Nginx, ALB)
-- Read replicas for PostgreSQL
-- Redis for caching and sessions
-- CDN for static assets (Cloudinary already used)
-- Microservices extraction (chat, notifications)
-
----
-
-[← Back to README](../README.md)
+  TECHNOLOGY ||--o{ TASK_TECHNOLOGY : maps
+  TECHNOLOGY ||--o{ PROJECT_TECHNOLOGY : maps
+  TECHNOLOGY ||--o{ DEVELOPER_TECHNOLOGY : maps
+```

@@ -1,339 +1,305 @@
-﻿# TeamUp IT Backend
+# TeamUp Backend
 
-A RESTful API backend for a freelance collaboration platform that connects software developers with companies for short-term tasks and projects.
-
----
-
-## Documentation
-
-- **[Getting Started](#quick-start)** - Set up and run locally in 5 minutes
-- **[API Documentation](docs/API.md)** - Complete endpoint reference with examples
-- **[Architecture](docs/ARCHITECTURE.md)** - System design and key decisions
-- **[Development Guide](docs/DEVELOPMENT.md)** - Detailed development workflows
-- **[Deployment Guide](docs/DEPLOYMENT.md)** - Production deployment instructions
-- **[Project Standards](docs/PROJECT_STANDARDS.md)** - Public engineering standards
-- **[Swagger Structure](docs/SWAGGER_STRUCTURE.md)** - How OpenAPI paths/schemas are organized
-- **[Contributing](docs/CONTRIBUTING.md)** - How to contribute to the project
-
----
+REST API for a collaboration platform where companies publish projects and tasks, developers apply or receive invites, and both sides complete work through a structured workflow with reviews, chat, notifications, and moderation tools.
 
 ## Overview
 
-TeamUp IT enables developers to showcase their skills, apply for tasks, and collaborate with companies through a structured workflow. Companies can post tasks, review applications, invite specific developers, and manage projects with integrated chat and review systems.
+This repository contains the backend for a diploma project focused on a production-style marketplace for short-term technical collaboration.
 
-**Core Capabilities:**
+The system supports two user personas:
 
-- Dual user personas (developers and companies)
-- Full task lifecycle management with state transitions
-- Real-time chat for active tasks
-- Technology-based skill matching
-- Bidirectional review and rating system
-- Comprehensive notification engine
+- developers, who create profiles, browse work, apply, chat, complete tasks, save favorites, and leave reviews
+- companies, who manage public or unlisted projects, publish tasks, review candidates, invite developers, confirm completion, and receive feedback
+
+In addition to the core workflow, the backend includes moderation-oriented features such as content reports, task disputes, platform review approval, and admin-controlled moderator roles.
+
+## Documentation
+
+- [API Reference](docs/API.md)
+- [Architecture](docs/ARCHITECTURE.md)
+- [Development Guide](docs/DEVELOPMENT.md)
+- [Deployment Guide](docs/DEPLOYMENT.md)
+- [Contributing](docs/CONTRIBUTING.md)
+- [Project Standards](docs/PROJECT_STANDARDS.md)
+- [Swagger Structure](docs/SWAGGER_STRUCTURE.md)
 
 ## Key Features
 
-### Authentication & Security
+### Authentication and account security
 
-- JWT access tokens with refresh token rotation
-- Email verification and password reset
-- Role-based access control (developer/company personas)
+- email/password signup and login
+- email verification and resend flow
+- password reset and authenticated password change
+- JWT access tokens plus refresh tokens stored in HTTP-only cookies
+- refresh token rotation and persisted token revocation
 
-### User Profiles
+### Personas, roles, and profiles
 
-- **Developers:** Skills, experience level, availability, portfolio links, avatar uploads
-- **Companies:** Company info, team size, logo uploads, verification status
-- Aggregate ratings calculated from reviews
+- developer and company personas selected via `X-Persona`
+- separate developer and company profile models
+- avatar and logo upload support through Cloudinary
+- platform roles stored on the user record: `USER`, `MODERATOR`, `ADMIN`
+- admin endpoint to grant or revoke moderator access
 
-### Task Management
+### Projects and tasks
 
-- Create tasks (paid, unpaid, volunteer, experience)
-- Difficulty levels and technology requirements
-- Draft/publish workflow with visibility controls
-- Application system with acceptance/rejection
-- Task invitations from companies to developers
-- Completion workflow with review requests
+- company-owned projects with visibility, status, deadlines, and technology tags
+- task drafts, publishing, updates, closing, and soft deletion
+- public catalogs for published tasks and active public projects
+- owner views for private, unlisted, archived, and soft-deleted records
+- project task listing and project review aggregation
 
-### Collaboration
+### Hiring and collaboration workflow
 
-- Real-time chat threads for active tasks
-- Notification system (applications, acceptances, messages, reviews)
-- Email notifications (configurable)
+- developer applications to published tasks
+- company-side candidate ranking and recommended developers
+- direct task invites with accept, decline, and cancel actions
+- task-linked chat threads and unread tracking
+- notifications for applications, invites, completion requests, disputes, reviews, and chat activity
+- developer favorites for saving interesting tasks
 
-### Technology Catalog
+### Completion, reviews, and moderation
 
-- Curated list of technologies by category
-- Community suggestion workflow
-- Search and filtering capabilities
-
-### Reviews & Ratings
-
-- Bidirectional reviews (developer ↔ company)
-- 1-5 star ratings with optional feedback
-- Automatic profile rating recalculation
-
-### Platform Reviews
-
-- Users can submit reviews about the platform itself
-- Review moderation system with admin approval
-- Cooldown period between reviews to prevent spam
-- Public display of approved reviews
-
-**[→ See complete API reference](docs/API.md)**
+- completion request flow with configurable response deadline
+- rejection counter and failure transition after repeated rejections
+- dispute opening and moderator/admin resolution
+- task and project reporting queues for moderators/admins
+- task reviews between company and developer after completion
+- public platform reviews with moderation approval flow
 
 ## Tech Stack
 
-| Category           | Technologies                             |
-| ------------------ | ---------------------------------------- |
-| **Runtime**        | Node.js 20+, Express.js 4                |
-| **Database**       | PostgreSQL 16, Prisma 7 (ORM)            |
-| **Authentication** | JWT, bcryptjs, HTTP-only cookies         |
-| **Validation**     | Joi schemas                              |
-| **Documentation**  | Swagger UI (OpenAPI 3.0)                 |
-| **File Storage**   | Cloudinary, Multer, Sharp                |
-| **Email**          | Nodemailer (SMTP)                        |
-| **Testing**        | Jest 29, Supertest, Testcontainers       |
-| **Code Quality**   | ESLint 9, Prettier 3, Husky              |
-| **DevOps**         | Docker, Docker Compose, node-cron        |
-| **CI/CD**          | GitHub Actions with coverage enforcement |
+| Area             | Technologies                                     |
+| ---------------- | ------------------------------------------------ |
+| Runtime          | Node.js 20, Express 4                            |
+| Database         | PostgreSQL 16, Prisma 7                          |
+| Auth             | JWT, bcryptjs, cookie-parser                     |
+| Validation       | Joi                                              |
+| Files            | Multer, Sharp, Cloudinary                        |
+| Email            | Nodemailer                                       |
+| Background jobs  | node-cron                                        |
+| API docs         | Swagger UI, OpenAPI 3                            |
+| Testing          | Jest, Supertest, Testcontainers                  |
+| Quality          | ESLint 9, Prettier 3, Husky, custom ESLint rules |
+| Containerization | Docker, Docker Compose                           |
 
-**[→ Learn about architecture decisions](docs/ARCHITECTURE.md)**
+## Architecture
 
-## Quick Start
+The application follows a layered Express architecture:
+
+- `routes/` wire endpoints, auth, persona checks, and validation
+- `controllers/` translate HTTP requests into service calls
+- `services/` contain domain logic grouped by feature
+- `db/queries/` centralize reusable Prisma access patterns
+- `middleware/` handles auth, persona enforcement, validation, and error formatting
+
+Notable implementation choices visible in the codebase:
+
+- modular service folders for larger domains such as tasks, projects, profiles, auth, and me
+- Prisma schema with enums for workflow state, moderation state, personas, and platform roles
+- soft deletes for tasks and projects
+- scheduled cleanup for expired and used verification tokens
+- OpenAPI generation from modular Swagger path and schema fragments in `src/docs/swagger`
+
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for details.
+
+## Project Structure
+
+```text
+src/
+  app.js                 Express app factory
+  server.js              startup, shutdown, and cron bootstrap
+  config/                env and CORS configuration
+  controllers/           route handlers
+  middleware/            auth, persona, validation, error middleware
+  routes/                API route modules
+  schemas/               Joi request schemas
+  services/              domain logic by feature
+  db/                    Prisma client and query helpers
+  docs/swagger/          modular OpenAPI definitions
+  jobs/                  scheduled background jobs
+  templates/             email templates
+  utils/                 shared helpers
+prisma/
+  schema.prisma          data model and enums
+  migrations/            migration history
+  seed.js                seed data script
+tests/
+  integration/           HTTP and workflow integration tests
+  unit/                  unit tests by module
+docs/                    repository documentation
+docker/                  container entrypoint
+```
+
+## Getting Started
 
 ### Prerequisites
 
 - Node.js 20+
+- npm 9+
 - Docker and Docker Compose
+- PostgreSQL 16 if you do not use Docker for the database
 
 ### Installation
 
 ```bash
-# 1. Clone and install
 git clone <repository-url>
 cd diploma-project-backend
 npm install
-
-# 2. Set up environment
 cp .env.example .env
-
-# 3. Start database
 docker compose up -d db
-
-# 4. Run migrations
 npm run prisma:generate
 npm run prisma:migrate:dev
-
-# 5. Seed database (optional)
 npm run db:seed
-
-# 6. Start server
 npm run dev
 ```
 
-**Server runs at:** `http://localhost:3000`
-**API docs:** `http://localhost:3000/api/v1/docs`
-**Health check:** `http://localhost:3000/api/v1/health`
+On Windows PowerShell, replace `cp` with `Copy-Item`.
 
-**[→ Detailed setup instructions](docs/DEVELOPMENT.md)**
+### Environment variables
 
----
+The project expects a local `.env` file. The main variables are:
 
-## Project Structure
+| Variable                         | Purpose                                          |
+| -------------------------------- | ------------------------------------------------ |
+| `DATABASE_URL`                   | PostgreSQL connection string                     |
+| `JWT_ACCESS_SECRET`              | access token signing secret                      |
+| `ACCESS_TOKEN_TTL_SECONDS`       | access token lifetime                            |
+| `REFRESH_TOKEN_TTL_DAYS`         | refresh token lifetime                           |
+| `CLIENT_ORIGIN`                  | allowed frontend origins                         |
+| `APP_BASE_URL`                   | backend base URL                                 |
+| `FRONTEND_BASE_URL`              | frontend base URL used in emails                 |
+| `EMAIL_*`                        | SMTP configuration                               |
+| `EMAIL_NOTIFICATIONS_ENABLED`    | enables outbound event email delivery            |
+| `CLOUDINARY_*`                   | media upload support                             |
+| `PLATFORM_REVIEW_COOLDOWN_DAYS`  | minimum delay between platform reviews           |
+| `TASK_COMPLETION_RESPONSE_HOURS` | company response window after completion request |
+| `ADMIN_EMAIL`, `ADMIN_PASSWORD`  | optional admin user bootstrapping during seed    |
 
-```
-src/
-	controllers/    # HTTP request handlers
-	services/       # Business logic (modular folder structure)
-	  tasks/        # Task domain: drafts, catalog, workflows, candidates
-	  projects/     # Project domain: lifecycle, catalog, reporting
-	  profiles/     # Profile domain: developer, company, reviews
-	  invites/      # Invite domain: creation, catalog, responses
-	  me/           # Current user: catalog, notifications, messaging
-	  auth/         # Authentication service
-	  ...           # Other domain services
-	routes/         # API routes
-	middleware/     # Auth, validation, errors
-	schemas/        # Joi validation schemas
-	utils/          # Helpers (JWT, email, cloudinary)
-	config/         # Environment & CORS config
-	db/
-	  prisma.js     # Prisma client
-	  queries/      # Query helper functions (tasks, projects, profiles)
-prisma/
-	schema.prisma   # Database schema
-	migrations/     # Migration history
-	seed.js         # Database seeding
-tests/
-	unit/           # Service & controller unit tests
-	integration/    # API integration tests
-docs/             # Project documentation
-docker/           # Docker configuration
+See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) and [.env.example](.env.example) for the full reference.
+
+## Running the Project
+
+### Local development
+
+```bash
+npm run dev
 ```
 
-**[→ Architecture details](docs/ARCHITECTURE.md)**
+Available URLs:
 
----
+- API base: http://localhost:3000/api/v1
+- Swagger UI: http://localhost:3000/api/v1/docs
+- Health check: http://localhost:3000/api/v1/health
+
+### Docker Compose
+
+Start the local database only:
+
+```bash
+docker compose up -d db
+```
+
+Or start both services:
+
+```bash
+docker compose up -d
+docker compose exec api npm run prisma:migrate:dev
+```
+
+Note: the development Compose service generates Prisma client and starts `npm run dev`, but it does not apply development migrations automatically.
+
+## Database
+
+The database schema lives in [prisma/schema.prisma](prisma/schema.prisma).
+
+Current schema areas include:
+
+- users, refresh tokens, verification tokens, platform roles
+- developer and company profiles
+- projects, tasks, applications, invites, favorites
+- reviews, notifications, chat threads and reads
+- project reports, task reports, task disputes
+- technology catalog and cross-reference tables
+- platform reviews
+
+Useful commands:
+
+```bash
+npm run prisma:generate
+npm run prisma:migrate:dev
+npm run prisma:migrate:status
+npm run prisma:studio
+npm run db:clean
+npm run db:seed
+```
 
 ## API Overview
 
-The API follows REST conventions with JSON request/response bodies.
+Base path: `/api/v1`
 
-### Authentication
+Main route groups:
 
-```bash
-# Sign up
-POST /api/v1/auth/signup
+- `/auth` - signup, login, verify email, reset password, refresh, logout, change password
+- `/profiles` - developer and company profiles, media upload endpoints, developer discovery
+- `/projects` - project catalog, owner management, reports, project reviews, project task listing
+- `/tasks` - task catalog, drafts, lifecycle actions, applications, candidate discovery, invites, reviews, reports, disputes
+- `/applications` - accept or reject a submitted application
+- `/invites` - accept, decline, or cancel invites
+- `/me` - current user data, personal catalogs, notifications, chat, favorites
+- `/users` - user reviews and admin moderator management
+- `/technologies` - technology catalog and type listing
+- `/platform-reviews` - platform feedback and moderation
 
-# Login (returns access_token + refresh_token cookie)
-POST /api/v1/auth/login
+Important access rules:
 
-# Refresh access token
-POST /api/v1/auth/refresh
+- protected routes require `Authorization: Bearer <access_token>`
+- persona-scoped routes require `X-Persona: developer` or `X-Persona: company`
+- moderator/admin features use persisted roles on the user record, not the persona header
 
-# Logout
-POST /api/v1/auth/logout
-```
+See [docs/API.md](docs/API.md) for the current endpoint map.
 
-### Main Resources
+## Scripts
 
-- **`/api/v1/me`** - Current user info, applications, invites, tasks, projects, notifications, chat
-- **`/api/v1/profiles`** - Developer and company profiles
-- **`/api/v1/projects`** - Project management
-- **`/api/v1/tasks`** - Task CRUD and lifecycle
-- **`/api/v1/applications`** - Task applications
-- **`/api/v1/invites`** - Task invitations
-- **`/api/v1/technologies`** - Technology catalog
-- **`/api/v1/platform-reviews`** - Platform feedback and reviews
-- **`/api/v1/users/:userId/reviews`** - User reviews and ratings
+| Script                          | Purpose                                              |
+| ------------------------------- | ---------------------------------------------------- |
+| `npm run dev`                   | start dev server with nodemon                        |
+| `npm start`                     | production start                                     |
+| `npm test`                      | run all tests                                        |
+| `npm run test:unit`             | unit tests only                                      |
+| `npm run test:integration`      | integration tests only                               |
+| `npm run test:coverage`         | coverage run                                         |
+| `npm run lint`                  | JS lint, docs English check, Swagger/Joi consistency |
+| `npm run format`                | Prettier formatting                                  |
+| `npm run prisma:generate`       | generate Prisma client                               |
+| `npm run prisma:migrate:dev`    | create/apply dev migration                           |
+| `npm run prisma:migrate:deploy` | apply production migrations                          |
+| `npm run prisma:studio`         | open Prisma Studio                                   |
+| `npm run db:clean`              | clear data while preserving schema                   |
+| `npm run db:seed`               | seed local data                                      |
 
-**Protected routes** require `Authorization: Bearer <token>` header.
-**Persona routes** also require `X-Persona: developer` or `X-Persona: company` header.
+## Testing and Code Quality
 
-**[→ Complete API reference](docs/API.md)**
+The repository includes both unit and integration coverage.
 
----
+- integration tests run against PostgreSQL through Testcontainers
+- coverage thresholds are enforced in Jest and CI
+- ESLint includes a custom `english-only` rule for source and test content
+- Swagger and Joi definitions are checked for consistency via `npm run check:swagger-joi`
 
-## Testing
+Current global coverage thresholds:
 
-```bash
-# Run all tests
-npm test
+- statements: 90%
+- branches: 80%
+- functions: 95%
+- lines: 90%
 
-# Unit tests only
-npm run test:unit
-
-# Integration tests only
-npm run test:integration
-
-# With coverage report
-npm run test:coverage
-```
-
-### Testing Strategy (required)
-
-- Prefer unit tests as the primary coverage driver; service/controller/schema logic should be covered in unit tests first.
-- Aim to maximize unit coverage for changed modules before adding new integration scenarios.
-- Keep integration tests focused on behavior that unit tests cannot fully validate:
-  - route wiring and middleware chain (auth/persona/validation)
-  - real HTTP contract shape and status codes
-  - cross-layer side effects (DB state transitions, notifications, chat thread creation)
-- Do not add integration tests for logic already fully verified in unit tests unless they validate one of the integration-only concerns above.
-- Remove empty or placeholder integration blocks; every integration test block must execute at least one meaningful assertion path.
-
-**Coverage Thresholds (CI enforced):**
-
-- Statements: 90%
-- Branches: 80%
-- Functions: 95%
-- Lines: 90%
-
-**[→ Testing guide](docs/DEVELOPMENT.md#testing)**
-
----
-
-## Development
-
-```bash
-# Start dev server (auto-reload)
-npm run dev
-
-# Lint code
-npm run lint
-
-# Format code
-npm run format
-
-# Prisma Studio (database GUI)
-npm run prisma:studio
-
-# Create migration
-npm run prisma:migrate:dev -- --name migration_name
-```
-
-**Pre-commit hooks** automatically format staged files.
-
-**[→ Development guide](docs/DEVELOPMENT.md)**
-
----
-
-## Deployment
-
-### Docker
-
-```bash
-# Build production image
-docker build -t teamup-backend:latest .
-
-# Run container
-docker run -p 3000:3000 --env-file .env teamup-backend:latest
-```
-
-### Platforms
-
-Deployment guides for:
-
-- Render (free tier available)
-- Railway
-- Fly.io
-- Vercel (serverless)
-
-**[→ Deployment guide](docs/DEPLOYMENT.md)**
-
----
+GitHub Actions runs linting, tests, coverage enforcement, artifact upload, and PR coverage comments for pull requests targeting `main`.
 
 ## Contributing
 
-Contributions are welcome! Please follow these guidelines:
-
-1. Fork the repository
-2. Create a feature branch
-3. Follow [project standards](docs/PROJECT_STANDARDS.md)
-4. Write tests for new features
-5. Ensure tests and linting pass
-6. Submit a pull request
-
-**[→ Contributing guide](docs/CONTRIBUTING.md)**
-
----
-
-## License
-
-<!-- TODO: Add license information -->
-
----
+See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) and [docs/PROJECT_STANDARDS.md](docs/PROJECT_STANDARDS.md).
 
 ## Author
 
-Developed as a diploma project demonstrating backend engineering skills:
-
-- RESTful API design
-- Authentication and authorization
-- Database modeling and migrations
-- Test-driven development
-- CI/CD pipelines
-- Containerization
-- Code quality automation
-
----
-
-**Questions?** Open an issue on GitHub.
+Maintained as a diploma backend project with emphasis on API design, workflow modeling, validation, testing, and deployment readiness.

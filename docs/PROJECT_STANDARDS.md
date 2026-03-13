@@ -66,6 +66,19 @@ src/services/
 - Validation errors should be field-oriented and UI-friendly.
 - Protected endpoints must consistently enforce authentication and persona checks.
 
+### Persona and Role Enforcement
+
+- Persona access (`developer` / `company`) must be enforced through persona middleware.
+- Platform moderation/admin access must be enforced through role middleware (`ADMIN`, `MODERATOR`).
+- Persona headers must not be treated as platform role grants.
+- When route behavior depends on `owner=true` or similar conditional access, route and service checks must align and be explicitly tested.
+
+### API Contract Consistency
+
+- Keep request/response contracts backward compatible unless a change is explicitly marked as breaking.
+- Follow existing field naming in each module (some contracts are snake_case by design).
+- If a contract changes, update corresponding Joi schema, controller mapping, integration tests, Swagger docs, and `docs/API.md` in the same PR.
+
 ## Error Handling Standards
 
 - Use centralized error middleware.
@@ -80,6 +93,7 @@ src/services/
 - Use secure cookie settings in production.
 - Hash passwords and never return secret/token values in responses.
 - Apply least-privilege checks for role/persona-specific actions.
+- Do not expose moderation capabilities without role checks backed by persisted user roles.
 
 ## Database Standards
 
@@ -119,13 +133,16 @@ src/services/
 - Update API docs when request/response contracts change.
 - Keep examples minimal, correct, and copy-pasteable.
 - Do not reference internal-only or ignored files from public docs.
+- For endpoint/workflow changes, update all impacted docs together: `README.md`, `docs/API.md`, and any affected operational guide (`docs/DEVELOPMENT.md`, `docs/DEPLOYMENT.md`, `docs/ARCHITECTURE.md`).
 
 ## CI and Quality Gates
 
-- **Lint must pass:** ESLint checks code quality and enforces:
+- **Lint must pass:** project lint pipeline (`npm run lint`) runs and enforces:
   - Import extensions (`.js` required)
   - Max file size (400 lines for services and tests)
   - English-only content in error messages and validation messages
+  - Docs English checks
+  - Swagger/Joi consistency checks
 - **Test suite must pass:** All unit and integration tests
 - **Coverage thresholds enforced by CI must remain green:**
   - Statements: 90%

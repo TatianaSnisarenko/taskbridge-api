@@ -1,8 +1,8 @@
-# Contributing to TeamUp IT Backend
+# Contributing to TeamUp Backend
 
 [← Back to README](../README.md)
 
-Thank you for considering contributing to TeamUp IT! This document provides guidelines and standards for contributing to the project.
+Thank you for considering contributing to TeamUp Backend. This document provides guidelines and standards for contributing to the project.
 
 ## Code of Conduct
 
@@ -170,6 +170,13 @@ Prisma      → Data access only
 - **Schemas belong in** `src/schemas/`
 - **Apply validation** at route level with middleware
 - **Error messages** should be clear and actionable
+
+### Authentication, Persona, and Role Rules
+
+- Use authentication middleware for every protected route.
+- Use `requirePersona(...)` only for business actions that depend on active persona context (`developer` / `company`).
+- Use role-based middleware for moderation and platform administration endpoints (`ADMIN`, `MODERATOR`).
+- Do not use persona headers as a substitute for platform roles.
 
 **Example:**
 
@@ -387,10 +394,10 @@ Brief description of changes.
 
 ## Changes Made
 
-- Added `requestCompletion` endpoint
-- Added `completeTask` endpoint
-- Added notification triggers
-- Updated task state machine
+- Added `POST /tasks/:taskId/completion/request`
+- Added `POST /tasks/:taskId/completion/confirm`
+- Added moderation checks for dispute/report resolution
+- Updated task state transitions and tests
 
 ## Testing
 
@@ -405,6 +412,7 @@ Brief description of changes.
 - [ ] Self-review completed
 - [ ] Comments added for complex logic
 - [ ] Documentation updated
+- [ ] `README` and affected `docs/*` pages updated for contract changes
 - [ ] No new warnings generated
 - [ ] **Linter passes** (`npm run lint`)
 - [ ] **All tests pass** (`npm run test:coverage`)
@@ -466,9 +474,11 @@ See [DEVELOPMENT.md](DEVELOPMENT.md) for detailed setup instructions.
 ### Code Review Process
 
 1. **Automated CI checks run** (all must pass before merge):
-   - ✅ **ESLint:** Code quality and style
-   - ✅ **Tests:** Full test suite (unit + integration)
-   - ✅ **Coverage:** Statements (90%), Branches (80%), Functions (95%), Lines (90%)
+
+- ✅ **Lint:** ESLint + docs English checks + Swagger/Joi consistency
+- ✅ **Tests:** Full test suite (unit + integration)
+- ✅ **Coverage:** Statements (90%), Branches (80%), Functions (95%), Lines (90%)
+
 2. **Reviewer provides feedback**
 3. **You make requested changes**
 4. **Approval required** before merge
@@ -505,7 +515,6 @@ See [DEVELOPMENT.md](DEVELOPMENT.md) for detailed setup instructions.
 ❌ Write tests without assertions
 ❌ Commit commented-out code
 ❌ Hardcode configuration values
-❌ Use `any` or ignore TypeScript errors (if using TS)
 ❌ Expose sensitive data in responses
 ❌ Skip error handling
 ❌ Use `console.log` for production logging
