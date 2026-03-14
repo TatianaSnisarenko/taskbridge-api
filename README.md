@@ -1,17 +1,17 @@
 # TeamUp Backend
 
-REST API for a collaboration platform where companies publish projects and tasks, developers apply or receive invites, and both sides complete work through a structured workflow with reviews, chat, notifications, and moderation tools.
+REST API for a collaboration platform where companies publish project-based tasks and developers apply or receive invites to collaborate through a structured workflow.
 
 ## Overview
 
-This repository contains the backend for a diploma project focused on a production-style marketplace for short-term technical collaboration.
+This repository contains the backend for a diploma project focused on production-style API design and workflow modeling.
 
-The system supports two user personas:
+The system supports two personas:
 
-- developers, who create profiles, browse work, apply, chat, complete tasks, save favorites, and leave reviews
-- companies, who manage public or unlisted projects, publish tasks, review candidates, invite developers, confirm completion, and receive feedback
+- developers, who build profiles, browse tasks/projects, apply, chat, complete work, and leave reviews
+- companies, who create projects/tasks, review candidates, send invites, confirm completion, and receive feedback
 
-In addition to the core workflow, the backend includes moderation-oriented features such as content reports, task disputes, platform review approval, and admin-controlled moderator roles.
+The platform also includes moderation-oriented flows: task/project reports, task disputes, platform review approval, and admin-managed moderator roles.
 
 ## Documentation
 
@@ -27,107 +27,106 @@ In addition to the core workflow, the backend includes moderation-oriented featu
 
 ### Authentication and account security
 
-- email/password signup and login
+- signup/login with email and password
 - email verification and resend flow
-- password reset and authenticated password change
-- JWT access tokens plus refresh tokens stored in HTTP-only cookies
-- refresh token rotation and persisted token revocation
+- forgot/reset password flow and authenticated password change
+- JWT access token auth with refresh tokens in HTTP-only cookies
+- refresh token persistence and revocation tracking
 
 ### Personas, roles, and profiles
 
-- developer and company personas selected via `X-Persona`
+- persona-aware access using `X-Persona` (`developer` / `company`)
 - separate developer and company profile models
-- avatar and logo upload support through Cloudinary
-- platform roles stored on the user record: `USER`, `MODERATOR`, `ADMIN`
-- admin endpoint to grant or revoke moderator access
+- avatar/logo upload endpoints (Multer + Cloudinary path)
+- platform roles on user account: `USER`, `MODERATOR`, `ADMIN`
+- admin endpoint to grant/revoke moderator role
 
-### Projects and tasks
+### Projects and tasks lifecycle
 
-- company-owned projects with visibility, status, deadlines, and technology tags
-- task drafts, publishing, updates, closing, and soft deletion
-- public catalogs for published tasks and active public projects
-- owner views for private, unlisted, archived, and soft-deleted records
-- project task listing and project review aggregation
+- company-owned projects with status/visibility and technology tags
+- task draft creation, update, publish, close, and soft delete
+- public catalogs plus owner-oriented views (`owner=true` flows)
+- project reports and task reports with moderator/admin resolution
+- project-level and task-level review endpoints
 
 ### Hiring and collaboration workflow
 
 - developer applications to published tasks
-- company-side candidate ranking and recommended developers
-- direct task invites with accept, decline, and cancel actions
-- task-linked chat threads and unread tracking
-- notifications for applications, invites, completion requests, disputes, reviews, and chat activity
-- developer favorites for saving interesting tasks
+- company-side candidate and recommended developer endpoints
+- task invites with accept/decline/cancel actions
+- task-linked chat threads with unread tracking
+- personal notifications and read/read-all actions
+- developer favorites for tasks
 
-### Completion, reviews, and moderation
+### Completion and dispute handling
 
-- completion request flow with configurable response deadline
-- rejection counter and failure transition after repeated rejections
-- dispute opening and moderator/admin resolution
-- task and project reporting queues for moderators/admins
-- task reviews between company and developer after completion
-- public platform reviews with moderation approval flow
+- developer completion request flow
+- company confirm/reject completion actions
+- escalation/dispute flow for unresolved completion
+- admin/moderator dispute resolution actions
 
 ## Tech Stack
 
-| Area             | Technologies                                     |
-| ---------------- | ------------------------------------------------ |
-| Runtime          | Node.js 20, Express 4                            |
-| Database         | PostgreSQL 16, Prisma 7                          |
-| Auth             | JWT, bcryptjs, cookie-parser                     |
-| Validation       | Joi                                              |
-| Files            | Multer, Sharp, Cloudinary                        |
-| Email            | Nodemailer                                       |
-| Background jobs  | node-cron                                        |
-| API docs         | Swagger UI, OpenAPI 3                            |
-| Testing          | Jest, Supertest, Testcontainers                  |
-| Quality          | ESLint 9, Prettier 3, Husky, custom ESLint rules |
-| Containerization | Docker, Docker Compose                           |
+| Area            | Technologies                                     |
+| --------------- | ------------------------------------------------ |
+| Backend         | Node.js 20, Express 4                            |
+| Database        | PostgreSQL 16, Prisma 7                          |
+| Auth & Security | JWT, bcryptjs, cookie-parser                     |
+| Validation      | Joi                                              |
+| File & Media    | Multer, Sharp, Cloudinary                        |
+| Email           | Nodemailer                                       |
+| Background Jobs | node-cron                                        |
+| API Docs        | Swagger UI, OpenAPI 3                            |
+| Testing         | Jest, Supertest, Testcontainers                  |
+| Code Quality    | ESLint 9, Prettier 3, Husky, custom ESLint rules |
+| Infrastructure  | Docker, Docker Compose                           |
 
 ## Architecture
 
-The application follows a layered Express architecture:
+The codebase uses a layered Express structure:
 
-- `routes/` wire endpoints, auth, persona checks, and validation
-- `controllers/` translate HTTP requests into service calls
-- `services/` contain domain logic grouped by feature
-- `db/queries/` centralize reusable Prisma access patterns
-- `middleware/` handles auth, persona enforcement, validation, and error formatting
+- `routes/` defines endpoint maps and middleware chains
+- `controllers/` handles HTTP input/output boundaries
+- `services/` contains feature/domain business logic
+- `db/` provides Prisma client access and query helpers
+- `middleware/` centralizes auth, persona checks, validation, and errors
 
-Notable implementation choices visible in the codebase:
+Design choices visible in the implementation:
 
-- modular service folders for larger domains such as tasks, projects, profiles, auth, and me
-- Prisma schema with enums for workflow state, moderation state, personas, and platform roles
-- soft deletes for tasks and projects
-- scheduled cleanup for expired and used verification tokens
-- OpenAPI generation from modular Swagger path and schema fragments in `src/docs/swagger`
+- Prisma schema models explicit workflow states with enums
+- task/project soft deletion instead of immediate hard delete
+- scheduled verification token cleanup job (`node-cron`)
+- modular Swagger composition under `src/docs/swagger`
+- route-level Joi validation before controller execution
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for details.
+TODO: add architecture diagram to docs.
 
 ## Project Structure
 
 ```text
 src/
-  app.js                 Express app factory
-  server.js              startup, shutdown, and cron bootstrap
-  config/                env and CORS configuration
-  controllers/           route handlers
-  middleware/            auth, persona, validation, error middleware
+  app.js                 Express app setup
+  server.js              startup/shutdown + cron bootstrap
+  config/                environment and CORS config
   routes/                API route modules
+  controllers/           request handlers
+  services/              business logic by domain
   schemas/               Joi request schemas
-  services/              domain logic by feature
+  middleware/            auth, persona, validation, error handling
   db/                    Prisma client and query helpers
-  docs/swagger/          modular OpenAPI definitions
-  jobs/                  scheduled background jobs
+  docs/swagger/          OpenAPI paths/schemas composition
+  jobs/                  scheduled tasks
   templates/             email templates
   utils/                 shared helpers
 prisma/
   schema.prisma          data model and enums
   migrations/            migration history
-  seed.js                seed data script
+  seed.js                seed script
+  clean.js               DB cleanup script
 tests/
-  integration/           HTTP and workflow integration tests
-  unit/                  unit tests by module
-docs/                    repository documentation
+  unit/                  unit tests
+  integration/           integration tests
+docs/                    project documentation
 docker/                  container entrypoint
 ```
 
@@ -138,7 +137,7 @@ docker/                  container entrypoint
 - Node.js 20+
 - npm 9+
 - Docker and Docker Compose
-- PostgreSQL 16 if you do not use Docker for the database
+- PostgreSQL 16 (only if not using Docker for DB)
 
 ### Installation
 
@@ -154,73 +153,92 @@ npm run db:seed
 npm run dev
 ```
 
-On Windows PowerShell, replace `cp` with `Copy-Item`.
+PowerShell alternative:
 
-### Environment variables
+```powershell
+Copy-Item .env.example .env
+```
 
-The project expects a local `.env` file. The main variables are:
+### Environment Variables
 
-| Variable                         | Purpose                                          |
-| -------------------------------- | ------------------------------------------------ |
-| `DATABASE_URL`                   | PostgreSQL connection string                     |
-| `JWT_ACCESS_SECRET`              | access token signing secret                      |
-| `ACCESS_TOKEN_TTL_SECONDS`       | access token lifetime                            |
-| `REFRESH_TOKEN_TTL_DAYS`         | refresh token lifetime                           |
-| `CLIENT_ORIGIN`                  | allowed frontend origins                         |
-| `APP_BASE_URL`                   | backend base URL                                 |
-| `FRONTEND_BASE_URL`              | frontend base URL used in emails                 |
-| `EMAIL_*`                        | SMTP configuration                               |
-| `EMAIL_NOTIFICATIONS_ENABLED`    | enables outbound event email delivery            |
-| `CLOUDINARY_*`                   | media upload support                             |
-| `PLATFORM_REVIEW_COOLDOWN_DAYS`  | minimum delay between platform reviews           |
-| `TASK_COMPLETION_RESPONSE_HOURS` | company response window after completion request |
-| `ADMIN_EMAIL`, `ADMIN_PASSWORD`  | optional admin user bootstrapping during seed    |
+Create `.env` from `.env.example` and configure values for your environment.
 
-See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) and [.env.example](.env.example) for the full reference.
+```dotenv
+PORT=3000
+NODE_ENV=development
+DATABASE_URL=postgresql://teamup:teamup@localhost:5432/teamup?schema=public
+JWT_ACCESS_SECRET=change_me_access_secret
+ACCESS_TOKEN_TTL_SECONDS=900
+REFRESH_TOKEN_TTL_DAYS=30
+CLIENT_ORIGIN=http://localhost:5173,http://localhost:3000
+APP_BASE_URL=http://localhost:3000
+FRONTEND_BASE_URL=http://localhost:5173
+EMAIL_ADDRESS=example@domain.com
+EMAIL_PASSWORD=change_me_email_password
+EMAIL_HOST=smtp.example.com
+EMAIL_PORT=465
+EMAIL_SECURE=true
+EMAIL_NOTIFICATIONS_ENABLED=false
+```
+
+Additional runtime settings used by `src/config/env.js`:
+
+- `COOKIE_SECURE`, `COOKIE_SAMESITE`
+- `EMAIL_VERIFICATION_TTL_HOURS`, `VERIFICATION_TOKEN_RETENTION_DAYS`, `PASSWORD_RESET_TOKEN_TTL_MINUTES`
+- `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`
+- `PLATFORM_REVIEW_COOLDOWN_DAYS`, `TASK_COMPLETION_RESPONSE_HOURS`
+- optional seed bootstrap: `ADMIN_EMAIL`, `ADMIN_PASSWORD`
 
 ## Running the Project
 
-### Local development
+Run locally:
 
 ```bash
 npm run dev
 ```
 
-Available URLs:
+Default local URLs:
 
-- API base: http://localhost:3000/api/v1
+- API: http://localhost:3000/api/v1
 - Swagger UI: http://localhost:3000/api/v1/docs
 - Health check: http://localhost:3000/api/v1/health
 
-### Docker Compose
+## Running with Docker
 
-Start the local database only:
+Start only database service (recommended for development):
 
 ```bash
 docker compose up -d db
 ```
 
-Or start both services:
+Start both API and DB services:
 
 ```bash
 docker compose up -d
 docker compose exec api npm run prisma:migrate:dev
 ```
 
-Note: the development Compose service generates Prisma client and starts `npm run dev`, but it does not apply development migrations automatically.
+Notes:
+
+- `docker-compose.yml` API service runs `npm install`, `prisma:generate`, and `npm run dev`
+- it does not automatically execute development migrations
+- production image startup runs `prisma migrate deploy` via `docker/entrypoint.sh`
 
 ## Database
 
-The database schema lives in [prisma/schema.prisma](prisma/schema.prisma).
+Schema and migration source:
 
-Current schema areas include:
+- `prisma/schema.prisma`
+- `prisma/migrations/`
 
-- users, refresh tokens, verification tokens, platform roles
-- developer and company profiles
+Main schema domains include:
+
+- users, tokens, onboarding states, roles
+- developer/company profiles
 - projects, tasks, applications, invites, favorites
-- reviews, notifications, chat threads and reads
-- project reports, task reports, task disputes
-- technology catalog and cross-reference tables
+- reviews, notifications, chat threads/messages/reads
+- task/project reports and task disputes
+- technologies and suggestions
 - platform reviews
 
 Useful commands:
@@ -229,72 +247,121 @@ Useful commands:
 npm run prisma:generate
 npm run prisma:migrate:dev
 npm run prisma:migrate:status
+npm run prisma:migrate:deploy
 npm run prisma:studio
 npm run db:clean
 npm run db:seed
 ```
 
+`package.json` includes `db:seed:clean`, but `prisma/seed-clean.js` is currently not present.
+
 ## API Overview
 
 Base path: `/api/v1`
 
-Main route groups:
+Route groups:
 
-- `/auth` - signup, login, verify email, reset password, refresh, logout, change password
-- `/profiles` - developer and company profiles, media upload endpoints, developer discovery
-- `/projects` - project catalog, owner management, reports, project reviews, project task listing
-- `/tasks` - task catalog, drafts, lifecycle actions, applications, candidate discovery, invites, reviews, reports, disputes
-- `/applications` - accept or reject a submitted application
-- `/invites` - accept, decline, or cancel invites
-- `/me` - current user data, personal catalogs, notifications, chat, favorites
-- `/users` - user reviews and admin moderator management
-- `/technologies` - technology catalog and type listing
-- `/platform-reviews` - platform feedback and moderation
+- `/auth` - signup/login, verification, password reset, refresh/logout
+- `/me` - current user, onboarding, personal catalogs, notifications, chat, favorites
+- `/profiles` - developer/company profile CRUD and media upload
+- `/projects` - project catalog/management, reports, project reviews, project tasks
+- `/tasks` - task catalog/lifecycle, applications, candidates, invites, reviews, reports, disputes
+- `/applications` - company accept/reject application actions
+- `/invites` - developer accept/decline and company cancel invite actions
+- `/users` - user reviews and admin moderator role toggle
+- `/technologies` - technology search and type list
+- `/platform-reviews` - public and moderated platform reviews
 
-Important access rules:
+Access model:
 
-- protected routes require `Authorization: Bearer <access_token>`
-- persona-scoped routes require `X-Persona: developer` or `X-Persona: company`
-- moderator/admin features use persisted roles on the user record, not the persona header
+- authenticated endpoints require `Authorization: Bearer <access_token>`
+- persona-scoped endpoints require `X-Persona: developer` or `X-Persona: company`
+- moderator/admin checks rely on persisted user roles, not persona header
 
-See [docs/API.md](docs/API.md) for the current endpoint map.
+Example requests:
+
+```bash
+curl http://localhost:3000/api/v1/health
+```
+
+```bash
+curl -X POST http://localhost:3000/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com","password":"password123"}'
+```
+
+```bash
+curl "http://localhost:3000/api/v1/tasks?limit=10&page=1"
+```
+
+See [docs/API.md](docs/API.md) for detailed endpoint documentation.
+
+TODO: add expanded end-to-end workflow examples (company + developer scenario).
 
 ## Scripts
 
-| Script                          | Purpose                                              |
-| ------------------------------- | ---------------------------------------------------- |
-| `npm run dev`                   | start dev server with nodemon                        |
-| `npm start`                     | production start                                     |
-| `npm test`                      | run all tests                                        |
-| `npm run test:unit`             | unit tests only                                      |
-| `npm run test:integration`      | integration tests only                               |
-| `npm run test:coverage`         | coverage run                                         |
-| `npm run lint`                  | JS lint, docs English check, Swagger/Joi consistency |
-| `npm run format`                | Prettier formatting                                  |
-| `npm run prisma:generate`       | generate Prisma client                               |
-| `npm run prisma:migrate:dev`    | create/apply dev migration                           |
-| `npm run prisma:migrate:deploy` | apply production migrations                          |
-| `npm run prisma:studio`         | open Prisma Studio                                   |
-| `npm run db:clean`              | clear data while preserving schema                   |
-| `npm run db:seed`               | seed local data                                      |
+| Script                          | Purpose                                                |
+| ------------------------------- | ------------------------------------------------------ |
+| `npm run dev`                   | start development server via nodemon                   |
+| `npm start`                     | production start (runs `prestart` first)               |
+| `npm test`                      | run complete test suite                                |
+| `npm run test:unit`             | run unit tests                                         |
+| `npm run test:integration`      | run integration tests                                  |
+| `npm run test:coverage`         | run tests with coverage                                |
+| `npm run test:cleanup`          | cleanup test containers                                |
+| `npm run lint`                  | JS lint + docs English check + Swagger/Joi consistency |
+| `npm run format`                | run Prettier                                           |
+| `npm run prisma:generate`       | generate Prisma client                                 |
+| `npm run prisma:migrate:dev`    | create/apply development migration                     |
+| `npm run prisma:migrate:status` | check migration status                                 |
+| `npm run prisma:migrate:deploy` | apply migrations (non-dev)                             |
+| `npm run prisma:studio`         | open Prisma Studio                                     |
+| `npm run db:clean`              | clean database data                                    |
+| `npm run db:seed`               | seed local data                                        |
 
-## Testing and Code Quality
+## Testing
 
-The repository includes both unit and integration coverage.
+The project includes unit and integration tests with shared Jest base configuration.
 
-- integration tests run against PostgreSQL through Testcontainers
-- coverage thresholds are enforced in Jest and CI
-- ESLint includes a custom `english-only` rule for source and test content
-- Swagger and Joi definitions are checked for consistency via `npm run check:swagger-joi`
+- unit tests: `tests/unit`
+- integration tests: `tests/integration`
+- integration flows use Testcontainers with PostgreSQL
 
-Current global coverage thresholds:
+Coverage thresholds enforced in Jest and CI:
 
 - statements: 90%
 - branches: 80%
 - functions: 95%
 - lines: 90%
 
-GitHub Actions runs linting, tests, coverage enforcement, artifact upload, and PR coverage comments for pull requests targeting `main`.
+## Code Quality
+
+- ESLint 9 with custom repository rules
+- custom `english-only` lint rule for source/tests
+- Prettier 3 formatting
+- Swagger/Joi consistency validation script
+- Husky + lint-staged configured for local workflow
+
+## CI/CD
+
+GitHub Actions workflow: `.github/workflows/test-coverage.yml`.
+
+On pull requests targeting `main`, the pipeline:
+
+- installs dependencies with npm cache
+- runs lint and consistency checks (`npm run lint`)
+- runs full coverage test suite (`npm run test:coverage`)
+- enforces coverage thresholds
+- uploads coverage artifacts
+- posts a coverage summary comment on the PR
+
+## Roadmap
+
+- strengthen API examples in `docs/API.md` with persona-based scenarios
+- add visual architecture/workflow diagrams
+- reconcile/remove `db:seed:clean` script reference if not needed
+- expand deployment examples for multi-environment setups
+- TODO: add short API demo (GIF/video) for portfolio presentation
 
 ## Contributing
 
@@ -302,4 +369,4 @@ See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) and [docs/PROJECT_STANDARDS.md]
 
 ## Author
 
-Maintained as a diploma backend project with emphasis on API design, workflow modeling, validation, testing, and deployment readiness.
+Developed and maintained as a diploma backend project with focus on maintainable architecture, strict validation boundaries, and workflow-driven API design.

@@ -1,11 +1,14 @@
 # Swagger Structure
 
+[Back to README](../README.md)
+
 This project keeps OpenAPI docs modular to avoid a single oversized file.
 
 ## Entry Point
 
 - Main aggregator: `src/docs/swagger.js`
 - It imports and merges all path/schema modules into `createSwaggerSpec(...)`.
+- Swagger UI is mounted at `/api/v1/docs`.
 
 ## Folder Layout
 
@@ -44,6 +47,8 @@ src/docs/swagger/
 3. Register new modules in `src/docs/swagger.js` via imports + spread merge.
 4. Put shared enums/constants in `src/docs/swagger/constants.js`.
 5. Reuse schemas via `$ref` instead of duplicating definitions.
+6. Keep path docs synchronized with route wiring in `src/routes`.
+7. Keep request/response docs synchronized with Joi schemas in `src/schemas`.
 
 ## How To Add A New Endpoint
 
@@ -55,8 +60,36 @@ src/docs/swagger/
 
 ```bash
 npm run lint
+npm run check:swagger-joi
 ```
 
 Optionally verify generated spec at runtime:
 
 - Swagger UI: `/api/v1/docs`
+
+## Common Maintenance Tasks
+
+### Add a new schema component
+
+1. Add component in relevant `src/docs/swagger/schemas/*.schemas.js` file
+2. Reuse via `$ref` from paths
+3. Keep naming stable (avoid frequent renames)
+
+### Move endpoints between path files
+
+If endpoint ownership changes between domains:
+
+1. Move path object to the new `*.paths.js`
+2. Ensure old duplicate key is removed
+3. Verify `src/docs/swagger.js` still imports merged object once
+
+### Troubleshooting mismatch errors
+
+If Swagger/Joi consistency check fails:
+
+- verify route exists in `src/routes`
+- verify Joi schema shape and required fields
+- verify Swagger requestBody/params reflect same constraints
+- verify endpoint path/method is not duplicated in multiple path files
+
+TODO: add examples of common mismatch patterns and fixes.

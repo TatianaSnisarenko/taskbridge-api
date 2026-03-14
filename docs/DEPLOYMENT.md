@@ -2,17 +2,17 @@
 
 [Back to README](../README.md)
 
-This document describes the deployment-related assets that are currently present in the repository.
+This document describes deployment assets and operational checks currently present in the repository.
 
 ## What the repository already provides
 
-Deployment-ready pieces in this repo:
+Deployment-related components in this repo:
 
 - multi-stage `Dockerfile`
 - `docker/entrypoint.sh` that runs `prisma migrate deploy` before startup
 - environment-based runtime configuration in `src/config/env.js`
 - production `npm start` flow with Prisma prestart hooks
-- GitHub Actions workflow for lint, tests, and coverage on pull requests
+- GitHub Actions workflow for lint, tests, and coverage on pull requests to `main`
 
 ## Production checklist
 
@@ -27,12 +27,20 @@ Before deployment, make sure you have set:
 - `COOKIE_SECURE=true` behind HTTPS
 - Cloudinary credentials if profile media uploads are needed
 
+Important: current env loader requires SMTP variables even if email notifications are disabled.
+
 ## Docker image
 
 ### Build
 
 ```bash
 docker build -t teamup-backend:latest .
+```
+
+Example with explicit platform (optional):
+
+```bash
+docker build --platform linux/amd64 -t teamup-backend:latest .
 ```
 
 ### What the Dockerfile does
@@ -50,6 +58,8 @@ prisma migrate deploy
 ```
 
 before launching the application command.
+
+At runtime, `docker/entrypoint.sh` executes `prisma migrate deploy`, then starts `node src/server.js`.
 
 ### Run
 
@@ -86,6 +96,9 @@ Depending on your feature usage, also configure:
 - `CLOUDINARY_API_SECRET`
 - `PLATFORM_REVIEW_COOLDOWN_DAYS`
 - `TASK_COMPLETION_RESPONSE_HOURS`
+- `EMAIL_VERIFICATION_TTL_HOURS`
+- `PASSWORD_RESET_TOKEN_TTL_MINUTES`
+- `VERIFICATION_TOKEN_RETENTION_DAYS`
 
 ## Database migrations in production
 
@@ -96,6 +109,8 @@ npm run prisma:migrate:deploy
 ```
 
 If you deploy with the provided Docker image, the entrypoint already runs `prisma migrate deploy` automatically at container startup.
+
+Avoid running `prisma migrate dev` in production environments.
 
 ## Non-container deployment
 
@@ -110,6 +125,8 @@ npm start
 
 `npm start` triggers the current `prestart` script, which also executes Prisma migration deploy and client generation before booting the server.
 
+If migrations are executed by your platform separately, make sure duplicate migration execution is acceptable in your deployment model.
+
 ## Health and smoke checks
 
 After deployment, verify:
@@ -119,6 +136,7 @@ After deployment, verify:
 - login and refresh flow
 - one protected route with `Authorization` header
 - one persona-protected route with `X-Persona`
+- one moderation endpoint with a moderator/admin token (if moderation is enabled)
 
 ## CI status
 
@@ -135,6 +153,8 @@ For pull requests targeting `main`, CI currently runs:
 
 This is not a deployment pipeline, but it does protect code quality before merge.
 
+TODO: add release/deploy workflow (build + publish image + environment promotion).
+
 ## Deployment notes
 
 - the API depends on PostgreSQL and does not bundle a managed database setup
@@ -142,3 +162,13 @@ This is not a deployment pipeline, but it does protect code quality before merge
 - refresh tokens are persisted in the database
 - verification token cleanup runs on startup and on a daily cron schedule
 - if outbound email is disabled, SMTP variables are still required by the current env loader
+
+## Rollback Strategy (Baseline)
+
+Current repository-level rollback guidance:
+
+- roll forward when possible (apply corrective migration or hotfix)
+- keep database backups/snapshots before production deploys
+- if image rollout fails, redeploy previously known-good image tag
+
+TODO: add environment-specific rollback runbook.

@@ -2,7 +2,7 @@
 
 [← Back to README](../README.md)
 
-This document defines public engineering standards for TeamUp IT Backend. It is intended for all contributors and keeps implementation and review expectations consistent.
+This document defines engineering standards for TeamUp Backend. It is intended for all contributors and keeps implementation and review expectations consistent.
 
 ## Scope
 
@@ -20,6 +20,7 @@ These standards apply to:
 - Validate all external input.
 - Prefer deterministic tests over brittle tests.
 - Keep public API behavior explicit and documented.
+- Prefer small, incremental changes over broad refactors.
 
 ## Architecture Rules
 
@@ -37,6 +38,16 @@ These standards apply to:
 - Service methods should encapsulate domain behavior and error semantics.
 - Repeated complex Prisma queries should be extracted into query helpers (`src/db/queries/`).
 - Services organized as domain folders should keep individual modules under 400 lines (ESLint enforced).
+
+### Source of Truth Order
+
+When docs, Swagger, and implementation differ, use this order:
+
+1. route + middleware wiring in `src/routes`
+2. Joi schemas in `src/schemas`
+3. service behavior in `src/services`
+4. Swagger modular docs in `src/docs/swagger`
+5. repository docs in `README.md` and `docs/*`
 
 ### Service Organization
 
@@ -78,6 +89,7 @@ src/services/
 - Keep request/response contracts backward compatible unless a change is explicitly marked as breaking.
 - Follow existing field naming in each module (some contracts are snake_case by design).
 - If a contract changes, update corresponding Joi schema, controller mapping, integration tests, Swagger docs, and `docs/API.md` in the same PR.
+- For user-facing behavior changes, also update `README.md` and relevant operational docs.
 
 ## Error Handling Standards
 
@@ -85,6 +97,12 @@ src/services/
 - Throw typed/domain-aware errors from services.
 - Avoid leaking sensitive internals in error responses.
 - Keep error payloads structured and consistent (`code`, `message`, optional `details`).
+
+## Logging Standards
+
+- Keep logs operational and concise.
+- Avoid logging secrets, token values, credentials, or full sensitive payloads.
+- Use structured wording that helps diagnose issues in development and CI.
 
 ## Security Standards
 
@@ -101,6 +119,7 @@ src/services/
 - Keep migrations small and descriptive.
 - Use transactions for multi-step writes requiring atomicity.
 - Add indexes for frequent filters/sorts and relation lookups.
+- Validate migration impact on seed scripts when schema relations change.
 
 ## Testing Standards
 
@@ -118,6 +137,7 @@ src/services/
 - Tests must be deterministic and isolated.
 - Avoid external network dependencies in tests.
 - Keep assertions explicit and meaningful.
+- Do not lower coverage thresholds to pass a PR.
 
 ## Code Style Standards
 
@@ -134,6 +154,7 @@ src/services/
 - Keep examples minimal, correct, and copy-pasteable.
 - Do not reference internal-only or ignored files from public docs.
 - For endpoint/workflow changes, update all impacted docs together: `README.md`, `docs/API.md`, and any affected operational guide (`docs/DEVELOPMENT.md`, `docs/DEPLOYMENT.md`, `docs/ARCHITECTURE.md`).
+- Document known gaps with explicit `TODO:` markers rather than implicit assumptions.
 
 ## CI and Quality Gates
 
@@ -149,6 +170,12 @@ src/services/
   - Branches: 80%
   - Functions: 95%
   - Lines: 90%
+
+## Pull Request Scope Standards
+
+- Keep PRs focused on one logical change set.
+- Avoid unrelated refactors in feature/fix PRs.
+- If unrelated issues are discovered, document them and handle separately.
 
 ## Destructive Operations Policy
 

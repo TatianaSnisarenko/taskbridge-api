@@ -2,7 +2,7 @@
 
 [Back to README](../README.md)
 
-This guide covers local setup, environment variables, database workflows, testing, and development conventions that are visible in the repository today.
+This guide covers local setup, environment variables, database workflows, testing, and day-to-day development conventions visible in the repository.
 
 ## Prerequisites
 
@@ -16,6 +16,10 @@ Optional:
 
 - local PostgreSQL 16 instead of Docker
 - Prisma Studio for database inspection
+
+Recommended:
+
+- Node version manager (`nvm`, `fnm`, `asdf`, or equivalent)
 
 ## Initial setup
 
@@ -73,6 +77,8 @@ npm run db:seed
 npm run dev
 ```
 
+The server starts verification token cleanup at boot and schedules daily cleanup via cron.
+
 Useful local URLs:
 
 - API: http://localhost:3000/api/v1
@@ -81,7 +87,7 @@ Useful local URLs:
 
 ## Environment variables
 
-The runtime configuration is defined in `src/config/env.js`.
+Runtime validation is defined in `src/config/env.js`.
 
 ### Core application settings
 
@@ -158,6 +164,12 @@ It does not run `prisma migrate dev` automatically, so after the first start you
 
 ```bash
 docker compose exec api npm run prisma:migrate:dev
+```
+
+To stop services:
+
+```bash
+docker compose down
 ```
 
 ## Database workflows
@@ -237,6 +249,12 @@ npm run test:integration
 npm run test:coverage
 ```
 
+### Testcontainers cleanup helper
+
+```bash
+npm run test:cleanup
+```
+
 ## Testing strategy
 
 The repository is structured around two goals:
@@ -282,6 +300,17 @@ npm run format
 - domain folders for large services
 - soft deletes for tasks and projects
 - Swagger generated from modular fragments
+
+## Recommended Development Loop
+
+```text
+1) Pull latest main
+2) Create feature branch
+3) Implement change
+4) Run lint + targeted tests
+5) Run full coverage before PR
+6) Update docs if contracts/workflows changed
+```
 
 See also:
 
