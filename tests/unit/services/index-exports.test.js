@@ -29,6 +29,10 @@ describe('service barrel index exports', () => {
           create: jest.fn(),
           delete: jest.fn(),
         },
+        userOnboardingState: {
+          findMany: jest.fn(),
+          upsert: jest.fn(),
+        },
       },
     }));
 
@@ -51,6 +55,10 @@ describe('service barrel index exports', () => {
     expect(me.addFavoriteTask).toEqual(expect.any(Function));
     expect(me.removeFavoriteTask).toEqual(expect.any(Function));
     expect(me.getMyFavoriteTasks).toEqual(expect.any(Function));
+    expect(me.getMyOnboardingState).toEqual(expect.any(Function));
+    expect(me.updateMyOnboardingState).toEqual(expect.any(Function));
+    expect(me.resetMyOnboardingState).toEqual(expect.any(Function));
+    expect(me.checkShouldShowOnboarding).toEqual(expect.any(Function));
 
     expect(projects.createProject).toEqual(expect.any(Function));
     expect(projects.getProjects).toEqual(expect.any(Function));

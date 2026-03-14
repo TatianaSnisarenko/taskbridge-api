@@ -15,12 +15,33 @@ import {
   createMessageBodySchema,
   favoriteTaskParamSchema,
   getMyFavoriteTasksQuerySchema,
+  patchMyOnboardingSchema,
+  resetMyOnboardingSchema,
+  checkMyOnboardingQuerySchema,
 } from '../schemas/me.schemas.js';
 
 export const meRouter = Router();
 
 meRouter.get('/', requireAuth, meController.getMe);
 meRouter.delete('/', requireAuth, meController.deleteMyAccount);
+meRouter.patch(
+  '/onboarding',
+  requireAuth,
+  validate(patchMyOnboardingSchema),
+  meController.updateMyOnboarding
+);
+meRouter.get(
+  '/onboarding/check',
+  requireAuth,
+  validate(checkMyOnboardingQuerySchema, 'query'),
+  meController.checkMyOnboarding
+);
+meRouter.post(
+  '/onboarding/reset',
+  requireAuth,
+  validate(resetMyOnboardingSchema),
+  meController.resetMyOnboarding
+);
 
 meRouter.get(
   '/applications',

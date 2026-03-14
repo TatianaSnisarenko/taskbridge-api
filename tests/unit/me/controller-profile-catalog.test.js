@@ -13,6 +13,10 @@ const meServiceMock = {
   getMyApplications: jest.fn(),
   getMyTasks: jest.fn(),
   getMyProjects: jest.fn(),
+  getMyOnboardingState: jest.fn(),
+  updateMyOnboardingState: jest.fn(),
+  resetMyOnboardingState: jest.fn(),
+  checkShouldShowOnboarding: jest.fn(),
 };
 
 const invitesServiceMock = {
@@ -40,6 +44,20 @@ describe('me.controller - profile and catalog', () => {
   test('getMe returns profile availability flags', async () => {
     prismaMock.developerProfile.findUnique.mockResolvedValue({ userId: 'u-1' });
     prismaMock.companyProfile.findUnique.mockResolvedValue(null);
+    meServiceMock.getMyOnboardingState.mockResolvedValue({
+      developer: {
+        status: 'completed',
+        version: 1,
+        completed_at: '2026-03-14T10:00:00.000Z',
+        skipped_at: null,
+      },
+      company: {
+        status: 'not_started',
+        version: 1,
+        completed_at: null,
+        skipped_at: null,
+      },
+    });
 
     const req = { user: { id: 'u-1', email: 'user@example.com' } };
     const res = createResponseMock();
@@ -57,6 +75,106 @@ describe('me.controller - profile and catalog', () => {
       email: 'user@example.com',
       hasDeveloperProfile: true,
       hasCompanyProfile: false,
+      onboarding: {
+        developer: {
+          status: 'completed',
+          version: 1,
+          completed_at: '2026-03-14T10:00:00.000Z',
+          skipped_at: null,
+        },
+        company: {
+          status: 'not_started',
+          version: 1,
+          completed_at: null,
+          skipped_at: null,
+        },
+      },
+    });
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  test('updateMyOnboarding delegates to service and returns payload', async () => {
+    meServiceMock.updateMyOnboardingState.mockResolvedValue({
+      role: 'developer',
+      status: 'completed',
+      version: 2,
+      completed_at: '2026-03-14T10:30:00.000Z',
+      skipped_at: null,
+      updated_at: '2026-03-14T10:30:00.000Z',
+    });
+
+    const req = {
+      user: { id: 'u-1' },
+      body: { role: 'developer', status: 'completed', version: 2 },
+    };
+    const res = createResponseMock();
+    const next = jest.fn();
+
+    await meController.updateMyOnboarding(req, res, next);
+
+    expect(meServiceMock.updateMyOnboardingState).toHaveBeenCalledWith({
+      userId: 'u-1',
+      role: 'developer',
+      status: 'completed',
+      version: 2,
+    });
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  test('resetMyOnboarding delegates to service and returns payload', async () => {
+    meServiceMock.resetMyOnboardingState.mockResolvedValue({
+      role: 'company',
+      status: 'not_started',
+      version: 1,
+      completed_at: null,
+      skipped_at: null,
+      updated_at: '2026-03-14T10:40:00.000Z',
+    });
+
+    const req = {
+      user: { id: 'u-1' },
+      body: { role: 'company' },
+    };
+    const res = createResponseMock();
+    const next = jest.fn();
+
+    await meController.resetMyOnboarding(req, res, next);
+
+    expect(meServiceMock.resetMyOnboardingState).toHaveBeenCalledWith({
+      userId: 'u-1',
+      role: 'company',
+    });
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  test('checkMyOnboarding calls service and returns result', async () => {
+    meServiceMock.checkShouldShowOnboarding.mockResolvedValue({
+      should_show: true,
+      current_status: 'not_started',
+      current_version: 1,
+    });
+
+    const req = {
+      user: { id: 'u-1' },
+      query: { role: 'developer', version: '2' },
+    };
+    const res = createResponseMock();
+    const next = jest.fn();
+
+    await meController.checkMyOnboarding(req, res, next);
+
+    expect(meServiceMock.checkShouldShowOnboarding).toHaveBeenCalledWith({
+      userId: 'u-1',
+      role: 'developer',
+      version: 2,
+    });
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith({
+      should_show: true,
+      current_status: 'not_started',
+      current_version: 1,
     });
     expect(next).not.toHaveBeenCalled();
   });

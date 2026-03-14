@@ -14,6 +14,11 @@ import {
   threadIdParamSchema,
   threadMessagesQuerySchema,
   createMessageBodySchema,
+  favoriteTaskParamSchema,
+  getMyFavoriteTasksQuerySchema,
+  patchMyOnboardingSchema,
+  resetMyOnboardingSchema,
+  checkMyOnboardingQuerySchema,
 } from '../../../src/schemas/me.schemas.js';
 import {
   createDeveloperProfileSchema,
@@ -93,9 +98,26 @@ describe('additional Joi schemas', () => {
     ).toBeUndefined();
     expect(threadMessagesQuerySchema.validate({ page: 1, size: 50 }).error).toBeUndefined();
     expect(createMessageBodySchema.validate({ text: 'hello' }).error).toBeUndefined();
+    expect(
+      favoriteTaskParamSchema.validate({ taskId: '550e8400-e29b-41d4-a716-446655440000' }).error
+    ).toBeUndefined();
+    expect(getMyFavoriteTasksQuerySchema.validate({ page: 1, size: 10 }).error).toBeUndefined();
+    expect(
+      patchMyOnboardingSchema.validate({ role: 'developer', status: 'completed', version: 1 }).error
+    ).toBeUndefined();
+    expect(resetMyOnboardingSchema.validate({ role: 'company' }).error).toBeUndefined();
+    expect(
+      checkMyOnboardingQuerySchema.validate({ role: 'developer', version: 1 }).error
+    ).toBeUndefined();
 
     expect(getMyTasksQuerySchema.validate({ status: 'BAD' }).error).toBeDefined();
     expect(createMessageBodySchema.validate({ text: '' }).error).toBeDefined();
+    expect(
+      patchMyOnboardingSchema.validate({ role: 'developer', status: 'not_started', version: 1 })
+        .error
+    ).toBeDefined();
+    expect(resetMyOnboardingSchema.validate({ role: 'invalid-role' }).error).toBeDefined();
+    expect(checkMyOnboardingQuerySchema.validate({ role: 'developer' }).error).toBeDefined();
   });
 
   test('profiles schemas validate core payloads and constraints', () => {

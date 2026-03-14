@@ -155,3 +155,44 @@ export const getMyFavoriteTasksQuerySchema = Joi.object({
     'number.max': 'Size must not exceed 100',
   }),
 });
+
+export const checkMyOnboardingQuerySchema = Joi.object({
+  role: Joi.string().valid('developer', 'company').required().messages({
+    'string.base': 'Role must be a string',
+    'any.only': 'Role must be one of: developer, company',
+    'any.required': 'Role is required',
+  }),
+  version: Joi.number().integer().min(1).required().messages({
+    'number.base': 'Version must be a number',
+    'number.integer': 'Version must be an integer',
+    'number.min': 'Version must be at least 1',
+    'any.required': 'Version is required',
+  }),
+});
+
+export const patchMyOnboardingSchema = Joi.object({
+  role: Joi.string().valid('developer', 'company').required().messages({
+    'string.base': 'Role must be a string',
+    'any.only': 'Role must be one of: developer, company',
+    'any.required': 'Role is required',
+  }),
+  status: Joi.string().valid('completed', 'skipped').required().messages({
+    'string.base': 'Status must be a string',
+    'any.only': 'Status must be one of: completed, skipped',
+    'any.required': 'Status is required',
+  }),
+  version: Joi.number().integer().min(1).required().messages({
+    'number.base': 'Version must be a number',
+    'number.integer': 'Version must be an integer',
+    'number.min': 'Version must be at least 1',
+    'any.required': 'Version is required',
+  }),
+});
+
+export const resetMyOnboardingSchema = Joi.object({
+  role: Joi.string().valid('developer', 'company').required().messages({
+    'string.base': 'Role must be a string',
+    'any.only': 'Role must be one of: developer, company',
+    'any.required': 'Role is required',
+  }),
+});

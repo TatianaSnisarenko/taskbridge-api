@@ -5,7 +5,14 @@
       summary: 'Get current user',
       security: [{ bearerAuth: [] }],
       responses: {
-        200: { description: 'Current user profile' },
+        200: {
+          description: 'Current user profile',
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/GetMeResponse' },
+            },
+          },
+        },
         401: { description: 'Unauthorized' },
       },
     },
@@ -19,6 +26,104 @@
         200: { description: 'Account soft-deleted' },
         401: { description: 'Unauthorized' },
         404: { description: 'User not found' },
+      },
+    },
+  },
+  '/api/v1/me/onboarding': {
+    patch: {
+      tags: ['Me'],
+      summary: 'Update onboarding status for a role',
+      description:
+        'Stores onboarding completion or skip for developer/company role and version. Used to suppress automatic onboarding replay for the same role and version.',
+      security: [{ bearerAuth: [] }],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: { $ref: '#/components/schemas/UpdateMyOnboardingRequest' },
+          },
+        },
+      },
+      responses: {
+        200: {
+          description: 'Onboarding state updated',
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/UpdateMyOnboardingResponse' },
+            },
+          },
+        },
+        400: { description: 'Validation error' },
+        401: { description: 'Unauthorized' },
+        403: { description: 'Role profile does not exist for current user' },
+      },
+    },
+  },
+  '/api/v1/me/onboarding/check': {
+    get: {
+      tags: ['Me'],
+      summary: 'Check whether onboarding should be shown',
+      description:
+        'Returns whether the onboarding flow should be displayed for a given role and frontend version. Returns false if the user already completed or skipped onboarding for the same or higher version.',
+      security: [{ bearerAuth: [] }],
+      parameters: [
+        {
+          name: 'role',
+          in: 'query',
+          required: true,
+          schema: { type: 'string', enum: ['developer', 'company'] },
+          description: 'The role to check onboarding for',
+        },
+        {
+          name: 'version',
+          in: 'query',
+          required: true,
+          schema: { type: 'integer', minimum: 1 },
+          description: 'Current frontend onboarding version',
+        },
+      ],
+      responses: {
+        200: {
+          description: 'Onboarding display decision',
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/CheckOnboardingResponse' },
+            },
+          },
+        },
+        400: { description: 'Validation error' },
+        401: { description: 'Unauthorized' },
+        403: { description: 'Role profile does not exist for current user' },
+      },
+    },
+  },
+  '/api/v1/me/onboarding/reset': {
+    post: {
+      tags: ['Me'],
+      summary: 'Reset onboarding status for a role',
+      description:
+        'Resets role onboarding state to not_started. Used for manual replay from profile/settings and QA checks.',
+      security: [{ bearerAuth: [] }],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: { $ref: '#/components/schemas/ResetMyOnboardingRequest' },
+          },
+        },
+      },
+      responses: {
+        200: {
+          description: 'Onboarding state reset',
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/ResetMyOnboardingResponse' },
+            },
+          },
+        },
+        400: { description: 'Validation error' },
+        401: { description: 'Unauthorized' },
+        403: { description: 'Role profile does not exist for current user' },
       },
     },
   },

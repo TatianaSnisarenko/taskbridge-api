@@ -4,9 +4,10 @@ import * as meService from '../services/me/index.js';
 
 export const getMe = asyncHandler(async (req, res) => {
   const userId = req.user.id;
-  const [dev, company] = await Promise.all([
+  const [dev, company, onboarding] = await Promise.all([
     prisma.developerProfile.findUnique({ where: { userId } }),
     prisma.companyProfile.findUnique({ where: { userId } }),
+    meService.getMyOnboardingState({ userId }),
   ]);
 
   return res.status(200).json({
@@ -14,7 +15,38 @@ export const getMe = asyncHandler(async (req, res) => {
     email: req.user.email,
     hasDeveloperProfile: !!dev,
     hasCompanyProfile: !!company,
+    onboarding,
   });
+});
+
+export const updateMyOnboarding = asyncHandler(async (req, res) => {
+  const result = await meService.updateMyOnboardingState({
+    userId: req.user.id,
+    role: req.body.role,
+    status: req.body.status,
+    version: req.body.version,
+  });
+
+  return res.status(200).json(result);
+});
+
+export const resetMyOnboarding = asyncHandler(async (req, res) => {
+  const result = await meService.resetMyOnboardingState({
+    userId: req.user.id,
+    role: req.body.role,
+  });
+
+  return res.status(200).json(result);
+});
+
+export const checkMyOnboarding = asyncHandler(async (req, res) => {
+  const result = await meService.checkShouldShowOnboarding({
+    userId: req.user.id,
+    role: req.query.role,
+    version: parseInt(req.query.version),
+  });
+
+  return res.status(200).json(result);
 });
 
 export const deleteMyAccount = asyncHandler(async (req, res) => {

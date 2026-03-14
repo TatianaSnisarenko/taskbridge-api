@@ -112,6 +112,12 @@ enum Persona {
   company
 }
 
+enum OnboardingStatus {
+  not_started
+  skipped
+  completed
+}
+
 enum CompanyType {
   STARTUP
   SMB
@@ -220,11 +226,30 @@ model User {
 
   platformReviews PlatformReview[] @relation("PlatformReviewAuthor")
 
-  taskFavorites         TaskFavorite[] @relation("TaskFavoriteUser")
-  initiatedTaskDisputes TaskDispute[]  @relation("TaskDisputeInitiator")
-  resolvedTaskDisputes  TaskDispute[]  @relation("TaskDisputeResolver")
+  taskFavorites         TaskFavorite[]        @relation("TaskFavoriteUser")
+  initiatedTaskDisputes TaskDispute[]         @relation("TaskDisputeInitiator")
+  resolvedTaskDisputes  TaskDispute[]         @relation("TaskDisputeResolver")
+  onboardingStates      UserOnboardingState[]
 
   @@map("users")
+}
+
+model UserOnboardingState {
+  id          String           @id @default(uuid()) @db.Uuid
+  userId      String           @map("user_id") @db.Uuid
+  role        Persona
+  status      OnboardingStatus @default(not_started)
+  version     Int              @default(1)
+  completedAt DateTime?        @map("completed_at") @db.Timestamptz(6)
+  skippedAt   DateTime?        @map("skipped_at") @db.Timestamptz(6)
+  createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, role])
+  @@index([userId])
+  @@map("user_onboarding_states")
 }
 
 model VerificationToken {

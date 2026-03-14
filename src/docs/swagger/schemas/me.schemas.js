@@ -1,4 +1,94 @@
 ﻿export const meSchemas = {
+  OnboardingRoleState: {
+    type: 'object',
+    properties: {
+      status: {
+        type: 'string',
+        enum: ['not_started', 'skipped', 'completed'],
+        example: 'completed',
+      },
+      version: { type: 'integer', minimum: 1, example: 1 },
+      completed_at: { type: 'string', format: 'date-time', nullable: true },
+      skipped_at: { type: 'string', format: 'date-time', nullable: true },
+    },
+  },
+  OnboardingState: {
+    type: 'object',
+    properties: {
+      developer: { $ref: '#/components/schemas/OnboardingRoleState' },
+      company: { $ref: '#/components/schemas/OnboardingRoleState' },
+    },
+  },
+  GetMeResponse: {
+    type: 'object',
+    properties: {
+      user_id: { type: 'string', format: 'uuid' },
+      email: { type: 'string', format: 'email' },
+      hasDeveloperProfile: { type: 'boolean' },
+      hasCompanyProfile: { type: 'boolean' },
+      onboarding: { $ref: '#/components/schemas/OnboardingState' },
+    },
+  },
+  UpdateMyOnboardingRequest: {
+    type: 'object',
+    required: ['role', 'status', 'version'],
+    properties: {
+      role: { type: 'string', enum: ['developer', 'company'], example: 'developer' },
+      status: { type: 'string', enum: ['completed', 'skipped'], example: 'completed' },
+      version: { type: 'integer', minimum: 1, example: 1 },
+    },
+  },
+  UpdateMyOnboardingResponse: {
+    type: 'object',
+    properties: {
+      role: { type: 'string', enum: ['developer', 'company'], example: 'developer' },
+      status: {
+        type: 'string',
+        enum: ['not_started', 'skipped', 'completed'],
+        example: 'completed',
+      },
+      version: { type: 'integer', minimum: 1, example: 1 },
+      completed_at: { type: 'string', format: 'date-time', nullable: true },
+      skipped_at: { type: 'string', format: 'date-time', nullable: true },
+      updated_at: { type: 'string', format: 'date-time' },
+    },
+  },
+  ResetMyOnboardingRequest: {
+    type: 'object',
+    required: ['role'],
+    properties: {
+      role: { type: 'string', enum: ['developer', 'company'], example: 'company' },
+    },
+  },
+  ResetMyOnboardingResponse: {
+    type: 'object',
+    properties: {
+      role: { type: 'string', enum: ['developer', 'company'], example: 'company' },
+      status: { type: 'string', enum: ['not_started'], example: 'not_started' },
+      version: { type: 'integer', minimum: 1, example: 1 },
+      completed_at: { type: 'string', format: 'date-time', nullable: true, example: null },
+      skipped_at: { type: 'string', format: 'date-time', nullable: true, example: null },
+      updated_at: { type: 'string', format: 'date-time' },
+    },
+  },
+  CheckOnboardingResponse: {
+    type: 'object',
+    required: ['should_show', 'current_status', 'current_version'],
+    properties: {
+      should_show: {
+        type: 'boolean',
+        description:
+          'True if the onboarding flow should be displayed. False if it was already completed or skipped for the given version.',
+        example: true,
+      },
+      current_status: {
+        type: 'string',
+        enum: ['not_started', 'skipped', 'completed'],
+        example: 'not_started',
+      },
+      current_version: { type: 'integer', minimum: 1, example: 1 },
+    },
+  },
   MyApplicationItem: {
     type: 'object',
     properties: {
