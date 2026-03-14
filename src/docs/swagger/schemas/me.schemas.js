@@ -138,11 +138,26 @@
         nullable: true,
         example: '5f1c3ce6-cd67-46f5-95a8-c086ecf3e9b2',
       },
+      actor_name: {
+        type: 'string',
+        nullable: true,
+        example: 'Anonymous Developer',
+      },
+      company_name: {
+        type: 'string',
+        nullable: true,
+        example: 'NovaTech Labs',
+      },
       project_id: {
         type: 'string',
         format: 'uuid',
         nullable: true,
         example: '0e9a7df8-6407-48e3-b7cb-fd6f119f48a0',
+      },
+      project_title: {
+        type: 'string',
+        nullable: true,
+        example: 'TeamUp Analytics Dashboard',
       },
       task_id: {
         type: 'string',
@@ -150,11 +165,45 @@
         nullable: true,
         example: '21f01069-2f1f-47ea-bf23-6fbe5b27f2f5',
       },
+      task_title: {
+        type: 'string',
+        nullable: true,
+        example: 'Implement notifications feed cards',
+      },
       thread_id: {
         type: 'string',
         format: 'uuid',
         nullable: true,
         example: 'a65f07fe-8ed2-4862-ae89-590520f89f59',
+      },
+      message: {
+        type: 'string',
+        example: 'New application received: Implement notifications feed cards',
+      },
+      category: {
+        type: 'string',
+        enum: ['chat', 'projects', 'reviews'],
+        example: 'projects',
+      },
+      target: {
+        type: 'object',
+        nullable: true,
+        properties: {
+          type: {
+            type: 'string',
+            enum: ['thread', 'task', 'project'],
+            example: 'task',
+          },
+          id: {
+            type: 'string',
+            format: 'uuid',
+            example: '21f01069-2f1f-47ea-bf23-6fbe5b27f2f5',
+          },
+          url: {
+            type: 'string',
+            example: '/tasks/21f01069-2f1f-47ea-bf23-6fbe5b27f2f5',
+          },
+        },
       },
       payload: { type: 'object', additionalProperties: true },
       created_at: { type: 'string', format: 'date-time' },

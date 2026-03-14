@@ -75,6 +75,21 @@ export const signupSchema = Joi.object({
         'array.unique': 'Technology IDs must be unique',
         'array.max': 'Technology list must not exceed 50 items',
       }),
+    technologies: Joi.array()
+      .items(
+        Joi.object({
+          id: Joi.string().guid({ version: 'uuidv4' }).required().messages({
+            'string.guid': 'Technology id must be a valid UUID',
+            'any.required': 'Technology id is required',
+          }),
+        }).unknown(true)
+      )
+      .unique('id')
+      .max(50)
+      .messages({
+        'array.unique': 'Technologies must be unique by id',
+        'array.max': 'Technology list must not exceed 50 items',
+      }),
   }),
   companyProfile: Joi.object({
     companyName: Joi.string().trim().min(2).max(100).required().messages({

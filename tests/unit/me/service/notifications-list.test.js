@@ -50,10 +50,11 @@ describe('me.service - notifications list/read', () => {
           payload: { message: 'Application accepted' },
           createdAt,
           readAt,
-          task: { ownerUserId: 'c1' },
+          task: { ownerUserId: 'c1', title: 'Build API endpoint' },
+          project: { title: 'TeamUp Platform' },
           actor: {
             developerProfile: null,
-            companyProfile: { userId: 'u2' },
+            companyProfile: { userId: 'u2', companyName: 'NovaTech Labs' },
           },
         },
       ]);
@@ -76,9 +77,20 @@ describe('me.service - notifications list/read', () => {
         id: 'n1',
         type: 'APPLICATION_ACCEPTED',
         actor_user_id: 'u2',
+        actor_name: 'NovaTech Labs',
+        company_name: 'NovaTech Labs',
         project_id: 'p1',
+        project_title: 'TeamUp Platform',
         task_id: 't1',
+        task_title: 'Build API endpoint',
         thread_id: null,
+        message: 'Application accepted',
+        category: 'projects',
+        target: {
+          type: 'task',
+          id: 't1',
+          url: '/tasks/t1',
+        },
         payload: { message: 'Application accepted' },
         created_at: createdAt.toISOString(),
         read_at: readAt.toISOString(),
@@ -121,8 +133,9 @@ describe('me.service - notifications list/read', () => {
           createdAt,
           readAt: null,
           task: null,
+          project: null,
           actor: {
-            developerProfile: { userId: 'u2' },
+            developerProfile: { userId: 'u2', displayName: 'Tetiana' },
             companyProfile: null,
           },
         },
@@ -137,6 +150,14 @@ describe('me.service - notifications list/read', () => {
       });
 
       expect(result.items[0].read_at).toBeNull();
+      expect(result.items[0].actor_name).toBe('Tetiana');
+      expect(result.items[0].category).toBe('chat');
+      expect(result.items[0].target).toEqual({
+        type: 'thread',
+        id: 'th1',
+        url: '/chat/threads/th1',
+      });
+      expect(result.items[0].message).toBe('New chat message');
     });
   });
 

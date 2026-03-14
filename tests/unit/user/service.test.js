@@ -10,11 +10,17 @@ const prismaMock = {
 };
 const hashPasswordMock = jest.fn();
 const verifyPasswordMock = jest.fn();
+const validateTechnologyIdsMock = jest.fn();
+const incrementTechnologyPopularityMock = jest.fn();
 
 jest.unstable_mockModule('../../src/db/prisma.js', () => ({ prisma: prismaMock }));
 jest.unstable_mockModule('../../src/utils/password.js', () => ({
   hashPassword: hashPasswordMock,
   verifyPassword: verifyPasswordMock,
+}));
+jest.unstable_mockModule('../../src/services/technologies/index.js', () => ({
+  validateTechnologyIds: validateTechnologyIdsMock,
+  incrementTechnologyPopularity: incrementTechnologyPopularityMock,
 }));
 
 const userService = await import('../../../src/services/user/index.js');
@@ -22,6 +28,8 @@ const userService = await import('../../../src/services/user/index.js');
 describe('user.service', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    validateTechnologyIdsMock.mockResolvedValue([]);
+    incrementTechnologyPopularityMock.mockResolvedValue(undefined);
   });
 
   test('createUser hashes password and creates profiles', async () => {
@@ -48,6 +56,82 @@ describe('user.service', () => {
         companyProfile: true,
       },
     });
+  });
+
+  test('createUser stores developer technologies from object list', async () => {
+    hashPasswordMock.mockResolvedValue('hash');
+    validateTechnologyIdsMock.mockResolvedValue(['tech-1', 'tech-2']);
+    prismaMock.user.create.mockResolvedValue({ id: 'u1' });
+
+    await userService.createUser({
+      email: 'a@example.com',
+      password: 'Passw0rd!',
+      developerProfile: {
+        displayName: 'Dev',
+        technologies: [{ id: 'tech-1' }, { id: 'tech-2', name: 'Node.js' }],
+      },
+    });
+
+    expect(validateTechnologyIdsMock).toHaveBeenCalledWith(['tech-1', 'tech-2']);
+    expect(prismaMock.user.create).toHaveBeenCalledWith({
+      data: {
+        email: 'a@example.com',
+        passwordHash: 'hash',
+        roles: ['USER'],
+        developerProfile: {
+          create: {
+            displayName: 'Dev',
+            technologies: {
+              createMany: {
+                data: [
+                  { technologyId: 'tech-1', proficiencyYears: 0 },
+                  { technologyId: 'tech-2', proficiencyYears: 0 },
+                ],
+                skipDuplicates: true,
+              },
+            },
+          },
+        },
+        companyProfile: undefined,
+      },
+      include: {
+        developerProfile: true,
+        companyProfile: true,
+      },
+    });
+    expect(incrementTechnologyPopularityMock).toHaveBeenCalledWith(['tech-1', 'tech-2']);
+  });
+
+  test('createUser merges technologyIds and technologies object ids', async () => {
+    hashPasswordMock.mockResolvedValue('hash');
+    validateTechnologyIdsMock.mockResolvedValue(['tech-1', 'tech-2']);
+    prismaMock.user.create.mockResolvedValue({ id: 'u1' });
+
+    await userService.createUser({
+      email: 'a@example.com',
+      password: 'Passw0rd!',
+      developerProfile: {
+        displayName: 'Dev',
+        technologyIds: ['tech-1'],
+        technologies: [{ id: 'tech-2' }],
+      },
+    });
+
+    expect(validateTechnologyIdsMock).toHaveBeenCalledWith(['tech-1', 'tech-2']);
+  });
+
+  test('createUser skips popularity increment when no technologies', async () => {
+    hashPasswordMock.mockResolvedValue('hash');
+    validateTechnologyIdsMock.mockResolvedValue([]);
+    prismaMock.user.create.mockResolvedValue({ id: 'u1' });
+
+    await userService.createUser({
+      email: 'a@example.com',
+      password: 'Passw0rd!',
+      developerProfile: { displayName: 'Dev', technologies: [] },
+    });
+
+    expect(incrementTechnologyPopularityMock).not.toHaveBeenCalled();
   });
 
   test('createUser allows missing profiles', async () => {

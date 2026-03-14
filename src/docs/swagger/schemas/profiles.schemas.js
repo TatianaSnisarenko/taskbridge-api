@@ -30,7 +30,7 @@ export const profilesSchemas = {
         uniqueItems: true,
         maxItems: 50,
         description: 'Array of technology IDs from the catalog',
-        example: ['3fa85f64-5717-4562-b3fc-2c963f66afa6', 'a1b2c3d4-5e6f-7890-abcd-ef1234567890'],
+        example: ['3fa85f64-5717-4562-b3fc-2c963f66afa6', '550e8400-e29b-41d4-a716-446655440000'],
       },
       availability: {
         type: 'string',

@@ -108,7 +108,25 @@
             maxItems: 50,
             example: [
               '3fa85f64-5717-4562-b3fc-2c963f66afa6',
-              'a1b2c3d4-5e6f-7890-abcd-ef1234567890',
+              '550e8400-e29b-41d4-a716-446655440000',
+            ],
+          },
+          technologies: {
+            type: 'array',
+            description:
+              'Alternative format. Each item may contain only technology id; IDs are used to create records in developer_technologies.',
+            items: {
+              type: 'object',
+              required: ['id'],
+              properties: {
+                id: { type: 'string', format: 'uuid' },
+              },
+              additionalProperties: true,
+            },
+            maxItems: 50,
+            example: [
+              { id: '3fa85f64-5717-4562-b3fc-2c963f66afa6' },
+              { id: '550e8400-e29b-41d4-a716-446655440000' },
             ],
           },
         },

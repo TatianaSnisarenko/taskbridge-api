@@ -20,6 +20,10 @@
                 timezone: 'EET',
                 availability: 'FULL_TIME',
                 preferredTaskCategories: ['BACKEND', 'FRONTEND', 'FULLSTACK'],
+                technologies: [
+                  { id: '3fa85f64-5717-4562-b3fc-2c963f66afa6' },
+                  { id: '550e8400-e29b-41d4-a716-446655440000' },
+                ],
                 portfolioUrl: 'https://olena-dev.com',
                 linkedinUrl: 'https://linkedin.com/in/olena-kovalenko',
               },
@@ -53,6 +57,10 @@
                     timezone: 'EET',
                     availability: 'FULL_TIME',
                     preferredTaskCategories: ['BACKEND', 'FRONTEND', 'FULLSTACK'],
+                    technologies: [
+                      { id: '3fa85f64-5717-4562-b3fc-2c963f66afa6' },
+                      { id: '550e8400-e29b-41d4-a716-446655440000' },
+                    ],
                     portfolioUrl: 'https://olena-dev.com',
                     linkedinUrl: 'https://linkedin.com/in/olena-kovalenko',
                   },
@@ -93,6 +101,10 @@
                     timezone: 'EET',
                     availability: 'FULL_TIME',
                     preferredTaskCategories: ['BACKEND', 'FRONTEND', 'FULLSTACK'],
+                    technologies: [
+                      { id: '3fa85f64-5717-4562-b3fc-2c963f66afa6' },
+                      { id: '550e8400-e29b-41d4-a716-446655440000' },
+                    ],
                     portfolioUrl: 'https://olena-dev.com',
                     linkedinUrl: 'https://linkedin.com/in/olena-kovalenko',
                   },

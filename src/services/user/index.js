@@ -1,6 +1,7 @@
 import { prisma } from '../../db/prisma.js';
 import { hashPassword, verifyPassword } from '../../utils/password.js';
 import { ApiError } from '../../utils/ApiError.js';
+import { incrementTechnologyPopularity, validateTechnologyIds } from '../technologies/index.js';
 
 const USER_ROLE = 'USER';
 const MODERATOR_ROLE = 'MODERATOR';
@@ -21,12 +22,44 @@ function normalizeRoles(roles) {
 
 export async function createUser({ email, password, developerProfile, companyProfile }) {
   const passwordHash = await hashPassword(password);
-  return prisma.user.create({
+
+  const { technologyIds, technologies, ...developerProfileData } = developerProfile || {};
+  const technologyIdsFromObjects = Array.isArray(technologies)
+    ? technologies
+        .map((technology) => technology?.id)
+        .filter((technologyId) => typeof technologyId === 'string')
+    : [];
+  const rawTechnologyIds = [
+    ...(Array.isArray(technologyIds) ? technologyIds : []),
+    ...technologyIdsFromObjects,
+  ];
+  const validTechnologyIds = await validateTechnologyIds(rawTechnologyIds);
+
+  const user = await prisma.user.create({
     data: {
       email,
       passwordHash,
       roles: [USER_ROLE],
-      developerProfile: developerProfile ? { create: developerProfile } : undefined,
+      developerProfile: developerProfile
+        ? {
+            create: {
+              ...developerProfileData,
+              ...(validTechnologyIds.length > 0
+                ? {
+                    technologies: {
+                      createMany: {
+                        data: validTechnologyIds.map((technologyId) => ({
+                          technologyId,
+                          proficiencyYears: 0,
+                        })),
+                        skipDuplicates: true,
+                      },
+                    },
+                  }
+                : {}),
+            },
+          }
+        : undefined,
       companyProfile: companyProfile ? { create: companyProfile } : undefined,
     },
     include: {
@@ -34,6 +67,12 @@ export async function createUser({ email, password, developerProfile, companyPro
       companyProfile: true,
     },
   });
+
+  if (validTechnologyIds.length > 0) {
+    await incrementTechnologyPopularity(validTechnologyIds);
+  }
+
+  return user;
 }
 
 export async function findUserByEmail(email) {
