@@ -9,6 +9,18 @@
         401: { description: 'Unauthorized' },
       },
     },
+    delete: {
+      tags: ['Me'],
+      summary: 'Soft delete current account',
+      description:
+        'Soft deletes current account while preserving historical entities (reviews, tasks). Anonymizes developer/company profiles, revokes tokens, anonymizes email, and marks email as unverified.',
+      security: [{ bearerAuth: [] }],
+      responses: {
+        200: { description: 'Account soft-deleted' },
+        401: { description: 'Unauthorized' },
+        404: { description: 'User not found' },
+      },
+    },
   },
   '/api/v1/me/applications': {
     get: {

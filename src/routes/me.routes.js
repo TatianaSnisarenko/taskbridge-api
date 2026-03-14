@@ -20,6 +20,7 @@ import {
 export const meRouter = Router();
 
 meRouter.get('/', requireAuth, meController.getMe);
+meRouter.delete('/', requireAuth, meController.deleteMyAccount);
 
 meRouter.get(
   '/applications',

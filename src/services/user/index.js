@@ -37,7 +37,12 @@ export async function createUser({ email, password, developerProfile, companyPro
 }
 
 export async function findUserByEmail(email) {
-  return prisma.user.findUnique({ where: { email } });
+  return prisma.user.findFirst({
+    where: {
+      email,
+      deletedAt: null,
+    },
+  });
 }
 
 export async function verifyUserPassword({ user, password }) {

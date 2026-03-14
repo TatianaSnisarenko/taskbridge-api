@@ -108,6 +108,10 @@ export async function refresh({ refreshToken }) {
     throw new ApiError(401, 'REFRESH_TOKEN_INVALID', 'Refresh token is invalid or expired');
   }
 
+  if (record.user.deletedAt) {
+    throw new ApiError(401, 'REFRESH_TOKEN_INVALID', 'Refresh token is invalid or expired');
+  }
+
   // rotation: revoke current token, issue a new one
   await prisma.refreshToken.update({
     where: { id: record.id },

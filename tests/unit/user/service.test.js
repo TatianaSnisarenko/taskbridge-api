@@ -3,6 +3,7 @@ import { jest } from '@jest/globals';
 const prismaMock = {
   user: {
     create: jest.fn(),
+    findFirst: jest.fn(),
     findUnique: jest.fn(),
     update: jest.fn(),
   },
@@ -74,12 +75,15 @@ describe('user.service', () => {
   });
 
   test('findUserByEmail queries prisma', async () => {
-    prismaMock.user.findUnique.mockResolvedValue({ id: 'u1' });
+    prismaMock.user.findFirst.mockResolvedValue({ id: 'u1' });
 
     const user = await userService.findUserByEmail('a@example.com');
 
-    expect(prismaMock.user.findUnique).toHaveBeenCalledWith({
-      where: { email: 'a@example.com' },
+    expect(prismaMock.user.findFirst).toHaveBeenCalledWith({
+      where: {
+        email: 'a@example.com',
+        deletedAt: null,
+      },
     });
     expect(user).toEqual({ id: 'u1' });
   });

@@ -21,6 +21,17 @@ function mapAuthUser(payload) {
   };
 }
 
+async function loadActiveUser(userId) {
+  return prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      email: true,
+      deletedAt: true,
+    },
+  });
+}
+
 function hasAnyRole(userRoles, allowedRoles) {
   if (!Array.isArray(userRoles)) return false;
   return allowedRoles.some((role) => userRoles.includes(role));
@@ -33,7 +44,7 @@ async function loadUserRoles(userId) {
   });
 }
 
-export function requireAuth(req, res, next) {
+export async function requireAuth(req, res, next) {
   const header = req.headers.authorization;
   const token = extractBearerToken(header);
   if (!token) {
@@ -46,14 +57,23 @@ export function requireAuth(req, res, next) {
     if (!user) {
       return next(new ApiError(401, 'INVALID_TOKEN', 'Access token payload is invalid'));
     }
-    req.user = user;
+
+    const activeUser = await loadActiveUser(user.id);
+    if (!activeUser || activeUser.deletedAt) {
+      return next(new ApiError(401, 'INVALID_TOKEN', 'Access token is invalid or expired'));
+    }
+
+    req.user = {
+      id: activeUser.id,
+      email: activeUser.email,
+    };
     return next();
   } catch {
     return next(new ApiError(401, 'INVALID_TOKEN', 'Access token is invalid or expired'));
   }
 }
 
-export function requireAuthIfOwner(req, res, next) {
+export async function requireAuthIfOwner(req, res, next) {
   const isOwnerQuery = req.query.owner === 'true' || req.query.owner === true;
 
   if (!isOwnerQuery) {
@@ -74,7 +94,16 @@ export function requireAuthIfOwner(req, res, next) {
     if (!user) {
       return next(new ApiError(401, 'INVALID_TOKEN', 'Access token payload is invalid'));
     }
-    req.user = user;
+
+    const activeUser = await loadActiveUser(user.id);
+    if (!activeUser || activeUser.deletedAt) {
+      return next(new ApiError(401, 'INVALID_TOKEN', 'Access token is invalid or expired'));
+    }
+
+    req.user = {
+      id: activeUser.id,
+      email: activeUser.email,
+    };
     return next();
   } catch {
     return next(new ApiError(401, 'INVALID_TOKEN', 'Access token is invalid or expired'));
@@ -84,7 +113,7 @@ export function requireAuthIfOwner(req, res, next) {
 /**
  * Optional authentication - sets req.user if valid token provided, but doesn't require it
  */
-export function optionalAuth(req, res, next) {
+export async function optionalAuth(req, res, next) {
   const header = req.headers.authorization;
   const token = extractBearerToken(header);
 
@@ -95,7 +124,21 @@ export function optionalAuth(req, res, next) {
 
   try {
     const payload = jwt.verify(token, env.jwtAccessSecret);
-    req.user = mapAuthUser(payload);
+
+    const user = mapAuthUser(payload);
+    if (!user) {
+      return next();
+    }
+
+    const activeUser = await loadActiveUser(user.id);
+    if (!activeUser || activeUser.deletedAt) {
+      return next();
+    }
+
+    req.user = {
+      id: activeUser.id,
+      email: activeUser.email,
+    };
     return next();
   } catch {
     // Invalid token - continue without user (silently ignore)

@@ -17,6 +17,15 @@ export const getMe = asyncHandler(async (req, res) => {
   });
 });
 
+export const deleteMyAccount = asyncHandler(async (req, res) => {
+  const result = await meService.deactivateMyAccount({ userId: req.user.id });
+
+  return res.status(200).json({
+    user_id: result.userId,
+    deleted_at: result.deletedAt.toISOString(),
+  });
+});
+
 export const getMyApplications = asyncHandler(async (req, res) => {
   const result = await meService.getMyApplications({
     userId: req.user.id,
