@@ -1,5 +1,6 @@
 import { prisma } from '../../db/prisma.js';
 import { ApiError } from '../../utils/ApiError.js';
+import { mapChatMessageOutput } from './chat-message-output.js';
 
 /**
  * Get chat threads for the current user with pagination
@@ -316,6 +317,16 @@ export async function getThreadMessages({ userId, persona, threadId, page = 1, s
         senderPersona: true,
         text: true,
         sentAt: true,
+        attachments: {
+          select: {
+            url: true,
+            name: true,
+            type: true,
+          },
+          orderBy: {
+            createdAt: 'asc',
+          },
+        },
       },
       skip,
       take: size,
@@ -328,14 +339,11 @@ export async function getThreadMessages({ userId, persona, threadId, page = 1, s
     }),
   ]);
 
-  const messages = items.map((msg) => ({
-    id: msg.id,
-    sender_user_id: msg.senderUserId,
-    sender_persona: msg.senderPersona,
-    text: msg.text,
-    sent_at: msg.sentAt.toISOString(),
-    read_at: new Date(msg.sentAt) <= lastReadAt ? lastReadAt.toISOString() : null,
-  }));
+  const messages = items.map((msg) =>
+    mapChatMessageOutput(msg, {
+      readAt: new Date(msg.sentAt) <= lastReadAt ? lastReadAt : null,
+    })
+  );
 
   return {
     items: messages,

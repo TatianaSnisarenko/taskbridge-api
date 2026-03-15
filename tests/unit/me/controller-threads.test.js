@@ -172,6 +172,7 @@ describe('me.controller - chat threads', () => {
       headers: { 'x-persona': 'company' },
       params: { threadId: 'th-1' },
       body: { text: 'Message text' },
+      files: [],
     };
     const res = createResponseMock();
     const next = jest.fn();
@@ -183,6 +184,36 @@ describe('me.controller - chat threads', () => {
       persona: 'company',
       threadId: 'th-1',
       text: 'Message text',
+      files: [],
+    });
+    expect(res.status).toHaveBeenCalledWith(201);
+  });
+
+  test('createMessage passes uploaded files to service', async () => {
+    meServiceMock.createMessage.mockResolvedValue({
+      id: 'm-2',
+      threadId: 'th-1',
+      text: 'Message with file',
+    });
+
+    const req = {
+      user: { id: 'u-1' },
+      headers: { 'x-persona': 'developer' },
+      params: { threadId: 'th-1' },
+      body: { text: 'Message with file' },
+      files: [{ originalname: 'spec.pdf', size: 512, mimetype: 'application/pdf' }],
+    };
+    const res = createResponseMock();
+    const next = jest.fn();
+
+    await meController.createMessage(req, res, next);
+
+    expect(meServiceMock.createMessage).toHaveBeenCalledWith({
+      userId: 'u-1',
+      persona: 'developer',
+      threadId: 'th-1',
+      text: 'Message with file',
+      files: req.files,
     });
     expect(res.status).toHaveBeenCalledWith(201);
   });

@@ -585,6 +585,27 @@
               text: 'Hello! I have a question about this task.',
             },
           },
+          'multipart/form-data': {
+            schema: {
+              type: 'object',
+              properties: {
+                text: {
+                  type: 'string',
+                  maxLength: 2000,
+                  description: 'Optional when at least one file is attached.',
+                },
+                files: {
+                  type: 'array',
+                  maxItems: 10,
+                  items: {
+                    type: 'string',
+                    format: 'binary',
+                  },
+                  description: 'Up to 10 files, 10MB each.',
+                },
+              },
+            },
+          },
         },
       },
       responses: {

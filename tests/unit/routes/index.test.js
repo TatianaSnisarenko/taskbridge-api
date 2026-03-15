@@ -1,3 +1,5 @@
+import { jest } from '@jest/globals';
+
 describe('routes module smoke', () => {
   test('exports all route routers', async () => {
     const authRoutes = await import('../../../src/routes/auth.routes.js');
@@ -21,5 +23,19 @@ describe('routes module smoke', () => {
     expect(usersRoutes.usersRouter).toBeDefined();
     expect(technologiesRoutes.default).toBeDefined();
     expect(rootRoutes.apiRouter).toBeDefined();
+  });
+
+  test('health route returns ok status payload', async () => {
+    const { apiRouter } = await import('../../../src/routes/index.js');
+    const healthLayer = apiRouter.stack.find((layer) => layer.route?.path === '/health');
+    const handler = healthLayer.route.stack[0].handle;
+    const req = {};
+    const res = {
+      json: jest.fn().mockReturnThis(),
+    };
+
+    handler(req, res);
+
+    expect(res.json).toHaveBeenCalledWith({ status: 'ok' });
   });
 });

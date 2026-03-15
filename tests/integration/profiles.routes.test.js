@@ -19,6 +19,13 @@ jest.unstable_mockModule('../../src/utils/cloudinary.js', () => ({
     public_id: 'teamup/company-logos/test',
   })),
   deleteImage: jest.fn(async () => undefined),
+  uploadFile: jest.fn(async () => ({
+    secure_url:
+      'https://res.cloudinary.com/example/raw/upload/v123/teamup/chat-attachments/spec.pdf',
+    public_id: 'teamup/chat-attachments/spec',
+    resource_type: 'raw',
+  })),
+  deleteFile: jest.fn(async () => undefined),
 }));
 
 const { createApp } = await import('../../src/app.js');

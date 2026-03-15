@@ -389,6 +389,19 @@
       total: { type: 'integer', example: 1 },
     },
   },
+  ChatMessageAttachment: {
+    type: 'object',
+    properties: {
+      url: {
+        type: 'string',
+        format: 'uri',
+        example:
+          'https://res.cloudinary.com/example/raw/upload/v123/teamup/chat-attachments/spec.pdf',
+      },
+      name: { type: 'string', example: 'spec.pdf' },
+      type: { type: 'string', example: 'application/pdf' },
+    },
+  },
   ChatMessage: {
     type: 'object',
     properties: {
@@ -402,6 +415,10 @@
       text: { type: 'string', example: 'Hello!' },
       sent_at: { type: 'string', format: 'date-time' },
       read_at: { type: 'string', format: 'date-time', nullable: true },
+      attachments: {
+        type: 'array',
+        items: { $ref: '#/components/schemas/ChatMessageAttachment' },
+      },
     },
   },
   GetThreadMessagesResponse: {
@@ -415,15 +432,15 @@
   },
   CreateMessageRequest: {
     type: 'object',
-    required: ['text'],
     properties: {
       text: {
         type: 'string',
-        minLength: 1,
         maxLength: 2000,
         example: 'Hello! I have a question about this task.',
+        description: 'Optional when at least one file is attached.',
       },
     },
+    description: 'Either text or at least one file attachment is required.',
   },
   CreateMessageResponse: {
     type: 'object',
@@ -443,6 +460,10 @@
       text: { type: 'string', example: 'Hello! I have a question about this task.' },
       sent_at: { type: 'string', format: 'date-time' },
       read_at: { type: 'null', description: 'New messages are always unread (null)' },
+      attachments: {
+        type: 'array',
+        items: { $ref: '#/components/schemas/ChatMessageAttachment' },
+      },
     },
   },
   MarkThreadAsReadResponse: {

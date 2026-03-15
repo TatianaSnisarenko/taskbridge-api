@@ -120,8 +120,28 @@ describe('me.service threads - getThreadMessages', () => {
       reads: [{ lastReadAt: readAt }],
     });
     prismaMock.chatMessage.findMany.mockResolvedValue([
-      { id: 'm1', senderUserId: 'd1', senderPersona: 'developer', text: 'old', sentAt: m1At },
-      { id: 'm2', senderUserId: 'c1', senderPersona: 'company', text: 'new', sentAt: m2At },
+      {
+        id: 'm1',
+        senderUserId: 'd1',
+        senderPersona: 'developer',
+        text: 'old',
+        sentAt: m1At,
+        attachments: [],
+      },
+      {
+        id: 'm2',
+        senderUserId: 'c1',
+        senderPersona: 'company',
+        text: 'new',
+        sentAt: m2At,
+        attachments: [
+          {
+            url: 'https://cdn.example.com/spec.pdf',
+            name: 'spec.pdf',
+            type: 'application/pdf',
+          },
+        ],
+      },
     ]);
     prismaMock.chatMessage.count.mockResolvedValue(2);
 
@@ -136,6 +156,13 @@ describe('me.service threads - getThreadMessages', () => {
     expect(result.total).toBe(2);
     expect(result.items[0].read_at).toBe(readAt.toISOString());
     expect(result.items[1].read_at).toBeNull();
+    expect(result.items[1].attachments).toEqual([
+      {
+        url: 'https://cdn.example.com/spec.pdf',
+        name: 'spec.pdf',
+        type: 'application/pdf',
+      },
+    ]);
   });
 
   test('allows DISPUTE status and falls back to thread creation time when read marker is absent', async () => {
@@ -153,8 +180,22 @@ describe('me.service threads - getThreadMessages', () => {
       reads: [],
     });
     prismaMock.chatMessage.findMany.mockResolvedValue([
-      { id: 'm1', senderUserId: 'd1', senderPersona: 'developer', text: 'old', sentAt: m1At },
-      { id: 'm2', senderUserId: 'c1', senderPersona: 'company', text: 'new', sentAt: m2At },
+      {
+        id: 'm1',
+        senderUserId: 'd1',
+        senderPersona: 'developer',
+        text: 'old',
+        sentAt: m1At,
+        attachments: [],
+      },
+      {
+        id: 'm2',
+        senderUserId: 'c1',
+        senderPersona: 'company',
+        text: 'new',
+        sentAt: m2At,
+        attachments: [],
+      },
     ]);
     prismaMock.chatMessage.count.mockResolvedValue(2);
 

@@ -14,6 +14,7 @@ import {
   threadIdParamSchema,
   threadMessagesQuerySchema,
   createMessageBodySchema,
+  createMessageRequestSchema,
   favoriteTaskParamSchema,
   getMyFavoriteTasksQuerySchema,
   patchMyOnboardingSchema,
@@ -98,6 +99,13 @@ describe('additional Joi schemas', () => {
     ).toBeUndefined();
     expect(threadMessagesQuerySchema.validate({ page: 1, size: 50 }).error).toBeUndefined();
     expect(createMessageBodySchema.validate({ text: 'hello' }).error).toBeUndefined();
+    expect(createMessageBodySchema.validate({ text: '' }).error).toBeUndefined();
+    expect(
+      createMessageRequestSchema.validate({
+        text: '',
+        files: [{ originalname: 'spec.pdf', mimetype: 'application/pdf', size: 1 }],
+      }).error
+    ).toBeUndefined();
     expect(
       favoriteTaskParamSchema.validate({ taskId: '550e8400-e29b-41d4-a716-446655440000' }).error
     ).toBeUndefined();
@@ -111,7 +119,17 @@ describe('additional Joi schemas', () => {
     ).toBeUndefined();
 
     expect(getMyTasksQuerySchema.validate({ status: 'BAD' }).error).toBeDefined();
-    expect(createMessageBodySchema.validate({ text: '' }).error).toBeDefined();
+    expect(createMessageRequestSchema.validate({ text: '', files: [] }).error).toBeDefined();
+    expect(
+      createMessageRequestSchema.validate({
+        text: 'hello',
+        files: new Array(11).fill({
+          originalname: 'spec.pdf',
+          mimetype: 'application/pdf',
+          size: 1,
+        }),
+      }).error
+    ).toBeDefined();
     expect(
       patchMyOnboardingSchema.validate({ role: 'developer', status: 'not_started', version: 1 })
         .error

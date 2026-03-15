@@ -1,6 +1,11 @@
 import { jest } from '@jest/globals';
-
 const createNotificationMock = jest.fn();
+const cloudinaryMock = {
+  uploadImage: jest.fn(),
+  deleteImage: jest.fn(),
+  uploadFile: jest.fn(),
+  deleteFile: jest.fn(),
+};
 
 const prismaMock = {
   $transaction: jest.fn(),
@@ -30,6 +35,7 @@ jest.unstable_mockModule('../../src/db/prisma.js', () => ({ prisma: prismaMock }
 jest.unstable_mockModule('../../src/services/notifications/index.js', () => ({
   createNotification: createNotificationMock,
 }));
+jest.unstable_mockModule('../../src/utils/cloudinary.js', () => cloudinaryMock);
 
 const meService = await import('../../../../src/services/me/index.js');
 
@@ -85,6 +91,7 @@ describe('me.service threads', () => {
               senderPersona: 'developer',
               text: 'Hello',
               sentAt,
+              attachments: [],
             }),
           },
           chatThread: {
@@ -125,6 +132,7 @@ describe('me.service threads', () => {
         text: 'Hello',
         sent_at: sentAt.toISOString(),
         read_at: null,
+        attachments: [],
       });
 
       globalThis.Date = realDate;
@@ -220,6 +228,7 @@ describe('me.service threads', () => {
               senderPersona: 'company',
               text: 'Need to discuss',
               sentAt,
+              attachments: [],
             }),
           },
           chatThread: {
@@ -283,6 +292,7 @@ describe('me.service threads', () => {
               senderPersona: 'developer',
               text: 'Final note',
               sentAt,
+              attachments: [],
             }),
           },
           chatThread: {

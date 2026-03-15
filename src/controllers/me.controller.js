@@ -212,6 +212,7 @@ export const createMessage = asyncHandler(async (req, res) => {
     persona: req.headers['x-persona'],
     threadId: req.params.threadId,
     text: req.body.text,
+    files: req.files,
   });
 
   return res.status(201).json(result);

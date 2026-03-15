@@ -1,6 +1,8 @@
 import { Router } from 'express';
+import multer from 'multer';
 import { requireAuth } from '../middleware/auth.middleware.js';
 import { requirePersona } from '../middleware/persona.middleware.js';
+import { validateCreateMessageRequest } from '../middleware/validate-chat-message.middleware.js';
 import { validate } from '../middleware/validate.middleware.js';
 import * as meController from '../controllers/me.controller.js';
 import {
@@ -12,7 +14,6 @@ import {
   getMyThreadsQuerySchema,
   threadIdParamSchema,
   threadMessagesQuerySchema,
-  createMessageBodySchema,
   favoriteTaskParamSchema,
   getMyFavoriteTasksQuerySchema,
   patchMyOnboardingSchema,
@@ -21,6 +22,7 @@ import {
 } from '../schemas/me.schemas.js';
 
 export const meRouter = Router();
+const chatMessageUpload = multer({ storage: multer.memoryStorage() });
 
 meRouter.get('/', requireAuth, meController.getMe);
 meRouter.delete('/', requireAuth, meController.deleteMyAccount);
@@ -127,7 +129,8 @@ meRouter.post(
   requireAuth,
   requirePersona('developer', 'company'),
   validate(threadIdParamSchema, 'params'),
-  validate(createMessageBodySchema, 'body'),
+  chatMessageUpload.array('files'),
+  validateCreateMessageRequest,
   meController.createMessage
 );
 

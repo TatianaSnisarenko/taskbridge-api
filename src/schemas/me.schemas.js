@@ -125,14 +125,61 @@ export const threadMessagesQuerySchema = Joi.object({
 });
 
 export const createMessageBodySchema = Joi.object({
-  text: Joi.string().min(1).max(2000).required().messages({
+  text: Joi.string().allow('').max(2000).messages({
     'string.base': 'Text must be a string',
-    'string.empty': 'Text is required',
-    'string.min': 'Text must be at least 1 character',
     'string.max': 'Text must not exceed 2000 characters',
-    'any.required': 'Text is required',
   }),
 });
+
+export const createMessageRequestSchema = Joi.object({
+  text: Joi.string().allow('').max(2000).default('').messages({
+    'string.base': 'Text must be a string',
+    'string.max': 'Text must not exceed 2000 characters',
+  }),
+  files: Joi.array()
+    .items(
+      Joi.object({
+        originalname: Joi.string().required().messages({
+          'string.base': 'File name must be a string',
+          'any.required': 'File name is required',
+        }),
+        mimetype: Joi.string().required().messages({
+          'string.base': 'File type must be a string',
+          'any.required': 'File type is required',
+        }),
+        size: Joi.number()
+          .integer()
+          .min(1)
+          .max(10 * 1024 * 1024)
+          .required()
+          .messages({
+            'number.base': 'File size must be a number',
+            'number.integer': 'File size must be an integer',
+            'number.min': 'File must not be empty',
+            'number.max': 'File size must not exceed 10MB',
+            'any.required': 'File size is required',
+          }),
+      })
+    )
+    .max(10)
+    .default([])
+    .messages({
+      'array.base': 'Files must be an array',
+      'array.max': 'Files count must not exceed 10',
+    }),
+})
+  .custom((value, helpers) => {
+    if (!value.text.trim() && value.files.length === 0) {
+      return helpers.error('any.custom', {
+        customMessage: 'Either text or at least one file is required',
+      });
+    }
+
+    return value;
+  })
+  .messages({
+    'any.custom': '{{#customMessage}}',
+  });
 
 export const favoriteTaskParamSchema = Joi.object({
   taskId: Joi.string().guid({ version: 'uuidv4' }).required().messages({

@@ -103,6 +103,31 @@ describe('cloudinary utils', () => {
     });
   });
 
+  test('uploadFile uses upload helper and preserves provided folder', async () => {
+    const { mod, cloudinary } = await loadCloudinaryUtils({
+      cloudName: 'demo',
+      apiKey: 'key',
+      apiSecret: 'secret',
+    });
+
+    cloudinary.uploadStream.mockImplementation((opts, cb) => {
+      return {
+        end: () => cb(null, { public_id: 'raw1', secure_url: 'https://cdn.example.com/raw1' }),
+      };
+    });
+
+    const result = await mod.uploadFile(Buffer.from('file'), { folder: 'teamup/chat-attachments' });
+
+    expect(cloudinary.uploadStream).toHaveBeenCalledWith(
+      expect.objectContaining({
+        folder: 'teamup/chat-attachments',
+        resource_type: 'auto',
+      }),
+      expect.any(Function)
+    );
+    expect(result.public_id).toBe('raw1');
+  });
+
   test('deleteImage returns silently when cloudinary is not configured', async () => {
     const { mod, cloudinary } = await loadCloudinaryUtils();
 
@@ -134,5 +159,33 @@ describe('cloudinary utils', () => {
     cloudinary.destroy.mockRejectedValue(new Error('destroy failed'));
 
     await expect(mod.deleteImage('pid')).resolves.toBeUndefined();
+  });
+
+  test('deleteFile uses raw resource type for auto uploads', async () => {
+    const { mod, cloudinary } = await loadCloudinaryUtils({
+      cloudName: 'demo',
+      apiKey: 'key',
+      apiSecret: 'secret',
+    });
+
+    cloudinary.destroy.mockResolvedValue({ result: 'ok' });
+
+    await mod.deleteFile('raw-pid');
+
+    expect(cloudinary.destroy).toHaveBeenCalledWith('raw-pid', { resource_type: 'raw' });
+  });
+
+  test('deleteFile keeps explicit resource type', async () => {
+    const { mod, cloudinary } = await loadCloudinaryUtils({
+      cloudName: 'demo',
+      apiKey: 'key',
+      apiSecret: 'secret',
+    });
+
+    cloudinary.destroy.mockResolvedValue({ result: 'ok' });
+
+    await mod.deleteFile('img-pid', 'image');
+
+    expect(cloudinary.destroy).toHaveBeenCalledWith('img-pid', { resource_type: 'image' });
   });
 });
