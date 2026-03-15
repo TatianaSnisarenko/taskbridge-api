@@ -94,6 +94,7 @@ describe('me.service - notifications list/read', () => {
         payload: { message: 'Application accepted' },
         created_at: createdAt.toISOString(),
         read_at: readAt.toISOString(),
+        important_at: null,
       });
     });
 

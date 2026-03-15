@@ -128,6 +128,7 @@ export const getMyNotifications = asyncHandler(async (req, res) => {
     page: parseInt(req.query.page) || 1,
     size: parseInt(req.query.size) || 20,
     unreadOnly: req.query.unread_only === 'true' || req.query.unread_only === true,
+    importantOnly: req.query.important_only === 'true' || req.query.important_only === true,
     persona: req.persona,
   });
 
@@ -163,6 +164,32 @@ export const markNotificationAsUnread = asyncHandler(async (req, res) => {
   return res.status(200).json({
     id: result.id,
     read_at: result.read_at,
+  });
+});
+
+export const markNotificationAsImportant = asyncHandler(async (req, res) => {
+  const result = await meService.markNotificationAsImportant({
+    userId: req.user.id,
+    notificationId: req.params.id,
+    persona: req.persona,
+  });
+
+  return res.status(200).json({
+    id: result.id,
+    important_at: result.important_at,
+  });
+});
+
+export const markNotificationAsUnimportant = asyncHandler(async (req, res) => {
+  const result = await meService.markNotificationAsUnimportant({
+    userId: req.user.id,
+    notificationId: req.params.id,
+    persona: req.persona,
+  });
+
+  return res.status(200).json({
+    id: result.id,
+    important_at: result.important_at,
   });
 });
 

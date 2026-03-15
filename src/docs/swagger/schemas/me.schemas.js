@@ -298,6 +298,7 @@
       payload: { type: 'object', additionalProperties: true },
       created_at: { type: 'string', format: 'date-time' },
       read_at: { type: 'string', format: 'date-time', nullable: true },
+      important_at: { type: 'string', format: 'date-time', nullable: true },
     },
   },
   GetMyNotificationsResponse: {
@@ -322,6 +323,20 @@
     properties: {
       id: { type: 'string', format: 'uuid', example: '4f5a6b1d-cf72-4c06-b121-dca441c326cd' },
       read_at: { type: 'string', format: 'date-time', nullable: true, example: null },
+    },
+  },
+  MarkNotificationAsImportantResponse: {
+    type: 'object',
+    properties: {
+      id: { type: 'string', format: 'uuid', example: '4f5a6b1d-cf72-4c06-b121-dca441c326cd' },
+      important_at: { type: 'string', format: 'date-time', example: '2026-03-15T10:00:00Z' },
+    },
+  },
+  MarkNotificationAsUnimportantResponse: {
+    type: 'object',
+    properties: {
+      id: { type: 'string', format: 'uuid', example: '4f5a6b1d-cf72-4c06-b121-dca441c326cd' },
+      important_at: { type: 'string', format: 'date-time', nullable: true, example: null },
     },
   },
   MarkAllNotificationsAsReadResponse: {

@@ -85,6 +85,9 @@ export const getMyNotificationsQuerySchema = Joi.object({
   unread_only: Joi.boolean().default(false).messages({
     'boolean.base': 'The unread_only parameter must be true or false',
   }),
+  important_only: Joi.boolean().default(false).messages({
+    'boolean.base': 'The important_only parameter must be true or false',
+  }),
 });
 
 export const getMyThreadsQuerySchema = Joi.object({

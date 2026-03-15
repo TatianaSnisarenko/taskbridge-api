@@ -109,6 +109,22 @@ meRouter.post(
   meController.markNotificationAsUnread
 );
 
+meRouter.post(
+  '/notifications/:id/important',
+  requireAuth,
+  requirePersona('developer', 'company'),
+  validate(notificationIdParamSchema, 'params'),
+  meController.markNotificationAsImportant
+);
+
+meRouter.post(
+  '/notifications/:id/unimportant',
+  requireAuth,
+  requirePersona('developer', 'company'),
+  validate(notificationIdParamSchema, 'params'),
+  meController.markNotificationAsUnimportant
+);
+
 meRouter.get(
   '/chat/threads',
   requireAuth,

@@ -4,6 +4,8 @@ const meServiceMock = {
   getMyNotifications: jest.fn(),
   markNotificationAsRead: jest.fn(),
   markNotificationAsUnread: jest.fn(),
+  markNotificationAsImportant: jest.fn(),
+  markNotificationAsUnimportant: jest.fn(),
   markAllNotificationsAsRead: jest.fn(),
 };
 
@@ -47,6 +49,7 @@ describe('me.controller - notifications', () => {
       page: 3,
       size: 7,
       unreadOnly: true,
+      importantOnly: false,
       persona: 'developer',
     });
     expect(res.status).toHaveBeenCalledWith(200);
@@ -84,6 +87,7 @@ describe('me.controller - notifications', () => {
       page: 1,
       size: 20,
       unreadOnly: true,
+      importantOnly: false,
       persona: 'developer',
     });
 
@@ -100,6 +104,7 @@ describe('me.controller - notifications', () => {
       page: 1,
       size: 20,
       unreadOnly: false,
+      importantOnly: false,
       persona: 'developer',
     });
   });
@@ -179,6 +184,60 @@ describe('me.controller - notifications', () => {
     expect(res.json).toHaveBeenCalledWith({
       id: 'n-1',
       read_at: null,
+    });
+  });
+
+  test('markNotificationAsImportant maps service result to response', async () => {
+    meServiceMock.markNotificationAsImportant.mockResolvedValue({
+      id: 'n-1',
+      important_at: '2026-03-15T10:00:00.000Z',
+    });
+
+    const req = {
+      user: { id: 'u-1' },
+      params: { id: 'n-1' },
+      persona: 'developer',
+    };
+    const res = createResponseMock();
+
+    await meController.markNotificationAsImportant(req, res, jest.fn());
+
+    expect(meServiceMock.markNotificationAsImportant).toHaveBeenCalledWith({
+      userId: 'u-1',
+      notificationId: 'n-1',
+      persona: 'developer',
+    });
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith({
+      id: 'n-1',
+      important_at: '2026-03-15T10:00:00.000Z',
+    });
+  });
+
+  test('markNotificationAsUnimportant maps service result to response', async () => {
+    meServiceMock.markNotificationAsUnimportant.mockResolvedValue({
+      id: 'n-1',
+      important_at: null,
+    });
+
+    const req = {
+      user: { id: 'u-1' },
+      params: { id: 'n-1' },
+      persona: 'company',
+    };
+    const res = createResponseMock();
+
+    await meController.markNotificationAsUnimportant(req, res, jest.fn());
+
+    expect(meServiceMock.markNotificationAsUnimportant).toHaveBeenCalledWith({
+      userId: 'u-1',
+      notificationId: 'n-1',
+      persona: 'company',
+    });
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith({
+      id: 'n-1',
+      important_at: null,
     });
   });
 });

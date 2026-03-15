@@ -222,4 +222,78 @@ describe('me.service - mark notification read/unread', () => {
       });
     });
   });
+
+  describe('markNotificationAsImportant', () => {
+    test('marks notification as important and returns important_at', async () => {
+      const importantAt = new Date('2026-03-15T10:00:00Z');
+
+      prismaMock.notification.findUnique.mockResolvedValue({
+        id: 'n1',
+        userId: 'u1',
+        type: 'APPLICATION_ACCEPTED',
+        task: null,
+        actor: {
+          developerProfile: null,
+          companyProfile: { userId: 'u2' },
+        },
+      });
+
+      prismaMock.notification.update.mockResolvedValue({
+        id: 'n1',
+        importantAt,
+      });
+
+      const result = await meService.markNotificationAsImportant({
+        userId: 'u1',
+        notificationId: 'n1',
+        persona: 'developer',
+      });
+
+      expect(prismaMock.notification.update).toHaveBeenCalledWith({
+        where: { id: 'n1' },
+        data: { importantAt: expect.any(Date) },
+        select: { id: true, importantAt: true },
+      });
+      expect(result).toEqual({
+        id: 'n1',
+        important_at: importantAt.toISOString(),
+      });
+    });
+  });
+
+  describe('markNotificationAsUnimportant', () => {
+    test('removes important mark and returns null important_at', async () => {
+      prismaMock.notification.findUnique.mockResolvedValue({
+        id: 'n1',
+        userId: 'u1',
+        type: 'APPLICATION_ACCEPTED',
+        task: null,
+        actor: {
+          developerProfile: null,
+          companyProfile: { userId: 'u2' },
+        },
+      });
+
+      prismaMock.notification.update.mockResolvedValue({
+        id: 'n1',
+        importantAt: null,
+      });
+
+      const result = await meService.markNotificationAsUnimportant({
+        userId: 'u1',
+        notificationId: 'n1',
+        persona: 'developer',
+      });
+
+      expect(prismaMock.notification.update).toHaveBeenCalledWith({
+        where: { id: 'n1' },
+        data: { importantAt: null },
+        select: { id: true, importantAt: true },
+      });
+      expect(result).toEqual({
+        id: 'n1',
+        important_at: null,
+      });
+    });
+  });
 });

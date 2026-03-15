@@ -1,10 +1,11 @@
 export { getMyApplications, getMyTasks, getMyProjects } from './catalog.js';
+export { getMyNotifications, markAllNotificationsAsRead } from './notifications.js';
 export {
-  getMyNotifications,
   markNotificationAsRead,
   markNotificationAsUnread,
-  markAllNotificationsAsRead,
-} from './notifications.js';
+  markNotificationAsImportant,
+  markNotificationAsUnimportant,
+} from './notifications-mark.js';
 export { getMyThreads, getThreadById, getThreadMessages } from './threads-read.js';
 export { createMessage, markThreadAsRead } from './threads-messaging.js';
 export { addFavoriteTask, removeFavoriteTask, getMyFavoriteTasks } from './favorites.js';

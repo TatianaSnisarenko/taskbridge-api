@@ -340,6 +340,12 @@
           schema: { type: 'boolean', default: false },
           description: 'If true, return only unread notifications',
         },
+        {
+          name: 'important_only',
+          in: 'query',
+          schema: { type: 'boolean', default: false },
+          description: 'If true, return only notifications marked as important',
+        },
       ],
       responses: {
         200: {
@@ -418,6 +424,78 @@
           content: {
             'application/json': {
               schema: { $ref: '#/components/schemas/MarkNotificationAsUnreadResponse' },
+            },
+          },
+        },
+        400: { description: 'Validation error' },
+        401: { description: 'Unauthorized' },
+        404: { description: 'Notification not found' },
+      },
+    },
+  },
+  '/api/v1/me/notifications/{id}/important': {
+    post: {
+      tags: ['Me'],
+      summary: 'Mark notification as important',
+      security: [{ bearerAuth: [] }],
+      parameters: [
+        {
+          name: 'X-Persona',
+          in: 'header',
+          required: true,
+          schema: { type: 'string', enum: ['developer', 'company'] },
+          description: 'User persona context (required)',
+        },
+        {
+          name: 'id',
+          in: 'path',
+          required: true,
+          schema: { type: 'string', format: 'uuid' },
+          description: 'Notification ID',
+        },
+      ],
+      responses: {
+        200: {
+          description: 'Notification marked as important',
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/MarkNotificationAsImportantResponse' },
+            },
+          },
+        },
+        400: { description: 'Validation error' },
+        401: { description: 'Unauthorized' },
+        404: { description: 'Notification not found' },
+      },
+    },
+  },
+  '/api/v1/me/notifications/{id}/unimportant': {
+    post: {
+      tags: ['Me'],
+      summary: 'Remove important mark from notification',
+      security: [{ bearerAuth: [] }],
+      parameters: [
+        {
+          name: 'X-Persona',
+          in: 'header',
+          required: true,
+          schema: { type: 'string', enum: ['developer', 'company'] },
+          description: 'User persona context (required)',
+        },
+        {
+          name: 'id',
+          in: 'path',
+          required: true,
+          schema: { type: 'string', format: 'uuid' },
+          description: 'Notification ID',
+        },
+      ],
+      responses: {
+        200: {
+          description: 'Important mark removed from notification',
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/MarkNotificationAsUnimportantResponse' },
             },
           },
         },
