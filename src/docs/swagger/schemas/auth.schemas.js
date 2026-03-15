@@ -60,7 +60,7 @@
             example: 'SENIOR',
           },
           location: { type: 'string', minLength: 2, maxLength: 100, example: 'Kyiv, Ukraine' },
-          timezone: { type: 'string', minLength: 3, maxLength: 50, example: 'EET' },
+          timezone: { type: 'string', example: 'Europe/Kyiv' },
           availability: {
             type: 'string',
             enum: ['FEW_HOURS_WEEK', 'PART_TIME', 'FULL_TIME'],
@@ -150,7 +150,7 @@
           },
           teamSize: { type: 'integer', minimum: 1, maximum: 100000, example: 15 },
           country: { type: 'string', minLength: 2, maxLength: 100, example: 'Ukraine' },
-          timezone: { type: 'string', minLength: 3, maxLength: 50, example: 'EET' },
+          timezone: { type: 'string', example: 'Europe/Kyiv' },
           contactEmail: { type: 'string', format: 'email', example: 'contact@novatech.com' },
           websiteUrl: { type: 'string', format: 'uri', example: 'https://novatech.com' },
           links: {

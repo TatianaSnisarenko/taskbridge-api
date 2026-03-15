@@ -6,6 +6,7 @@ import { profilesPaths } from './swagger/paths/profiles.paths.js';
 import { projectsPaths } from './swagger/paths/projects.paths.js';
 import { tasksPaths } from './swagger/paths/tasks.paths.js';
 import { technologiesPaths } from './swagger/paths/technologies.paths.js';
+import { timezonesPaths } from './swagger/paths/timezones.paths.js';
 import { workflowsPaths } from './swagger/paths/workflows.paths.js';
 import { applicationsSchemas } from './swagger/schemas/applications.schemas.js';
 import { authSchemas } from './swagger/schemas/auth.schemas.js';
@@ -19,6 +20,7 @@ import { reviewsSchemas } from './swagger/schemas/reviews.schemas.js';
 import { sharedSchemas } from './swagger/schemas/shared.schemas.js';
 import { tasksSchemas } from './swagger/schemas/tasks.schemas.js';
 import { technologiesSchemas } from './swagger/schemas/technologies.schemas.js';
+import { timezonesSchemas } from './swagger/schemas/timezones.schemas.js';
 
 export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
   openapi: '3.0.0',
@@ -37,6 +39,7 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
     { name: 'Tasks' },
     { name: 'Invites' },
     { name: 'Technologies' },
+    { name: 'Timezones' },
     { name: 'Platform Reviews' },
   ],
   components: {
@@ -51,6 +54,7 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
       ...authSchemas,
       ...healthSchemas,
       ...technologiesSchemas,
+      ...timezonesSchemas,
       ...profilesSchemas,
       ...projectsSchemas,
       ...tasksSchemas,
@@ -70,6 +74,7 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
     ...projectsPaths,
     ...tasksPaths,
     ...technologiesPaths,
+    ...timezonesPaths,
     ...platformReviewsPaths,
     ...workflowsPaths,
   },

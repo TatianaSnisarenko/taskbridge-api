@@ -7,6 +7,19 @@ import {
   TASK_CATEGORIES,
   COMPANY_TYPES,
 } from './constants.js';
+import { TIMEZONE_VALUES } from '../data/timezones.js';
+
+// Validator used instead of Joi.valid() to avoid listing 150+ timezone values in enum
+const validTimezone = (value, helpers) => {
+  if (!TIMEZONE_VALUES.includes(value)) {
+    return helpers.error('any.invalidTimezone');
+  }
+  return value;
+};
+
+const timezoneMessages = {
+  'any.invalidTimezone': 'Timezone must be a valid IANA timezone identifier',
+};
 
 export { emailRegexp, passRegexp };
 
@@ -36,7 +49,7 @@ export const signupSchema = Joi.object({
         'any.only': 'Experience level must be one of: STUDENT, JUNIOR, MIDDLE, SENIOR',
       }),
     location: Joi.string().trim().min(2).max(100),
-    timezone: Joi.string().trim().min(3).max(50),
+    timezone: Joi.string().trim().custom(validTimezone).messages(timezoneMessages),
     availability: Joi.string()
       .valid(...AVAILABILITY_LEVELS)
       .messages({
@@ -114,7 +127,7 @@ export const signupSchema = Joi.object({
       'string.min': 'Country must be at least 2 characters',
       'string.max': 'Country must not exceed 100 characters',
     }),
-    timezone: Joi.string().trim().min(3).max(50),
+    timezone: Joi.string().trim().custom(validTimezone).messages(timezoneMessages),
     contactEmail: Joi.string().pattern(emailRegexp).messages({
       'string.pattern.base': 'Contact email must be a valid email',
     }),

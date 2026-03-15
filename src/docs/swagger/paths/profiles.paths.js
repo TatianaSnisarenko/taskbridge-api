@@ -16,7 +16,7 @@ export const profilesPaths = {
               bio: 'Short bio',
               experience_level: 'MIDDLE',
               location: 'EU',
-              timezone: 'Europe/UTC',
+              timezone: 'Europe/Kyiv',
               technology_ids: [
                 '6c8e4a2a-d1b4-4de8-b7d2-f4b9f7fddf61',
                 '8a311c84-7d56-4d1e-96c4-9ca2f83e7082',
@@ -58,7 +58,7 @@ export const profilesPaths = {
               bio: 'Updated bio',
               experience_level: 'MIDDLE',
               location: 'EU',
-              timezone: 'Europe/UTC',
+              timezone: 'Europe/Kyiv',
               technology_ids: [
                 '6c8e4a2a-d1b4-4de8-b7d2-f4b9f7fddf61',
                 '8a311c84-7d56-4d1e-96c4-9ca2f83e7082',

@@ -17,7 +17,7 @@
                 bio: 'Founder of NovaTech Labs, experienced full stack developer',
                 experienceLevel: 'SENIOR',
                 location: 'Kyiv, Ukraine',
-                timezone: 'EET',
+                timezone: 'Europe/Kyiv',
                 availability: 'FULL_TIME',
                 preferredTaskCategories: ['BACKEND', 'FRONTEND', 'FULLSTACK'],
                 technologies: [
@@ -33,7 +33,7 @@
                 description: 'We are an innovative tech startup focused on AI solutions',
                 teamSize: 15,
                 country: 'Ukraine',
-                timezone: 'EET',
+                timezone: 'Europe/Kyiv',
                 contactEmail: 'contact@novatech.com',
                 websiteUrl: 'https://novatech.com',
                 links: {
@@ -54,7 +54,7 @@
                     bio: 'I am an experienced developer with 5 years in full stack development',
                     experienceLevel: 'SENIOR',
                     location: 'Kyiv, Ukraine',
-                    timezone: 'EET',
+                    timezone: 'Europe/Kyiv',
                     availability: 'FULL_TIME',
                     preferredTaskCategories: ['BACKEND', 'FRONTEND', 'FULLSTACK'],
                     technologies: [
@@ -77,7 +77,7 @@
                     description: 'We are an innovative tech startup focused on AI solutions',
                     teamSize: 15,
                     country: 'Ukraine',
-                    timezone: 'EET',
+                    timezone: 'Europe/Kyiv',
                     contactEmail: 'contact@novatech.com',
                     websiteUrl: 'https://novatech.com',
                     links: {
@@ -98,7 +98,7 @@
                     bio: 'Founder of NovaTech Labs, experienced full stack developer',
                     experienceLevel: 'SENIOR',
                     location: 'Kyiv, Ukraine',
-                    timezone: 'EET',
+                    timezone: 'Europe/Kyiv',
                     availability: 'FULL_TIME',
                     preferredTaskCategories: ['BACKEND', 'FRONTEND', 'FULLSTACK'],
                     technologies: [
@@ -114,7 +114,7 @@
                     description: 'We are an innovative tech startup focused on AI solutions',
                     teamSize: 15,
                     country: 'Ukraine',
-                    timezone: 'EET',
+                    timezone: 'Europe/Kyiv',
                     contactEmail: 'contact@novatech.com',
                     websiteUrl: 'https://novatech.com',
                     links: {

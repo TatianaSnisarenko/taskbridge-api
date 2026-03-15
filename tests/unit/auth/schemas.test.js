@@ -45,7 +45,7 @@ describe('auth.schemas', () => {
         bio: 'I am a senior full stack developer',
         experienceLevel: 'SENIOR',
         location: 'Kyiv, Ukraine',
-        timezone: 'EET',
+        timezone: 'Europe/Kyiv',
         availability: 'FULL_TIME',
         preferredTaskCategories: ['BACKEND', 'FRONTEND'],
         portfolioUrl: 'https://johndeveloper.com',
@@ -69,7 +69,7 @@ describe('auth.schemas', () => {
         description: 'We are an innovative tech startup',
         teamSize: 15,
         country: 'Ukraine',
-        timezone: 'EET',
+        timezone: 'Europe/Kyiv',
         contactEmail: 'contact@techstartup.com',
         websiteUrl: 'https://techstartup.com',
         links: {

@@ -9,6 +9,7 @@ import { invitesRouter } from './invites.routes.js';
 import { usersRouter } from './users.routes.js';
 import technologiesRouter from './technologies.routes.js';
 import { platformReviewsRouter } from './platform-reviews.routes.js';
+import timezonesRouter from './timezones.routes.js';
 
 export const apiRouter = Router();
 
@@ -24,3 +25,4 @@ apiRouter.use('/invites', invitesRouter);
 apiRouter.use('/users', usersRouter);
 apiRouter.use('/technologies', technologiesRouter);
 apiRouter.use('/platform-reviews', platformReviewsRouter);
+apiRouter.use('/timezones', timezonesRouter);

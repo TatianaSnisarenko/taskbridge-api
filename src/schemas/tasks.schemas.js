@@ -1,5 +1,14 @@
 import Joi from 'joi';
 import { TASK_CATEGORIES, AVAILABILITY_LEVELS, EXPERIENCE_LEVELS } from './constants.js';
+import { TIMEZONE_VALUES } from '../data/timezones.js';
+
+// Validator used instead of Joi.valid() to avoid listing 150+ timezone values in enum
+const validTimezone = (value, helpers) => {
+  if (!TIMEZONE_VALUES.includes(value)) {
+    return helpers.error('any.invalidTimezone');
+  }
+  return value;
+};
 
 const TASK_TYPES = ['PAID', 'UNPAID', 'VOLUNTEER', 'EXPERIENCE'];
 const TASK_DIFFICULTY = ['JUNIOR', 'MIDDLE', 'SENIOR', 'ANY'];
@@ -105,10 +114,9 @@ export const createTaskDraftSchema = Joi.object({
     'string.max': 'Communication language must not exceed 50 characters',
     'any.required': 'Communication language is required',
   }),
-  timezone_preference: Joi.string().trim().min(3).max(60).required().messages({
+  timezone_preference: Joi.string().trim().custom(validTimezone).required().messages({
+    'any.invalidTimezone': 'Timezone preference must be a valid IANA timezone identifier',
     'string.empty': 'Timezone preference is required',
-    'string.min': 'Timezone preference must be at least 3 characters',
-    'string.max': 'Timezone preference must not exceed 60 characters',
     'any.required': 'Timezone preference is required',
   }),
   application_deadline: Joi.date().iso().required().messages({
@@ -205,9 +213,8 @@ export const updateTaskDraftSchema = Joi.object({
     'string.min': 'Communication language must be at least 2 characters',
     'string.max': 'Communication language must not exceed 50 characters',
   }),
-  timezone_preference: Joi.string().trim().min(3).max(60).messages({
-    'string.min': 'Timezone preference must be at least 3 characters',
-    'string.max': 'Timezone preference must not exceed 60 characters',
+  timezone_preference: Joi.string().trim().custom(validTimezone).messages({
+    'any.invalidTimezone': 'Timezone preference must be a valid IANA timezone identifier',
   }),
   application_deadline: Joi.date().iso().messages({
     'date.base': 'Application deadline must be a valid date',

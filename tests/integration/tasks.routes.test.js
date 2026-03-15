@@ -29,7 +29,7 @@ const basePayload = {
   estimated_effort_hours: 6,
   expected_duration: 'DAYS_8_14',
   communication_language: 'EN',
-  timezone_preference: 'Europe/Any',
+  timezone_preference: 'Europe/Kyiv',
   application_deadline: '2026-02-20',
   deadline: '2026-03-20',
   visibility: 'PUBLIC',

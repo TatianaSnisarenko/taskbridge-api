@@ -6,6 +6,19 @@ import {
   TASK_CATEGORIES,
   COMPANY_TYPES,
 } from './constants.js';
+import { TIMEZONE_VALUES } from '../data/timezones.js';
+
+// Validator used instead of Joi.valid() to avoid listing 150+ timezone values in enum
+const validTimezone = (value, helpers) => {
+  if (!TIMEZONE_VALUES.includes(value)) {
+    return helpers.error('any.invalidTimezone');
+  }
+  return value;
+};
+
+const timezoneMessages = {
+  'any.invalidTimezone': 'Timezone must be a valid IANA timezone identifier',
+};
 
 const developerProfileFields = {
   display_name: Joi.string().trim().min(2).max(100).required().messages({
@@ -31,10 +44,7 @@ const developerProfileFields = {
     'string.min': 'Location must be at least 2 characters',
     'string.max': 'Location must not exceed 100 characters',
   }),
-  timezone: Joi.string().trim().min(3).max(50).messages({
-    'string.min': 'Timezone must be at least 3 characters',
-    'string.max': 'Timezone must not exceed 50 characters',
-  }),
+  timezone: Joi.string().trim().custom(validTimezone).messages(timezoneMessages),
   availability: Joi.string()
     .valid(...AVAILABILITY_LEVELS)
     .messages({
@@ -121,10 +131,7 @@ const companyProfileFields = {
     'string.min': 'Country must be at least 2 characters',
     'string.max': 'Country must not exceed 100 characters',
   }),
-  timezone: Joi.string().trim().min(3).max(50).messages({
-    'string.min': 'Timezone must be at least 3 characters',
-    'string.max': 'Timezone must not exceed 50 characters',
-  }),
+  timezone: Joi.string().trim().custom(validTimezone).messages(timezoneMessages),
   contact_email: Joi.string().pattern(emailRegexp).messages({
     'string.pattern.base': 'Contact email must be a valid email',
   }),

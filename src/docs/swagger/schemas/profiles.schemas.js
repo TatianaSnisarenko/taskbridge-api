@@ -23,7 +23,7 @@ export const profilesSchemas = {
         enum: ['STUDENT', 'JUNIOR', 'MIDDLE', 'SENIOR'],
       },
       location: { type: 'string', minLength: 2, maxLength: 100, example: 'Warsaw, PL' },
-      timezone: { type: 'string', minLength: 3, maxLength: 50, example: 'Europe/Warsaw' },
+      timezone: { type: 'string', example: 'Europe/Warsaw' },
       technology_ids: {
         type: 'array',
         items: { type: 'string', format: 'uuid' },
@@ -77,8 +77,8 @@ export const profilesSchemas = {
         type: 'string',
         enum: ['STUDENT', 'JUNIOR', 'MIDDLE', 'SENIOR'],
       },
-      location: { type: 'string', minLength: 2, maxLength: 100, example: 'Kraków, PL' },
-      timezone: { type: 'string', minLength: 3, maxLength: 50, example: 'Europe/Warsaw' },
+      location: { type: 'string', minLength: 2, maxLength: 100, example: 'Krakow, PL' },
+      timezone: { type: 'string', example: 'Europe/Warsaw' },
       technology_ids: {
         type: 'array',
         items: { type: 'string', format: 'uuid' },
@@ -138,7 +138,7 @@ export const profilesSchemas = {
       },
       team_size: { type: 'integer', minimum: 1, maximum: 100000 },
       country: { type: 'string', minLength: 2, maxLength: 100, example: 'United States' },
-      timezone: { type: 'string', minLength: 3, maxLength: 50, example: 'Europe/Warsaw' },
+      timezone: { type: 'string', example: 'Europe/Warsaw' },
       contact_email: { type: 'string', format: 'email', example: 'hello@novatechlabs.com' },
       website_url: { type: 'string', format: 'uri', example: 'https://novatechlabs.com' },
       links: {
@@ -174,7 +174,7 @@ export const profilesSchemas = {
       },
       team_size: { type: 'integer', minimum: 1, maximum: 100000 },
       country: { type: 'string', minLength: 2, maxLength: 100, example: 'United States' },
-      timezone: { type: 'string', minLength: 3, maxLength: 50, example: 'Europe/Warsaw' },
+      timezone: { type: 'string', example: 'Europe/Warsaw' },
       contact_email: { type: 'string', format: 'email', example: 'partnerships@novatechlabs.com' },
       website_url: { type: 'string', format: 'uri', example: 'https://novatechlabs.com' },
       links: {
@@ -216,7 +216,7 @@ export const profilesSchemas = {
       },
       team_size: { type: 'integer', minimum: 1, maximum: 100000 },
       country: { type: 'string', minLength: 2, maxLength: 100, example: 'United States' },
-      timezone: { type: 'string', minLength: 3, maxLength: 50, example: 'Europe/Warsaw' },
+      timezone: { type: 'string', example: 'Europe/Warsaw' },
       logo_url: {
         type: 'string',
         format: 'uri',
@@ -266,7 +266,7 @@ export const profilesSchemas = {
         enum: ['STUDENT', 'JUNIOR', 'MIDDLE', 'SENIOR'],
       },
       location: { type: 'string', minLength: 2, maxLength: 100, example: 'Warsaw, PL' },
-      timezone: { type: 'string', minLength: 3, maxLength: 50, example: 'Europe/Warsaw' },
+      timezone: { type: 'string', example: 'Europe/Warsaw' },
       avatar_url: {
         type: 'string',
         format: 'uri',
