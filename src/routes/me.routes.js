@@ -11,6 +11,7 @@ import {
   getMyProjectsQuerySchema,
   getMyTasksQuerySchema,
   getMyNotificationsQuerySchema,
+  notificationIdParamSchema,
   getMyThreadsQuerySchema,
   threadIdParamSchema,
   threadMessagesQuerySchema,
@@ -96,7 +97,16 @@ meRouter.post(
   '/notifications/:id/read',
   requireAuth,
   requirePersona('developer', 'company'),
+  validate(notificationIdParamSchema, 'params'),
   meController.markNotificationAsRead
+);
+
+meRouter.post(
+  '/notifications/:id/unread',
+  requireAuth,
+  requirePersona('developer', 'company'),
+  validate(notificationIdParamSchema, 'params'),
+  meController.markNotificationAsUnread
 );
 
 meRouter.get(

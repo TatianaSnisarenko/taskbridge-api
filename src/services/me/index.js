@@ -2,6 +2,7 @@ export { getMyApplications, getMyTasks, getMyProjects } from './catalog.js';
 export {
   getMyNotifications,
   markNotificationAsRead,
+  markNotificationAsUnread,
   markAllNotificationsAsRead,
 } from './notifications.js';
 export { getMyThreads, getThreadById, getThreadMessages } from './threads-read.js';

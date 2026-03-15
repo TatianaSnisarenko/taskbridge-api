@@ -317,6 +317,13 @@
       read_at: { type: 'string', format: 'date-time', example: '2026-03-07T18:10:00Z' },
     },
   },
+  MarkNotificationAsUnreadResponse: {
+    type: 'object',
+    properties: {
+      id: { type: 'string', format: 'uuid', example: '4f5a6b1d-cf72-4c06-b121-dca441c326cd' },
+      read_at: { type: 'string', format: 'date-time', nullable: true, example: null },
+    },
+  },
   MarkAllNotificationsAsReadResponse: {
     type: 'object',
     properties: {

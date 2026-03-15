@@ -70,6 +70,26 @@ describe('platform-reviews.controller', () => {
     expect(res.json).toHaveBeenCalledWith(result);
   });
 
+  test('getPlatformReviews defaults requester context when user is absent', async () => {
+    const result = { items: [] };
+    platformReviewsServiceMock.getPlatformReviews.mockResolvedValue(result);
+    const req = {
+      query: { status: 'APPROVED', limit: '5', offset: '0', sort: 'oldest' },
+    };
+    const res = createResponseMock();
+
+    await platformReviewsController.getPlatformReviews(req, res, jest.fn());
+
+    expect(platformReviewsServiceMock.getPlatformReviews).toHaveBeenCalledWith({
+      status: 'APPROVED',
+      limit: '5',
+      offset: '0',
+      sort: 'oldest',
+      userId: undefined,
+      isAdmin: false,
+    });
+  });
+
   test('getPlatformReview forwards review and requester context', async () => {
     const result = { id: 'r-2' };
     platformReviewsServiceMock.getPlatformReview.mockResolvedValue(result);
@@ -89,6 +109,22 @@ describe('platform-reviews.controller', () => {
     });
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith(result);
+  });
+
+  test('getPlatformReview defaults requester context when user is absent', async () => {
+    const result = { id: 'r-public' };
+    platformReviewsServiceMock.getPlatformReview.mockResolvedValue(result);
+    const req = {
+      params: { reviewId: 'r-public' },
+    };
+
+    await platformReviewsController.getPlatformReview(req, createResponseMock(), jest.fn());
+
+    expect(platformReviewsServiceMock.getPlatformReview).toHaveBeenCalledWith({
+      reviewId: 'r-public',
+      userId: undefined,
+      isAdmin: false,
+    });
   });
 
   test('updatePlatformReview forwards updates and returns 200', async () => {
@@ -116,6 +152,29 @@ describe('platform-reviews.controller', () => {
     });
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith(result);
+  });
+
+  test('updatePlatformReview defaults admin flag to false when role marker is absent', async () => {
+    const result = { id: 'r-plain', updated: true };
+    platformReviewsServiceMock.updatePlatformReview.mockResolvedValue(result);
+    const req = {
+      params: { reviewId: 'r-plain' },
+      user: { id: 'u-4' },
+      body: { rating: 4, text: 'Updated', is_approved: false },
+    };
+
+    await platformReviewsController.updatePlatformReview(req, createResponseMock(), jest.fn());
+
+    expect(platformReviewsServiceMock.updatePlatformReview).toHaveBeenCalledWith({
+      reviewId: 'r-plain',
+      userId: 'u-4',
+      isAdmin: false,
+      updates: {
+        rating: 4,
+        text: 'Updated',
+        is_approved: false,
+      },
+    });
   });
 
   test('deletePlatformReview forwards review id and returns 200', async () => {

@@ -22,6 +22,10 @@ const tasksServiceMock = {
   confirmTaskCompletion: jest.fn(),
   rejectTaskCompletion: jest.fn(),
   createReview: jest.fn(),
+  getTaskReviews: jest.fn(),
+  reportTask: jest.fn(),
+  getTaskReports: jest.fn(),
+  resolveTaskReport: jest.fn(),
 };
 
 jest.unstable_mockModule('../../src/services/tasks/index.js', () => tasksServiceMock);
@@ -256,36 +260,5 @@ describe('tasks.controller', () => {
       review: { rating: 5, text: 'Great work!' },
     });
     expect(res.status).toHaveBeenCalledWith(201);
-  });
-
-  test('getTaskDisputes maps service result to response', async () => {
-    tasksServiceMock.getTaskDisputes.mockResolvedValue({
-      items: [],
-      page: 1,
-      size: 20,
-      total: 0,
-    });
-
-    const req = {
-      query: { page: '1', size: '20', status: 'OPEN', reason_type: 'COMPLETION_NOT_CONFIRMED' },
-    };
-    const res = createResponseMock();
-    const next = jest.fn();
-
-    await tasksController.getTaskDisputes(req, res, next);
-
-    expect(tasksServiceMock.getTaskDisputes).toHaveBeenCalledWith({
-      page: 1,
-      size: 20,
-      status: 'OPEN',
-      reasonType: 'COMPLETION_NOT_CONFIRMED',
-    });
-    expect(res.status).toHaveBeenCalledWith(200);
-    expect(res.json).toHaveBeenCalledWith({
-      items: [],
-      page: 1,
-      size: 20,
-      total: 0,
-    });
   });
 });

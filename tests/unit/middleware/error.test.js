@@ -3,6 +3,22 @@ import { ApiError } from '../../../src/utils/ApiError.js';
 import { errorMiddleware } from '../../../src/middleware/error.middleware.js';
 
 describe('error.middleware', () => {
+  test('forwards error when headers were already sent', () => {
+    const err = new Error('Already sent');
+    const next = jest.fn();
+    const res = {
+      headersSent: true,
+      status: jest.fn().mockReturnThis(),
+      json: jest.fn(),
+    };
+
+    errorMiddleware(err, {}, res, next);
+
+    expect(next).toHaveBeenCalledWith(err);
+    expect(res.status).not.toHaveBeenCalled();
+    expect(res.json).not.toHaveBeenCalled();
+  });
+
   test('handles ApiError', () => {
     const err = new ApiError(401, 'AUTH_REQUIRED', 'Missing auth');
     const req = {};
@@ -89,6 +105,34 @@ describe('error.middleware', () => {
         code: 'VALIDATION_ERROR',
         message: 'Validation failed',
         details: [{ field: 'email or password', issue: 'Missing fields' }],
+      },
+    });
+  });
+
+  test('handles Joi validation fallback field and issue values', () => {
+    const err = {
+      isJoi: true,
+      details: [
+        {
+          path: [],
+          type: 'string.empty',
+        },
+      ],
+    };
+    const res = {
+      headersSent: false,
+      status: jest.fn().mockReturnThis(),
+      json: jest.fn(),
+    };
+
+    errorMiddleware(err, {}, res, jest.fn());
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: 'Validation failed',
+        details: [{ field: 'body', issue: 'string.empty' }],
       },
     });
   });

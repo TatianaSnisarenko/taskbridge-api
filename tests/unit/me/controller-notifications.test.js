@@ -3,6 +3,7 @@ import { jest } from '@jest/globals';
 const meServiceMock = {
   getMyNotifications: jest.fn(),
   markNotificationAsRead: jest.fn(),
+  markNotificationAsUnread: jest.fn(),
   markAllNotificationsAsRead: jest.fn(),
 };
 
@@ -150,6 +151,34 @@ describe('me.controller - notifications', () => {
     expect(res.json).toHaveBeenCalledWith({
       updated: 5,
       read_at: '2026-03-08T11:00:00.000Z',
+    });
+  });
+
+  test('markNotificationAsUnread maps service result to response', async () => {
+    meServiceMock.markNotificationAsUnread.mockResolvedValue({
+      id: 'n-1',
+      read_at: null,
+    });
+
+    const req = {
+      user: { id: 'u-1' },
+      params: { id: 'n-1' },
+      persona: 'developer',
+    };
+    const res = createResponseMock();
+    const next = jest.fn();
+
+    await meController.markNotificationAsUnread(req, res, next);
+
+    expect(meServiceMock.markNotificationAsUnread).toHaveBeenCalledWith({
+      userId: 'u-1',
+      notificationId: 'n-1',
+      persona: 'developer',
+    });
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith({
+      id: 'n-1',
+      read_at: null,
     });
   });
 });

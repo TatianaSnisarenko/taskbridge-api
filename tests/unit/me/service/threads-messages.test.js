@@ -38,6 +38,20 @@ describe('me.service threads - getThreadMessages', () => {
     jest.clearAllMocks();
   });
 
+  test('rejects missing thread', async () => {
+    prismaMock.chatThread.findUnique.mockResolvedValue(null);
+
+    await expect(
+      meService.getThreadMessages({
+        userId: 'd1',
+        persona: 'developer',
+        threadId: 'th-missing',
+        page: 1,
+        size: 20,
+      })
+    ).rejects.toMatchObject({ status: 404, code: 'NOT_FOUND' });
+  });
+
   test('rejects deleted task thread', async () => {
     prismaMock.chatThread.findUnique.mockResolvedValue({
       id: 'th1',
@@ -75,6 +89,28 @@ describe('me.service threads - getThreadMessages', () => {
       meService.getThreadMessages({
         userId: 'c1',
         persona: 'company',
+        threadId: 'th1',
+        page: 1,
+        size: 20,
+      })
+    ).rejects.toMatchObject({ status: 403, code: 'FORBIDDEN' });
+  });
+
+  test('rejects developer persona when user is not developer participant', async () => {
+    prismaMock.chatThread.findUnique.mockResolvedValue({
+      id: 'th1',
+      companyUserId: 'c1',
+      developerUserId: 'd2',
+      taskId: 't1',
+      createdAt: new Date('2026-03-01T10:00:00Z'),
+      task: { id: 't1', status: 'IN_PROGRESS', deletedAt: null },
+      reads: [],
+    });
+
+    await expect(
+      meService.getThreadMessages({
+        userId: 'd1',
+        persona: 'developer',
         threadId: 'th1',
         page: 1,
         size: 20,
@@ -209,5 +245,50 @@ describe('me.service threads - getThreadMessages', () => {
 
     expect(result.items[0].read_at).toBe(createdAt.toISOString());
     expect(result.items[1].read_at).toBeNull();
+  });
+
+  test('allows FAILED status for company persona and paginates in ascending order', async () => {
+    const createdAt = new Date('2026-03-01T10:00:00Z');
+    const readAt = new Date('2026-03-01T10:30:00Z');
+    const sentAt = new Date('2026-03-01T11:00:00Z');
+
+    prismaMock.chatThread.findUnique.mockResolvedValue({
+      id: 'th3',
+      companyUserId: 'c1',
+      developerUserId: 'd1',
+      taskId: 't3',
+      createdAt,
+      task: { id: 't3', status: 'FAILED', deletedAt: null },
+      reads: [{ lastReadAt: readAt }],
+    });
+    prismaMock.chatMessage.findMany.mockResolvedValue([
+      {
+        id: 'm3',
+        senderUserId: 'd1',
+        senderPersona: 'developer',
+        text: 'after failure',
+        sentAt,
+        attachments: [],
+      },
+    ]);
+    prismaMock.chatMessage.count.mockResolvedValue(1);
+
+    const result = await meService.getThreadMessages({
+      userId: 'c1',
+      persona: 'company',
+      threadId: 'th3',
+      page: 2,
+      size: 5,
+    });
+
+    expect(prismaMock.chatMessage.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        skip: 5,
+        take: 5,
+        orderBy: { sentAt: 'asc' },
+      })
+    );
+    expect(result.total).toBe(1);
+    expect(result.items[0].read_at).toBeNull();
   });
 });

@@ -264,4 +264,34 @@ describe('me.service - notification persona visibility', () => {
       });
     });
   });
+
+  describe('markNotificationAsUnread', () => {
+    test('rejects company-owned APPLICATION_CREATED for developer persona', async () => {
+      prismaMock.notification.findUnique.mockResolvedValue({
+        id: 'n1',
+        userId: 'c1',
+        type: 'APPLICATION_CREATED',
+        readAt: new Date('2026-03-15T12:00:00Z'),
+        createdAt: new Date('2026-03-15T10:00:00Z'),
+        task: {
+          ownerUserId: 'c1',
+        },
+        actor: {
+          developerProfile: { userId: 'u1' },
+          companyProfile: null,
+        },
+      });
+
+      await expect(
+        meService.markNotificationAsUnread({
+          userId: 'c1',
+          notificationId: 'n1',
+          persona: 'developer',
+        })
+      ).rejects.toMatchObject({
+        status: 404,
+        code: 'NOT_FOUND',
+      });
+    });
+  });
 });

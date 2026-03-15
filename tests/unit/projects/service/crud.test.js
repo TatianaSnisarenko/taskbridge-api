@@ -107,6 +107,25 @@ describe('projects.service - crud', () => {
     });
   });
 
+  test('createProject skips technology linking when technology ids are absent', async () => {
+    const createdAt = new Date('2026-02-14T10:00:00Z');
+    prismaMock.project.findFirst.mockResolvedValue(null);
+    prismaMock.project.create.mockResolvedValue({ id: 'p2', createdAt });
+
+    const result = await projectsService.createProject({
+      userId: 'u1',
+      project: {
+        title: 'No Tech Project',
+        short_description: 'Simple',
+      },
+    });
+
+    expect(technologiesServiceMock.validateTechnologyIds).toHaveBeenCalledWith([]);
+    expect(prismaMock.projectTechnology.createMany).not.toHaveBeenCalled();
+    expect(technologiesServiceMock.incrementTechnologyPopularity).not.toHaveBeenCalled();
+    expect(result).toEqual({ projectId: 'p2', createdAt });
+  });
+
   test('updateProject rejects missing project', async () => {
     prismaMock.project.findUnique.mockResolvedValue(null);
 
@@ -201,6 +220,51 @@ describe('projects.service - crud', () => {
     });
 
     expect(result).toEqual({ projectId: 'p1', updated: true, updatedAt });
+  });
+
+  test('updateProject skips technology sync when technology_ids is not provided', async () => {
+    const updatedAt = new Date('2026-02-14T12:15:00Z');
+    prismaMock.project.findUnique.mockResolvedValue({ id: 'p1', ownerUserId: 'u1' });
+    prismaMock.project.findFirst.mockResolvedValue(null);
+    prismaMock.project.update.mockResolvedValue({ id: 'p1', updatedAt });
+
+    const result = await projectsService.updateProject({
+      userId: 'u1',
+      projectId: 'p1',
+      project: {
+        title: 'Renamed Project',
+        short_description: 'Updated',
+      },
+    });
+
+    expect(technologiesServiceMock.validateTechnologyIds).not.toHaveBeenCalled();
+    expect(prismaMock.projectTechnology.deleteMany).not.toHaveBeenCalled();
+    expect(prismaMock.projectTechnology.createMany).not.toHaveBeenCalled();
+    expect(technologiesServiceMock.incrementTechnologyPopularity).not.toHaveBeenCalled();
+    expect(result).toEqual({ projectId: 'p1', updated: true, updatedAt });
+  });
+
+  test('updateProject removes old technologies without recreating them when list is empty', async () => {
+    const updatedAt = new Date('2026-02-14T12:20:00Z');
+    prismaMock.project.findUnique.mockResolvedValue({ id: 'p1', ownerUserId: 'u1' });
+    prismaMock.project.findFirst.mockResolvedValue(null);
+    prismaMock.project.update.mockResolvedValue({ id: 'p1', updatedAt });
+
+    await projectsService.updateProject({
+      userId: 'u1',
+      projectId: 'p1',
+      project: {
+        title: 'Project Empty Stack',
+        technology_ids: [],
+      },
+    });
+
+    expect(technologiesServiceMock.validateTechnologyIds).toHaveBeenCalledWith([]);
+    expect(prismaMock.projectTechnology.deleteMany).toHaveBeenCalledWith({
+      where: { projectId: 'p1' },
+    });
+    expect(prismaMock.projectTechnology.createMany).not.toHaveBeenCalled();
+    expect(technologiesServiceMock.incrementTechnologyPopularity).not.toHaveBeenCalled();
   });
 
   test('deleteProject rejects missing project', async () => {

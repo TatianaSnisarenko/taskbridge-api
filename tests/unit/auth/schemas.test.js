@@ -190,6 +190,19 @@ describe('auth.schemas', () => {
     expect(error).toBeTruthy();
   });
 
+  test('signup rejects invalid timezone in developer profile', () => {
+    const { error } = signupSchema.validate({
+      email: 'a@example.com',
+      password: 'Passw0rd!',
+      developerProfile: {
+        displayName: 'Dev',
+        timezone: 'Mars/Olympus',
+      },
+    });
+
+    expect(error).toBeTruthy();
+  });
+
   test('signup accepts minimum display name length', () => {
     const { error } = signupSchema.validate({
       email: 'a@example.com',

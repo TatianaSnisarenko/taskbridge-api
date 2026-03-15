@@ -176,6 +176,25 @@ describe('me.service threads', () => {
       ).rejects.toMatchObject({ status: 403, code: 'FORBIDDEN' });
     });
 
+    test('rejects developer persona when user is not developer participant', async () => {
+      prismaMock.chatThread.findUnique.mockResolvedValue({
+        id: 'th-dev',
+        taskId: 't-dev',
+        companyUserId: 'c1',
+        developerUserId: 'd2',
+        task: { id: 't-dev', status: 'IN_PROGRESS', deletedAt: null },
+      });
+
+      await expect(
+        meService.createMessage({
+          userId: 'd1',
+          persona: 'developer',
+          threadId: 'th-dev',
+          text: 'Hello',
+        })
+      ).rejects.toMatchObject({ status: 403, code: 'FORBIDDEN' });
+    });
+
     test('rejects unsupported task status', async () => {
       prismaMock.chatThread.findUnique.mockResolvedValue({
         id: 'th1',
@@ -312,6 +331,62 @@ describe('me.service threads', () => {
 
       expect(result.thread_id).toBe('th3');
       expect(result.text).toBe('Final note');
+
+      globalThis.Date = realDate;
+    });
+
+    test('allows COMPLETED status and normalizes non-string text to empty string', async () => {
+      const sentAt = new Date('2026-03-01T17:00:00Z');
+      const realDate = Date;
+      globalThis.Date = class extends Date {
+        constructor(...args) {
+          if (args.length === 0) {
+            return sentAt;
+          }
+          return new realDate(...args);
+        }
+        static now() {
+          return sentAt.getTime();
+        }
+      };
+
+      prismaMock.chatThread.findUnique.mockResolvedValue({
+        id: 'th4',
+        taskId: 't4',
+        companyUserId: 'c1',
+        developerUserId: 'd1',
+        task: { id: 't4', status: 'COMPLETED', deletedAt: null },
+      });
+
+      prismaMock.$transaction.mockImplementation(async (callback) => {
+        const tx = {
+          chatMessage: {
+            create: jest.fn().mockResolvedValue({
+              id: 'm4',
+              threadId: 'th4',
+              senderUserId: 'd1',
+              senderPersona: 'developer',
+              text: '',
+              sentAt,
+              attachments: [],
+            }),
+          },
+          chatThread: {
+            update: jest.fn().mockResolvedValue({ id: 'th4' }),
+          },
+        };
+
+        return callback(tx);
+      });
+
+      const result = await meService.createMessage({
+        userId: 'd1',
+        persona: 'developer',
+        threadId: 'th4',
+        text: 123,
+      });
+
+      expect(result.text).toBe('');
 
       globalThis.Date = realDate;
     });

@@ -88,4 +88,32 @@ describe('cors config', () => {
 
     expect(cb).toHaveBeenCalledWith(expect.any(Error));
   });
+
+  test('origin callback allows listed origin in production', async () => {
+    jest.resetModules();
+
+    let capturedOptions;
+    const corsMock = jest.fn((options) => {
+      capturedOptions = options;
+      return (req, res, next) => next();
+    });
+
+    jest.unstable_mockModule('cors', () => ({
+      default: corsMock,
+    }));
+
+    jest.unstable_mockModule('../../src/config/env.js', () => ({
+      env: {
+        clientOrigin: 'http://a.test',
+        nodeEnv: 'production',
+      },
+    }));
+
+    await import('../../../src/config/cors.js');
+    const cb = jest.fn();
+
+    capturedOptions.origin('http://a.test', cb);
+
+    expect(cb).toHaveBeenCalledWith(null, true);
+  });
 });

@@ -1,7 +1,7 @@
 import { jest } from '@jest/globals';
 import { setImmediate } from 'node:timers';
 
-async function loadServer({ connectImpl, listenImpl }) {
+async function loadServer({ connectImpl, listenImpl, runOnceImpl }) {
   jest.resetModules();
 
   const connectMock = jest.fn(connectImpl ?? (() => Promise.resolve()));
@@ -9,7 +9,7 @@ async function loadServer({ connectImpl, listenImpl }) {
   const closeMock = jest.fn((cb) => cb());
 
   const cleanupTask = { stop: jest.fn() };
-  const runOnceMock = jest.fn().mockResolvedValue(undefined);
+  const runOnceMock = jest.fn(runOnceImpl ?? (() => Promise.resolve(undefined)));
 
   const listenMock = jest.fn((port, cb) => {
     if (listenImpl) return listenImpl(port, cb);

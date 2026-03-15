@@ -385,6 +385,43 @@
             },
           },
         },
+        400: { description: 'Validation error' },
+        401: { description: 'Unauthorized' },
+        404: { description: 'Notification not found' },
+      },
+    },
+  },
+  '/api/v1/me/notifications/{id}/unread': {
+    post: {
+      tags: ['Me'],
+      summary: 'Mark notification as unread',
+      security: [{ bearerAuth: [] }],
+      parameters: [
+        {
+          name: 'X-Persona',
+          in: 'header',
+          required: true,
+          schema: { type: 'string', enum: ['developer', 'company'] },
+          description: 'User persona context (required)',
+        },
+        {
+          name: 'id',
+          in: 'path',
+          required: true,
+          schema: { type: 'string', format: 'uuid' },
+          description: 'Notification ID',
+        },
+      ],
+      responses: {
+        200: {
+          description: 'Notification marked as unread',
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/MarkNotificationAsUnreadResponse' },
+            },
+          },
+        },
+        400: { description: 'Validation error' },
         401: { description: 'Unauthorized' },
         404: { description: 'Notification not found' },
       },

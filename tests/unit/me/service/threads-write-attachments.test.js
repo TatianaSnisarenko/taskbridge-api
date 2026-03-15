@@ -288,4 +288,103 @@ describe('me.service threads attachments', () => {
     expect(cloudinaryMock.deleteFile).toHaveBeenCalledWith('teamup/chat-attachments/spec-1', 'raw');
     expect(prismaMock.$transaction).not.toHaveBeenCalled();
   });
+
+  test('falls back to file.bin name and default mime type when metadata is missing', async () => {
+    const sentAt = new Date('2026-03-02T11:00:00Z');
+
+    prismaMock.chatThread.findUnique.mockResolvedValue({
+      id: 'th8',
+      taskId: 't8',
+      companyUserId: 'c1',
+      developerUserId: 'd1',
+      task: { id: 't8', status: 'IN_PROGRESS', deletedAt: null },
+    });
+
+    cloudinaryMock.uploadFile.mockResolvedValue({
+      secure_url: 'https://cdn.example.com/file.bin',
+      public_id: 'teamup/chat-attachments/file-bin',
+      resource_type: 'raw',
+    });
+
+    prismaMock.$transaction.mockImplementation(async (callback) => {
+      const tx = {
+        chatMessage: {
+          create: jest.fn().mockResolvedValue({
+            id: 'm8',
+            threadId: 'th8',
+            senderUserId: 'd1',
+            senderPersona: 'developer',
+            text: '',
+            sentAt,
+            attachments: [
+              {
+                url: 'https://cdn.example.com/file.bin',
+                name: 'file.bin',
+                type: 'application/octet-stream',
+              },
+            ],
+          }),
+        },
+        chatThread: {
+          update: jest.fn().mockResolvedValue({ id: 'th8' }),
+        },
+      };
+
+      return callback(tx);
+    });
+
+    const result = await meService.createMessage({
+      userId: 'd1',
+      persona: 'developer',
+      threadId: 'th8',
+      files: [
+        {
+          buffer: Buffer.from('data'),
+          originalname: '   ',
+        },
+      ],
+    });
+
+    const uploadOptions = cloudinaryMock.uploadFile.mock.calls[0][1];
+
+    expect(uploadOptions.filename_override).toBe('file.bin');
+    expect(uploadOptions.public_id).toMatch(/^teamup\/chat-attachments\/[0-9a-f-]+-file\.bin$/);
+    expect(result.attachments[0].type).toBe('application/octet-stream');
+  });
+
+  test('cleans up uploaded attachments when transaction fails after upload', async () => {
+    prismaMock.chatThread.findUnique.mockResolvedValue({
+      id: 'th9',
+      taskId: 't9',
+      companyUserId: 'c1',
+      developerUserId: 'd1',
+      task: { id: 't9', status: 'IN_PROGRESS', deletedAt: null },
+    });
+
+    cloudinaryMock.uploadFile.mockResolvedValue({
+      secure_url: 'https://cdn.example.com/spec.pdf',
+      public_id: 'teamup/chat-attachments/spec-9',
+      resource_type: 'raw',
+    });
+
+    prismaMock.$transaction.mockRejectedValue(new Error('transaction failed'));
+
+    await expect(
+      meService.createMessage({
+        userId: 'd1',
+        persona: 'developer',
+        threadId: 'th9',
+        text: 'with file',
+        files: [
+          {
+            buffer: Buffer.from('pdf'),
+            originalname: 'spec.pdf',
+            mimetype: 'application/pdf',
+          },
+        ],
+      })
+    ).rejects.toThrow('transaction failed');
+
+    expect(cloudinaryMock.deleteFile).toHaveBeenCalledWith('teamup/chat-attachments/spec-9', 'raw');
+  });
 });

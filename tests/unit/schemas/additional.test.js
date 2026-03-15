@@ -10,6 +10,7 @@ import {
   getMyTasksQuerySchema,
   getMyProjectsQuerySchema,
   getMyNotificationsQuerySchema,
+  notificationIdParamSchema,
   getMyThreadsQuerySchema,
   threadIdParamSchema,
   threadMessagesQuerySchema,
@@ -93,6 +94,9 @@ describe('additional Joi schemas', () => {
     expect(getMyTasksQuerySchema.validate({ status: 'COMPLETED' }).error).toBeUndefined();
     expect(getMyProjectsQuerySchema.validate({ page: 2, size: 10 }).error).toBeUndefined();
     expect(getMyNotificationsQuerySchema.validate({ unread_only: true }).error).toBeUndefined();
+    expect(
+      notificationIdParamSchema.validate({ id: '550e8400-e29b-41d4-a716-446655440000' }).error
+    ).toBeUndefined();
     expect(getMyThreadsQuerySchema.validate({ search: 'abc' }).error).toBeUndefined();
     expect(
       threadIdParamSchema.validate({ threadId: '550e8400-e29b-41d4-a716-446655440000' }).error
@@ -119,6 +123,7 @@ describe('additional Joi schemas', () => {
     ).toBeUndefined();
 
     expect(getMyTasksQuerySchema.validate({ status: 'BAD' }).error).toBeDefined();
+    expect(notificationIdParamSchema.validate({ id: 'bad-id' }).error).toBeDefined();
     expect(createMessageRequestSchema.validate({ text: '', files: [] }).error).toBeDefined();
     expect(
       createMessageRequestSchema.validate({
@@ -194,6 +199,12 @@ describe('additional Joi schemas', () => {
     expect(
       uploadAvatarSchema.validate({
         file: { ...filePayload.file, mimetype: 'image/gif' },
+      }).error
+    ).toBeDefined();
+    expect(
+      createDeveloperProfileSchema.validate({
+        ...developerPayload,
+        timezone: 'Mars/Olympus',
       }).error
     ).toBeDefined();
   });
@@ -351,6 +362,12 @@ describe('additional Joi schemas', () => {
     ).toBeUndefined();
 
     expect(createReviewSchema.validate({ rating: 10 }).error).toBeDefined();
+    expect(
+      createTaskDraftSchema.validate({
+        ...draftPayload,
+        timezone_preference: 'Mars/Olympus',
+      }).error
+    ).toBeDefined();
   });
 
   test('technologies schemas validate search and ids', () => {

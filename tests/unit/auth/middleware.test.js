@@ -4,6 +4,9 @@ import {
   optionalAuth,
   requireAuth,
   requireAuthIfOwner,
+  requireAdmin,
+  requireAdminOrModerator,
+  loadAdminOrModeratorStatus,
 } from '../../../src/middleware/auth.middleware.js';
 import { ApiError } from '../../../src/utils/ApiError.js';
 import { env } from '../../../src/config/env.js';
@@ -213,6 +216,198 @@ describe('auth.middleware', () => {
       await optionalAuth(req, res, next);
 
       expect(req.user).toBeUndefined();
+      expect(next).toHaveBeenCalledWith();
+    });
+
+    test('continues without user when token payload has no supported user id field', async () => {
+      const token = jwt.sign({ email: 'a@example.com' }, env.jwtAccessSecret, {
+        expiresIn: 60,
+      });
+
+      const req = { headers: { authorization: `Bearer ${token}` } };
+      const res = {};
+      const next = jest.fn();
+
+      await optionalAuth(req, res, next);
+
+      expect(req.user).toBeUndefined();
+      expect(next).toHaveBeenCalledWith();
+    });
+  });
+
+  describe('requireAdmin', () => {
+    test('rejects when req.user is missing', async () => {
+      const req = {};
+      const res = {};
+      const next = jest.fn();
+
+      await requireAdmin(req, res, next);
+
+      expect(next).toHaveBeenCalledWith(
+        expect.objectContaining({ status: 401, code: 'AUTH_REQUIRED' })
+      );
+    });
+
+    test('rejects when user is not found', async () => {
+      prisma.user.findUnique = jest.fn().mockResolvedValue(null);
+      const req = { user: { id: 'u1' } };
+      const res = {};
+      const next = jest.fn();
+
+      await requireAdmin(req, res, next);
+
+      expect(next).toHaveBeenCalledWith(
+        expect.objectContaining({ status: 401, code: 'USER_NOT_FOUND' })
+      );
+    });
+
+    test('rejects when user lacks admin role', async () => {
+      prisma.user.findUnique = jest.fn().mockResolvedValue({ roles: ['MODERATOR'] });
+      const req = { user: { id: 'u1' } };
+      const res = {};
+      const next = jest.fn();
+
+      await requireAdmin(req, res, next);
+
+      expect(next).toHaveBeenCalledWith(
+        expect.objectContaining({ status: 403, code: 'FORBIDDEN' })
+      );
+    });
+
+    test('allows admin user', async () => {
+      prisma.user.findUnique = jest.fn().mockResolvedValue({ roles: ['ADMIN'] });
+      const req = { user: { id: 'u1' } };
+      const res = {};
+      const next = jest.fn();
+
+      await requireAdmin(req, res, next);
+
+      expect(next).toHaveBeenCalledWith();
+    });
+
+    test('returns internal error when role lookup fails', async () => {
+      prisma.user.findUnique = jest.fn().mockRejectedValue(new Error('db failed'));
+      const req = { user: { id: 'u1' } };
+      const res = {};
+      const next = jest.fn();
+
+      await requireAdmin(req, res, next);
+
+      expect(next).toHaveBeenCalledWith(
+        expect.objectContaining({ status: 500, code: 'INTERNAL_ERROR' })
+      );
+    });
+  });
+
+  describe('requireAdminOrModerator', () => {
+    test('rejects when req.user is missing', async () => {
+      const req = {};
+      const res = {};
+      const next = jest.fn();
+
+      await requireAdminOrModerator(req, res, next);
+
+      expect(next).toHaveBeenCalledWith(
+        expect.objectContaining({ status: 401, code: 'AUTH_REQUIRED' })
+      );
+    });
+
+    test('rejects when user is not found', async () => {
+      prisma.user.findUnique = jest.fn().mockResolvedValue(null);
+      const req = { user: { id: 'u1' } };
+      const res = {};
+      const next = jest.fn();
+
+      await requireAdminOrModerator(req, res, next);
+
+      expect(next).toHaveBeenCalledWith(
+        expect.objectContaining({ status: 401, code: 'USER_NOT_FOUND' })
+      );
+    });
+
+    test('rejects when user lacks both admin and moderator roles', async () => {
+      prisma.user.findUnique = jest.fn().mockResolvedValue({ roles: ['USER'] });
+      const req = { user: { id: 'u1' } };
+      const res = {};
+      const next = jest.fn();
+
+      await requireAdminOrModerator(req, res, next);
+
+      expect(next).toHaveBeenCalledWith(
+        expect.objectContaining({ status: 403, code: 'FORBIDDEN' })
+      );
+    });
+
+    test('allows moderator user', async () => {
+      prisma.user.findUnique = jest.fn().mockResolvedValue({ roles: ['MODERATOR'] });
+      const req = { user: { id: 'u1' } };
+      const res = {};
+      const next = jest.fn();
+
+      await requireAdminOrModerator(req, res, next);
+
+      expect(next).toHaveBeenCalledWith();
+    });
+
+    test('returns internal error when role lookup fails', async () => {
+      prisma.user.findUnique = jest.fn().mockRejectedValue(new Error('db failed'));
+      const req = { user: { id: 'u1' } };
+      const res = {};
+      const next = jest.fn();
+
+      await requireAdminOrModerator(req, res, next);
+
+      expect(next).toHaveBeenCalledWith(
+        expect.objectContaining({ status: 500, code: 'INTERNAL_ERROR' })
+      );
+    });
+  });
+
+  describe('loadAdminOrModeratorStatus', () => {
+    test('sets false when request has no authenticated user', async () => {
+      const req = {};
+      const res = {};
+      const next = jest.fn();
+
+      await loadAdminOrModeratorStatus(req, res, next);
+
+      expect(req.user).toEqual({ isAdminOrModerator: false });
+      expect(next).toHaveBeenCalledWith();
+    });
+
+    test('sets false when user role record is missing', async () => {
+      prisma.user.findUnique = jest.fn().mockResolvedValue(null);
+      const req = { user: { id: 'u1' } };
+      const res = {};
+      const next = jest.fn();
+
+      await loadAdminOrModeratorStatus(req, res, next);
+
+      expect(req.user.isAdminOrModerator).toBe(false);
+      expect(next).toHaveBeenCalledWith();
+    });
+
+    test('sets true for admin user', async () => {
+      prisma.user.findUnique = jest.fn().mockResolvedValue({ roles: ['ADMIN'] });
+      const req = { user: { id: 'u1' } };
+      const res = {};
+      const next = jest.fn();
+
+      await loadAdminOrModeratorStatus(req, res, next);
+
+      expect(req.user.isAdminOrModerator).toBe(true);
+      expect(next).toHaveBeenCalledWith();
+    });
+
+    test('defaults to false when role lookup throws', async () => {
+      prisma.user.findUnique = jest.fn().mockRejectedValue(new Error('db failed'));
+      const req = { user: { id: 'u1' } };
+      const res = {};
+      const next = jest.fn();
+
+      await loadAdminOrModeratorStatus(req, res, next);
+
+      expect(req.user.isAdminOrModerator).toBe(false);
       expect(next).toHaveBeenCalledWith();
     });
   });

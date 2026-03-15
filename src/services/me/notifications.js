@@ -256,6 +256,56 @@ export async function markNotificationAsRead({ userId, notificationId, persona }
 }
 
 /**
+ * Mark a notification as unread for the current user (persona-aware)
+ */
+export async function markNotificationAsUnread({ userId, notificationId, persona }) {
+  const notification = await prisma.notification.findUnique({
+    where: { id: notificationId },
+    select: {
+      id: true,
+      userId: true,
+      type: true,
+      readAt: true,
+      createdAt: true,
+      task: {
+        select: {
+          ownerUserId: true,
+        },
+      },
+      actor: {
+        select: {
+          developerProfile: { select: { userId: true } },
+          companyProfile: { select: { userId: true } },
+        },
+      },
+    },
+  });
+
+  if (!notification || notification.userId !== userId) {
+    throw new ApiError(404, 'NOT_FOUND', 'Notification not found');
+  }
+
+  const isRelevant = isNotificationRelevantForPersona(notification, userId, persona);
+  if (!isRelevant) {
+    throw new ApiError(404, 'NOT_FOUND', 'Notification not found');
+  }
+
+  const updated = await prisma.notification.update({
+    where: { id: notificationId },
+    data: { readAt: null },
+    select: {
+      id: true,
+      readAt: true,
+    },
+  });
+
+  return {
+    id: updated.id,
+    read_at: updated.readAt?.toISOString() || null,
+  };
+}
+
+/**
  * Mark all notifications as read for the current user (persona-aware)
  */
 export async function markAllNotificationsAsRead({ userId, persona }) {

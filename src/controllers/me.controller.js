@@ -153,6 +153,19 @@ export const markNotificationAsRead = asyncHandler(async (req, res) => {
   });
 });
 
+export const markNotificationAsUnread = asyncHandler(async (req, res) => {
+  const result = await meService.markNotificationAsUnread({
+    userId: req.user.id,
+    notificationId: req.params.id,
+    persona: req.persona,
+  });
+
+  return res.status(200).json({
+    id: result.id,
+    read_at: result.read_at,
+  });
+});
+
 export const markAllNotificationsAsRead = asyncHandler(async (req, res) => {
   const result = await meService.markAllNotificationsAsRead({
     userId: req.user.id,

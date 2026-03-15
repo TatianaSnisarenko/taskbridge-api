@@ -31,6 +31,19 @@ describe('validateCreateMessageRequest', () => {
     expect(req.body.text).toBe('');
   });
 
+  test('accepts text payload when files is not an array and normalizes files to empty array', () => {
+    const req = {
+      body: { text: 'Hello' },
+      files: null,
+    };
+    const next = jest.fn();
+
+    validateCreateMessageRequest(req, {}, next);
+
+    expect(next).toHaveBeenCalledWith();
+    expect(req.files).toEqual([]);
+  });
+
   test('rejects when both text and files are missing', () => {
     const req = {
       body: { text: '   ' },
@@ -93,6 +106,28 @@ describe('validateCreateMessageRequest', () => {
         status: 400,
         code: 'VALIDATION_ERROR',
         details: [{ field: 'files[0]', message: 'File must not be empty' }],
+      })
+    );
+  });
+
+  test('rejects missing file name with indexed field path', () => {
+    const req = {
+      body: {},
+      files: [{ mimetype: 'application/pdf', size: 128 }],
+    };
+    const next = jest.fn();
+
+    validateCreateMessageRequest(req, {}, next);
+
+    expect(next).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: 400,
+        code: 'VALIDATION_ERROR',
+        details: expect.arrayContaining([
+          expect.objectContaining({
+            field: 'files[0]',
+          }),
+        ]),
       })
     );
   });

@@ -110,6 +110,15 @@ export const threadIdParamSchema = Joi.object({
     'any.required': 'Thread id is required',
   }),
 });
+
+export const notificationIdParamSchema = Joi.object({
+  id: Joi.string().guid({ version: 'uuidv4' }).required().messages({
+    'string.empty': 'Notification id is required',
+    'string.guid': 'Notification id must be a valid UUID',
+    'any.required': 'Notification id is required',
+  }),
+});
+
 export const threadMessagesQuerySchema = Joi.object({
   page: Joi.number().integer().min(1).default(1).messages({
     'number.base': 'Page must be a number',
