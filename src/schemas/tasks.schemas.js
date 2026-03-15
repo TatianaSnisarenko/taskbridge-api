@@ -10,7 +10,7 @@ const validTimezone = (value, helpers) => {
   return value;
 };
 
-const TASK_TYPES = ['PAID', 'UNPAID', 'VOLUNTEER', 'EXPERIENCE'];
+const TASK_TYPES = ['PAID', 'VOLUNTEER'];
 const TASK_DIFFICULTY = ['JUNIOR', 'MIDDLE', 'SENIOR', 'ANY'];
 const TASK_DURATION = ['DAYS_1_7', 'DAYS_8_14', 'DAYS_15_30', 'DAYS_30_PLUS'];
 const TASK_VISIBILITY = ['PUBLIC', 'UNLISTED'];
@@ -68,7 +68,7 @@ export const createTaskDraftSchema = Joi.object({
     .valid(...TASK_TYPES)
     .required()
     .messages({
-      'any.only': 'Type must be one of: PAID, UNPAID, VOLUNTEER, EXPERIENCE',
+      'any.only': 'Type must be one of: PAID, VOLUNTEER',
       'any.required': 'Type is required',
       'string.empty': 'Type is required',
     }),
@@ -173,7 +173,7 @@ export const updateTaskDraftSchema = Joi.object({
     .valid(...TASK_TYPES)
     .required()
     .messages({
-      'any.only': 'Type must be one of: PAID, UNPAID, VOLUNTEER, EXPERIENCE',
+      'any.only': 'Type must be one of: PAID, VOLUNTEER',
       'any.required': 'Type is required',
       'string.empty': 'Type is required',
     }),
@@ -291,7 +291,7 @@ export const getTasksCatalogSchema = Joi.object({
     .valid(...TASK_TYPES)
     .optional()
     .messages({
-      'any.only': 'Type must be one of: PAID, UNPAID, VOLUNTEER, EXPERIENCE',
+      'any.only': 'Type must be one of: PAID, VOLUNTEER',
     }),
   technology_ids: Joi.alternatives()
     .try(

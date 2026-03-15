@@ -42,7 +42,7 @@ export const tasksSchemas = {
       },
       type: {
         type: 'string',
-        enum: ['PAID', 'UNPAID', 'VOLUNTEER', 'EXPERIENCE'],
+        enum: ['PAID', 'VOLUNTEER'],
       },
       difficulty: {
         type: 'string',
@@ -122,7 +122,7 @@ export const tasksSchemas = {
       },
       type: {
         type: 'string',
-        enum: ['PAID', 'UNPAID', 'VOLUNTEER', 'EXPERIENCE'],
+        enum: ['PAID', 'VOLUNTEER'],
       },
       difficulty: {
         type: 'string',
@@ -603,7 +603,7 @@ export const tasksSchemas = {
         type: 'string',
         enum: TECHNOLOGY_TYPE_ENUM,
       },
-      type: { type: 'string', enum: ['PAID', 'UNPAID', 'VOLUNTEER', 'EXPERIENCE'] },
+      type: { type: 'string', enum: ['PAID', 'VOLUNTEER'] },
       difficulty: { type: 'string', enum: ['JUNIOR', 'MIDDLE', 'SENIOR', 'ANY'] },
       deadline: { type: 'string', format: 'date', nullable: true, example: '2026-08-20' },
       technologies: {
@@ -655,7 +655,7 @@ export const tasksSchemas = {
         type: 'string',
         enum: TECHNOLOGY_TYPE_ENUM,
       },
-      type: { type: 'string', enum: ['PAID', 'UNPAID', 'VOLUNTEER', 'EXPERIENCE'] },
+      type: { type: 'string', enum: ['PAID', 'VOLUNTEER'] },
       difficulty: { type: 'string', enum: ['JUNIOR', 'MIDDLE', 'SENIOR', 'ANY'] },
       technologies: {
         type: 'array',

@@ -41,7 +41,7 @@ export const tasksPaths = {
         {
           name: 'type',
           in: 'query',
-          schema: { type: 'string', enum: ['PAID', 'UNPAID', 'VOLUNTEER', 'EXPERIENCE'] },
+          schema: { type: 'string', enum: ['PAID', 'VOLUNTEER'] },
           description: 'Filter by type',
         },
         {
@@ -125,7 +125,7 @@ export const tasksPaths = {
               title: 'Add filtering to tasks catalog',
               description: 'Implement filters + pagination.',
               category: 'BACKEND',
-              type: 'EXPERIENCE',
+              type: 'VOLUNTEER',
               difficulty: 'JUNIOR',
               technology_ids: [
                 '6c8e4a2a-d1b4-4de8-b7d2-f4b9f7fddf61',
@@ -224,7 +224,7 @@ export const tasksPaths = {
               description:
                 'Refine backend filtering logic, improve query performance, and return richer pagination metadata.',
               category: 'BACKEND',
-              type: 'EXPERIENCE',
+              type: 'VOLUNTEER',
               difficulty: 'JUNIOR',
               technology_ids: [
                 '6c8e4a2a-d1b4-4de8-b7d2-f4b9f7fddf61',

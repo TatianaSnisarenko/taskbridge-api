@@ -514,7 +514,7 @@
             nullable: true,
             enum: ['JUNIOR', 'MIDDLE', 'SENIOR', 'ANY'],
           },
-          type: { type: 'string', enum: ['PAID', 'UNPAID', 'VOLUNTEER', 'EXPERIENCE'] },
+          type: { type: 'string', enum: ['PAID', 'VOLUNTEER'] },
           deadline: { type: 'string', format: 'date', nullable: true, example: '2026-08-15' },
           is_deleted: {
             type: 'boolean',

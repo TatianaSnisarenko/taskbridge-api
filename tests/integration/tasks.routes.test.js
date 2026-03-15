@@ -24,7 +24,7 @@ const basePayload = {
   title: 'Add filtering to tasks catalog',
   description: 'Implement filters + pagination.',
   category: 'BACKEND',
-  type: 'EXPERIENCE',
+  type: 'VOLUNTEER',
   difficulty: 'JUNIOR',
   estimated_effort_hours: 6,
   expected_duration: 'DAYS_8_14',

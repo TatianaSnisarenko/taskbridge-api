@@ -40,9 +40,7 @@ enum TechnologyType {
 
 enum TaskType {
   PAID
-  UNPAID
   VOLUNTEER
-  EXPERIENCE
 }
 
 enum TaskDifficulty {
@@ -397,7 +395,7 @@ model Task {
   title       String
   description String
   category    TechnologyType?
-  type        TaskType        @default(EXPERIENCE)
+  type        TaskType        @default(VOLUNTEER)
   difficulty  TaskDifficulty?
 
   estimatedEffortHours  Int?           @map("estimated_effort_hours")
@@ -588,8 +586,8 @@ model ChatMessage {
   text          String   @db.VarChar(2000)
   sentAt        DateTime @default(now()) @map("sent_at") @db.Timestamptz(6)
 
-  thread      ChatThread               @relation(fields: [threadId], references: [id], onDelete: Cascade)
-  sender      User                     @relation(fields: [senderUserId], references: [id], onDelete: Cascade)
+  thread      ChatThread              @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  sender      User                    @relation(fields: [senderUserId], references: [id], onDelete: Cascade)
   attachments ChatMessageAttachment[]
 
   @@index([threadId, sentAt(sort: Desc)])

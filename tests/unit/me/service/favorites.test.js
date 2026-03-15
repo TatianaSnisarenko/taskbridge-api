@@ -219,7 +219,7 @@ describe('me.service - favorites', () => {
             status: 'DELETED',
             category: null,
             difficulty: null,
-            type: 'EXPERIENCE',
+            type: 'VOLUNTEER',
             deadline: null,
             deletedAt: new Date('2026-03-05T00:00:00Z'),
             ownerUserId: 'c2',

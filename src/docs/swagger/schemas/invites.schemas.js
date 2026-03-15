@@ -89,7 +89,7 @@ export const invitesSchemas = {
         enum: ['JUNIOR', 'MIDDLE', 'SENIOR', 'ANY'],
         nullable: true,
       },
-      type: { type: 'string', enum: ['PAID', 'UNPAID', 'VOLUNTEER', 'EXPERIENCE'] },
+      type: { type: 'string', enum: ['PAID', 'VOLUNTEER'] },
     },
   },
   InviteCompanyInfo: {

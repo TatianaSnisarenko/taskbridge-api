@@ -260,7 +260,7 @@ describe('additional Joi schemas', () => {
       title: 'Backend API task',
       description: 'Implement endpoints and tests for API.',
       category: 'BACKEND',
-      type: 'EXPERIENCE',
+      type: 'VOLUNTEER',
       difficulty: 'JUNIOR',
       technology_ids: ['550e8400-e29b-41d4-a716-446655440000'],
       estimated_effort_hours: 10,
@@ -294,7 +294,7 @@ describe('additional Joi schemas', () => {
         size: 20,
         category: 'BACKEND',
         difficulty: 'JUNIOR',
-        type: 'EXPERIENCE',
+        type: 'VOLUNTEER',
         tech_match: 'ANY',
       }).error
     ).toBeUndefined();

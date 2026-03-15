@@ -637,7 +637,7 @@ const taskTemplates = [
     ],
     deliverables: ['Dark theme CSS, theme toggle component, localStorage integration.'],
     category: 'FRONTEND',
-    type: 'EXPERIENCE',
+    type: 'VOLUNTEER',
     difficulty: 'JUNIOR',
     estimatedEffortHours: 15,
     duration: 'DAYS_1_7',
