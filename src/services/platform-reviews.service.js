@@ -2,6 +2,55 @@ import { prisma } from '../db/prisma.js';
 import { ApiError } from '../utils/ApiError.js';
 import { env } from '../config/env.js';
 
+const reviewAuthorSelect = {
+  id: true,
+  developerProfile: {
+    select: { displayName: true, avatarUrl: true },
+  },
+  companyProfile: {
+    select: { companyName: true, logoUrl: true },
+  },
+};
+
+function buildReviewAuthor(user) {
+  if (user.developerProfile) {
+    return {
+      author_name: user.developerProfile.displayName,
+      author_type: 'developer',
+      author_image_url: user.developerProfile.avatarUrl || null,
+    };
+  }
+
+  if (user.companyProfile) {
+    return {
+      author_name: user.companyProfile.companyName,
+      author_type: 'company',
+      author_image_url: user.companyProfile.logoUrl || null,
+    };
+  }
+
+  return {
+    author_name: null,
+    author_type: null,
+    author_image_url: null,
+  };
+}
+
+function mapPlatformReview(review) {
+  const author = buildReviewAuthor(review.user);
+
+  return {
+    review_id: review.id,
+    user_id: review.userId,
+    ...author,
+    rating: review.rating,
+    text: review.text,
+    is_approved: review.isApproved,
+    created_at: review.createdAt.toISOString(),
+    updated_at: review.updatedAt.toISOString(),
+  };
+}
+
 /**
  * Create a platform review
  */
@@ -63,30 +112,12 @@ export async function createPlatformReview({ userId, rating, text }) {
     },
     include: {
       user: {
-        select: {
-          id: true,
-          developerProfile: {
-            select: { displayName: true },
-          },
-          companyProfile: {
-            select: { companyName: true },
-          },
-        },
+        select: reviewAuthorSelect,
       },
     },
   });
 
-  return {
-    review_id: review.id,
-    user_id: review.userId,
-    author_name:
-      review.user.developerProfile?.displayName || review.user.companyProfile?.companyName,
-    rating: review.rating,
-    text: review.text,
-    is_approved: review.isApproved,
-    created_at: review.createdAt.toISOString(),
-    updated_at: review.updatedAt.toISOString(),
-  };
+  return mapPlatformReview(review);
 }
 
 /**
@@ -144,15 +175,7 @@ export async function getPlatformReviews({
       orderBy,
       include: {
         user: {
-          select: {
-            id: true,
-            developerProfile: {
-              select: { displayName: true },
-            },
-            companyProfile: {
-              select: { companyName: true },
-            },
-          },
+          select: reviewAuthorSelect,
         },
       },
     }),
@@ -160,16 +183,7 @@ export async function getPlatformReviews({
   ]);
 
   return {
-    reviews: reviews.map((r) => ({
-      review_id: r.id,
-      user_id: r.userId,
-      author_name: r.user.developerProfile?.displayName || r.user.companyProfile?.companyName,
-      rating: r.rating,
-      text: r.text,
-      is_approved: r.isApproved,
-      created_at: r.createdAt.toISOString(),
-      updated_at: r.updatedAt.toISOString(),
-    })),
+    reviews: reviews.map(mapPlatformReview),
     total,
     limit,
     offset,
@@ -184,15 +198,7 @@ export async function getPlatformReview({ reviewId, userId = null, isAdmin = fal
     where: { id: reviewId },
     include: {
       user: {
-        select: {
-          id: true,
-          developerProfile: {
-            select: { displayName: true },
-          },
-          companyProfile: {
-            select: { companyName: true },
-          },
-        },
+        select: reviewAuthorSelect,
       },
     },
   });
@@ -209,17 +215,7 @@ export async function getPlatformReview({ reviewId, userId = null, isAdmin = fal
     throw new ApiError(403, 'FORBIDDEN', 'You do not have permission to view this review');
   }
 
-  return {
-    review_id: review.id,
-    user_id: review.userId,
-    author_name:
-      review.user.developerProfile?.displayName || review.user.companyProfile?.companyName,
-    rating: review.rating,
-    text: review.text,
-    is_approved: review.isApproved,
-    created_at: review.createdAt.toISOString(),
-    updated_at: review.updatedAt.toISOString(),
-  };
+  return mapPlatformReview(review);
 }
 
 /**
@@ -261,31 +257,12 @@ export async function updatePlatformReview({ reviewId, userId, isAdmin, updates 
     data: updateData,
     include: {
       user: {
-        select: {
-          id: true,
-          developerProfile: {
-            select: { displayName: true },
-          },
-          companyProfile: {
-            select: { companyName: true },
-          },
-        },
+        select: reviewAuthorSelect,
       },
     },
   });
 
-  return {
-    review_id: updatedReview.id,
-    user_id: updatedReview.userId,
-    author_name:
-      updatedReview.user.developerProfile?.displayName ||
-      updatedReview.user.companyProfile?.companyName,
-    rating: updatedReview.rating,
-    text: updatedReview.text,
-    is_approved: updatedReview.isApproved,
-    created_at: updatedReview.createdAt.toISOString(),
-    updated_at: updatedReview.updatedAt.toISOString(),
-  };
+  return mapPlatformReview(updatedReview);
 }
 
 /**
@@ -331,29 +308,10 @@ export async function approvePlatformReview({ reviewId }) {
     data: { isApproved: true },
     include: {
       user: {
-        select: {
-          id: true,
-          developerProfile: {
-            select: { displayName: true },
-          },
-          companyProfile: {
-            select: { companyName: true },
-          },
-        },
+        select: reviewAuthorSelect,
       },
     },
   });
 
-  return {
-    review_id: updatedReview.id,
-    user_id: updatedReview.userId,
-    author_name:
-      updatedReview.user.developerProfile?.displayName ||
-      updatedReview.user.companyProfile?.companyName,
-    rating: updatedReview.rating,
-    text: updatedReview.text,
-    is_approved: updatedReview.isApproved,
-    created_at: updatedReview.createdAt.toISOString(),
-    updated_at: updatedReview.updatedAt.toISOString(),
-  };
+  return mapPlatformReview(updatedReview);
 }

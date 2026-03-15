@@ -68,7 +68,7 @@ describe('auth.schemas', () => {
         companyType: 'STARTUP',
         description: 'We are an innovative tech startup',
         teamSize: 15,
-        country: 'UA',
+        country: 'Ukraine',
         timezone: 'EET',
         contactEmail: 'contact@techstartup.com',
         websiteUrl: 'https://techstartup.com',
@@ -150,17 +150,31 @@ describe('auth.schemas', () => {
     expect(error).toBeTruthy();
   });
 
-  test('signup rejects invalid country code', () => {
+  test('signup rejects too short country name', () => {
     const { error } = signupSchema.validate({
       email: 'a@example.com',
       password: 'Passw0rd!',
       companyProfile: {
         companyName: 'Company',
-        country: 'USA',
+        country: 'U',
       },
     });
 
     expect(error).toBeTruthy();
+  });
+
+  test('signup accepts full country name', () => {
+    const { error, value } = signupSchema.validate({
+      email: 'a@example.com',
+      password: 'Passw0rd!',
+      companyProfile: {
+        companyName: 'Company',
+        country: 'United States',
+      },
+    });
+
+    expect(error).toBeUndefined();
+    expect(value.companyProfile.country).toBe('United States');
   });
 
   test('signup rejects invalid contact email', () => {

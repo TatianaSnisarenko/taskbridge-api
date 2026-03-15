@@ -50,7 +50,7 @@ const companyPayload = {
   company_type: 'STARTUP',
   description: 'We build platforms for remote teams',
   team_size: 4,
-  country: 'UA',
+  country: 'Ukraine',
   timezone: 'Europe/Zaporozhye',
   contact_email: 'contact@teamup.dev',
   website_url: 'https://teamup.dev',

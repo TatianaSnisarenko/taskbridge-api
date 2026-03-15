@@ -48,7 +48,10 @@ describe('Platform Reviews Service - Update & Delete', () => {
         updatedAt: new Date('2026-03-08T11:00:00Z'),
         user: {
           id: 'user-123',
-          developerProfile: { displayName: 'John' },
+          developerProfile: {
+            displayName: 'John',
+            avatarUrl: 'https://cdn.example.com/avatars/john.png',
+          },
           companyProfile: null,
         },
       };
@@ -68,6 +71,8 @@ describe('Platform Reviews Service - Update & Delete', () => {
 
       expect(result.rating).toBe(4);
       expect(result.text).toBe('Updated review text');
+      expect(result.author_type).toBe('developer');
+      expect(result.author_image_url).toBe('https://cdn.example.com/avatars/john.png');
     });
 
     test('should not allow owner to approve their own review', async () => {
@@ -108,7 +113,10 @@ describe('Platform Reviews Service - Update & Delete', () => {
         updatedAt: new Date('2026-03-08T11:00:00Z'),
         user: {
           id: 'user-123',
-          developerProfile: { displayName: 'John' },
+          developerProfile: {
+            displayName: 'John',
+            avatarUrl: 'https://cdn.example.com/avatars/john.png',
+          },
           companyProfile: null,
         },
       };
@@ -126,6 +134,8 @@ describe('Platform Reviews Service - Update & Delete', () => {
       });
 
       expect(result.is_approved).toBe(true);
+      expect(result.author_type).toBe('developer');
+      expect(result.author_image_url).toBe('https://cdn.example.com/avatars/john.png');
     });
 
     test('should not allow non-owner non-admin to update review', async () => {
@@ -187,7 +197,10 @@ describe('Platform Reviews Service - Update & Delete', () => {
         updatedAt: new Date('2026-03-08T11:00:00Z'),
         user: {
           id: 'user-123',
-          developerProfile: { displayName: 'John' },
+          developerProfile: {
+            displayName: 'John',
+            avatarUrl: 'https://cdn.example.com/avatars/john.png',
+          },
           companyProfile: null,
         },
       };
@@ -226,7 +239,10 @@ describe('Platform Reviews Service - Update & Delete', () => {
         updatedAt: new Date('2026-03-08T11:00:00Z'),
         user: {
           id: 'user-123',
-          developerProfile: { displayName: 'John' },
+          developerProfile: {
+            displayName: 'John',
+            avatarUrl: 'https://cdn.example.com/avatars/john.png',
+          },
           companyProfile: null,
         },
       };
@@ -268,7 +284,10 @@ describe('Platform Reviews Service - Update & Delete', () => {
         updatedAt: new Date('2026-03-08T11:00:00Z'),
         user: {
           id: 'user-123',
-          developerProfile: { displayName: 'John' },
+          developerProfile: {
+            displayName: 'John',
+            avatarUrl: 'https://cdn.example.com/avatars/john.png',
+          },
           companyProfile: null,
         },
       };
@@ -310,7 +329,10 @@ describe('Platform Reviews Service - Update & Delete', () => {
         updatedAt: new Date('2026-03-08T11:00:00Z'),
         user: {
           id: 'user-123',
-          developerProfile: { displayName: 'John' },
+          developerProfile: {
+            displayName: 'John',
+            avatarUrl: 'https://cdn.example.com/avatars/john.png',
+          },
           companyProfile: null,
         },
       };
@@ -347,7 +369,10 @@ describe('Platform Reviews Service - Update & Delete', () => {
         updatedAt: new Date('2026-03-08T11:00:00Z'),
         user: {
           id: 'user-123',
-          developerProfile: { displayName: 'John' },
+          developerProfile: {
+            displayName: 'John',
+            avatarUrl: 'https://cdn.example.com/avatars/john.png',
+          },
           companyProfile: null,
         },
       };

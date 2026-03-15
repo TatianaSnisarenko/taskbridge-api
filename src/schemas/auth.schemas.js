@@ -110,12 +110,10 @@ export const signupSchema = Joi.object({
       'number.min': 'Team size must be at least 1',
       'number.max': 'Team size must not exceed 100000',
     }),
-    country: Joi.string()
-      .trim()
-      .pattern(/^[A-Z]{2}$/)
-      .messages({
-        'string.pattern.base': 'Country must be a valid 2-letter ISO code',
-      }),
+    country: Joi.string().trim().min(2).max(100).messages({
+      'string.min': 'Country must be at least 2 characters',
+      'string.max': 'Country must not exceed 100 characters',
+    }),
     timezone: Joi.string().trim().min(3).max(50),
     contactEmail: Joi.string().pattern(emailRegexp).messages({
       'string.pattern.base': 'Contact email must be a valid email',

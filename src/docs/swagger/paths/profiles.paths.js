@@ -274,7 +274,7 @@ export const profilesPaths = {
               description:
                 'Product company building SaaS collaboration tools for distributed teams.',
               team_size: 10,
-              country: 'US',
+              country: 'United States',
               timezone: 'America/New_York',
               contact_email: 'hello@novatechlabs.com',
               website_url: 'https://novatechlabs.com',
@@ -311,7 +311,7 @@ export const profilesPaths = {
               company_type: 'SMB',
               description: 'Updated profile with stronger focus on backend platform and analytics.',
               team_size: 12,
-              country: 'US',
+              country: 'United States',
               timezone: 'America/New_York',
               contact_email: 'partnerships@novatechlabs.com',
               website_url: 'https://novatechlabs.com',

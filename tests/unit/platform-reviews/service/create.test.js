@@ -32,7 +32,10 @@ describe('Platform Reviews Service - Create', () => {
 
       const mockUser = {
         id: userId,
-        developerProfile: { displayName: 'John Doe' },
+        developerProfile: {
+          displayName: 'John Doe',
+          avatarUrl: 'https://cdn.example.com/avatars/john-doe.png',
+        },
         companyProfile: null,
       };
 
@@ -61,6 +64,8 @@ describe('Platform Reviews Service - Create', () => {
         review_id: 'review-123',
         user_id: userId,
         author_name: 'John Doe',
+        author_type: 'developer',
+        author_image_url: 'https://cdn.example.com/avatars/john-doe.png',
         rating: 5,
         text,
         is_approved: false,
@@ -87,8 +92,8 @@ describe('Platform Reviews Service - Create', () => {
           user: {
             select: {
               id: true,
-              developerProfile: { select: { displayName: true } },
-              companyProfile: { select: { companyName: true } },
+              developerProfile: { select: { displayName: true, avatarUrl: true } },
+              companyProfile: { select: { companyName: true, logoUrl: true } },
             },
           },
         },
@@ -103,7 +108,10 @@ describe('Platform Reviews Service - Create', () => {
       const mockUser = {
         id: userId,
         developerProfile: null,
-        companyProfile: { companyName: 'TechCorp Inc.' },
+        companyProfile: {
+          companyName: 'TechCorp Inc.',
+          logoUrl: 'https://cdn.example.com/logos/techcorp.png',
+        },
       };
 
       const mockReview = {
@@ -128,6 +136,8 @@ describe('Platform Reviews Service - Create', () => {
       });
 
       expect(result.author_name).toBe('TechCorp Inc.');
+      expect(result.author_type).toBe('company');
+      expect(result.author_image_url).toBe('https://cdn.example.com/logos/techcorp.png');
     });
 
     test('should throw error if user not found', async () => {
@@ -198,8 +208,14 @@ describe('Platform Reviews Service - Create', () => {
 
       const mockUser = {
         id: userId,
-        developerProfile: { displayName: 'John Developer' },
-        companyProfile: { companyName: 'TechCorp Inc.' },
+        developerProfile: {
+          displayName: 'John Developer',
+          avatarUrl: 'https://cdn.example.com/avatars/john-developer.png',
+        },
+        companyProfile: {
+          companyName: 'TechCorp Inc.',
+          logoUrl: 'https://cdn.example.com/logos/techcorp.png',
+        },
       };
 
       const mockReview = {
@@ -224,6 +240,8 @@ describe('Platform Reviews Service - Create', () => {
       });
 
       expect(result.author_name).toBe('John Developer');
+      expect(result.author_type).toBe('developer');
+      expect(result.author_image_url).toBe('https://cdn.example.com/avatars/john-developer.png');
     });
   });
 });

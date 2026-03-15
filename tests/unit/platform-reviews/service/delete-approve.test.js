@@ -66,7 +66,10 @@ describe('Platform Reviews Service - Delete & Approve', () => {
         updatedAt: new Date('2026-03-08T11:00:00Z'),
         user: {
           id: 'user-123',
-          developerProfile: { displayName: 'John' },
+          developerProfile: {
+            displayName: 'John',
+            avatarUrl: 'https://cdn.example.com/avatars/john.png',
+          },
           companyProfile: null,
         },
       };
@@ -79,6 +82,8 @@ describe('Platform Reviews Service - Delete & Approve', () => {
       });
 
       expect(result.is_approved).toBe(true);
+      expect(result.author_type).toBe('developer');
+      expect(result.author_image_url).toBe('https://cdn.example.com/avatars/john.png');
       expect(prismaMock.platformReview.update).toHaveBeenCalledWith({
         where: { id: 'review-123' },
         data: { isApproved: true },

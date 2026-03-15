@@ -31,8 +31,18 @@ describe('platform-reviews routes - GET', () => {
 
   describe('GET /platform-reviews', () => {
     test('should return approved reviews for public access', async () => {
-      const user1 = await createUser({ developerProfile: { displayName: 'User One' } });
-      const user2 = await createUser({ companyProfile: { companyName: 'Company Two' } });
+      const user1 = await createUser({
+        developerProfile: {
+          displayName: 'User One',
+          avatarUrl: 'https://cdn.example.com/avatars/user-one.png',
+        },
+      });
+      const user2 = await createUser({
+        companyProfile: {
+          companyName: 'Company Two',
+          logoUrl: 'https://cdn.example.com/logos/company-two.png',
+        },
+      });
 
       await prisma.platformReview.createMany({
         data: [
@@ -63,6 +73,20 @@ describe('platform-reviews routes - GET', () => {
       expect(res.body.reviews).toHaveLength(2);
       expect(res.body.total).toBe(2);
       expect(res.body.reviews.every((r) => r.is_approved === true)).toBe(true);
+
+      const developerReview = res.body.reviews.find((review) => review.user_id === user1.id);
+      expect(developerReview).toMatchObject({
+        author_name: 'User One',
+        author_type: 'developer',
+        author_image_url: 'https://cdn.example.com/avatars/user-one.png',
+      });
+
+      const companyReview = res.body.reviews.find((review) => review.user_id === user2.id);
+      expect(companyReview).toMatchObject({
+        author_name: 'Company Two',
+        author_type: 'company',
+        author_image_url: 'https://cdn.example.com/logos/company-two.png',
+      });
     });
 
     test('should allow admin to see all reviews', async () => {

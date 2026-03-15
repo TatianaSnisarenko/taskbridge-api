@@ -38,6 +38,18 @@ export const platformReviewsSchemas = {
         example: 'Olena Kovalenko',
         description: 'Display name or company name of the author',
       },
+      author_type: {
+        type: 'string',
+        enum: ['developer', 'company'],
+        nullable: true,
+        example: 'developer',
+      },
+      author_image_url: {
+        type: 'string',
+        format: 'uri',
+        nullable: true,
+        example: 'https://cdn.example.com/avatars/user.png',
+      },
       rating: {
         type: 'integer',
         minimum: 1,
@@ -106,6 +118,18 @@ export const platformReviewsSchemas = {
         type: 'string',
         example: 'Olena Kovalenko',
       },
+      author_type: {
+        type: 'string',
+        enum: ['developer', 'company'],
+        nullable: true,
+        example: 'developer',
+      },
+      author_image_url: {
+        type: 'string',
+        format: 'uri',
+        nullable: true,
+        example: 'https://cdn.example.com/avatars/user.png',
+      },
       rating: {
         type: 'integer',
         minimum: 1,
@@ -148,6 +172,18 @@ export const platformReviewsSchemas = {
       author_name: {
         type: 'string',
         example: 'Olena Kovalenko',
+      },
+      author_type: {
+        type: 'string',
+        enum: ['developer', 'company'],
+        nullable: true,
+        example: 'developer',
+      },
+      author_image_url: {
+        type: 'string',
+        format: 'uri',
+        nullable: true,
+        example: 'https://cdn.example.com/avatars/user.png',
       },
       rating: {
         type: 'integer',
@@ -217,6 +253,18 @@ export const platformReviewsSchemas = {
       author_name: {
         type: 'string',
         example: 'TechCorp Inc.',
+      },
+      author_type: {
+        type: 'string',
+        enum: ['developer', 'company'],
+        nullable: true,
+        example: 'company',
+      },
+      author_image_url: {
+        type: 'string',
+        format: 'uri',
+        nullable: true,
+        example: 'https://cdn.example.com/logos/company.png',
       },
       rating: {
         type: 'integer',

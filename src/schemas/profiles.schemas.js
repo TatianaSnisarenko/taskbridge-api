@@ -117,12 +117,10 @@ const companyProfileFields = {
     'number.min': 'Team size must be at least 1',
     'number.max': 'Team size must not exceed 100000',
   }),
-  country: Joi.string()
-    .trim()
-    .pattern(/^[A-Z]{2}$/)
-    .messages({
-      'string.pattern.base': 'Country must be a valid 2-letter ISO code',
-    }),
+  country: Joi.string().trim().min(2).max(100).messages({
+    'string.min': 'Country must be at least 2 characters',
+    'string.max': 'Country must not exceed 100 characters',
+  }),
   timezone: Joi.string().trim().min(3).max(50).messages({
     'string.min': 'Timezone must be at least 3 characters',
     'string.max': 'Timezone must not exceed 50 characters',

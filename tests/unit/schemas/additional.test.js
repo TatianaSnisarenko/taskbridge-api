@@ -169,7 +169,7 @@ describe('additional Joi schemas', () => {
       company_type: 'STARTUP',
       description: 'We build modern software products.',
       team_size: 10,
-      country: 'UA',
+      country: 'Ukraine',
       timezone: 'Europe/Kyiv',
       contact_email: 'contact@example.com',
       website_url: 'https://acme.dev',

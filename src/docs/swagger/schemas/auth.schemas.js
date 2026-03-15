@@ -149,7 +149,7 @@
             example: 'We are an innovative tech startup focused on AI solutions',
           },
           teamSize: { type: 'integer', minimum: 1, maximum: 100000, example: 15 },
-          country: { type: 'string', pattern: '^[A-Z]{2}$', example: 'UA' },
+          country: { type: 'string', minLength: 2, maxLength: 100, example: 'Ukraine' },
           timezone: { type: 'string', minLength: 3, maxLength: 50, example: 'EET' },
           contactEmail: { type: 'string', format: 'email', example: 'contact@novatech.com' },
           websiteUrl: { type: 'string', format: 'uri', example: 'https://novatech.com' },
