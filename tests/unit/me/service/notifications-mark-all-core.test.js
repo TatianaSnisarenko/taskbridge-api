@@ -125,7 +125,7 @@ describe('me.service - notifications markAll core', () => {
         },
         {
           id: 'n2',
-          type: 'TASK_COMPLETED',
+          type: 'TASK_INVITE_ACCEPTED',
           task: {
             ownerUserId: 'c1',
           },
@@ -154,7 +154,7 @@ describe('me.service - notifications markAll core', () => {
 
       expect(prismaMock.notification.updateMany).toHaveBeenCalledWith({
         where: {
-          id: { in: ['n1', 'n2'] }, // Only company-relevant notifications
+          id: { in: ['n1', 'n2'] }, // Only company-relevant notifications (APPLICATION_CREATED, TASK_INVITE_ACCEPTED)
         },
         data: {
           readAt: expect.any(Date),
