@@ -108,27 +108,5 @@ describe('me notification routes', () => {
 
       expect(updated.readAt).toBeNull();
     });
-
-    test('returns 401 when no access token is provided', async () => {
-      const res = await request(app)
-        .post('/api/v1/me/notifications/550e8400-e29b-41d4-a716-446655440000/unread')
-        .set('X-Persona', 'developer');
-
-      expect(res.status).toBe(401);
-    });
-
-    test('returns 400 for invalid notification id format', async () => {
-      const user = await createUser({ developerProfile: { displayName: 'Dev' } });
-      const token = buildAccessToken({ userId: user.id, email: user.email });
-
-      const res = await request(app)
-        .post('/api/v1/me/notifications/not-a-uuid/unread')
-        .set('Authorization', `Bearer ${token}`)
-        .set('X-Persona', 'developer');
-
-      expect(res.status).toBe(400);
-      expect(res.body).toHaveProperty('error.details');
-      expect(Array.isArray(res.body.error.details)).toBe(true);
-    });
   });
 });

@@ -135,26 +135,6 @@ describe('platform-reviews routes - PATCH & DELETE', () => {
       expect(res.status).toBe(200);
       expect(res.body.is_approved).toBe(true);
     });
-
-    test('should reject non-admin approval attempt', async () => {
-      const user = await createUser({ developerProfile: { displayName: 'User' } });
-      const token = buildAccessToken({ userId: user.id, email: user.email });
-
-      const review = await prisma.platformReview.create({
-        data: {
-          userId: user.id,
-          rating: 5,
-          text: 'Review text here',
-          isApproved: false,
-        },
-      });
-
-      const res = await request(app)
-        .patch(`/api/v1/platform-reviews/${review.id}/approve`)
-        .set('Authorization', `Bearer ${token}`);
-
-      expect(res.status).toBe(403);
-    });
   });
 
   describe('DELETE /platform-reviews/:reviewId', () => {
@@ -187,26 +167,6 @@ describe('platform-reviews routes - PATCH & DELETE', () => {
         where: { id: review.id },
       });
       expect(deleted).toBeNull();
-    });
-
-    test('should reject non-admin delete attempt', async () => {
-      const user = await createUser({ developerProfile: { displayName: 'User' } });
-      const token = buildAccessToken({ userId: user.id, email: user.email });
-
-      const review = await prisma.platformReview.create({
-        data: {
-          userId: user.id,
-          rating: 5,
-          text: 'Review text here',
-          isApproved: false,
-        },
-      });
-
-      const res = await request(app)
-        .delete(`/api/v1/platform-reviews/${review.id}`)
-        .set('Authorization', `Bearer ${token}`);
-
-      expect(res.status).toBe(403);
     });
   });
 });

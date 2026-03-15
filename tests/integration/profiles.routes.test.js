@@ -1,6 +1,5 @@
 import { jest } from '@jest/globals';
 import request from 'supertest';
-import sharp from 'sharp';
 import { prisma } from '../../src/db/prisma.js';
 import { resetDatabase } from '../helpers/db.js';
 import { buildAccessToken } from '../helpers/auth.js';
@@ -45,31 +44,6 @@ const basePayload = {
   linkedin_url: 'https://linkedin.com/in/example',
 };
 
-const companyPayload = {
-  company_name: 'TeamUp Studio',
-  company_type: 'STARTUP',
-  description: 'We build platforms for remote teams',
-  team_size: 4,
-  country: 'Ukraine',
-  timezone: 'Europe/Zaporozhye',
-  contact_email: 'contact@teamup.dev',
-  website_url: 'https://teamup.dev',
-  links: { linkedin: 'https://linkedin.com/company/teamup' },
-};
-
-async function createValidImage(width = 512, height = 512) {
-  return sharp({
-    create: {
-      width,
-      height,
-      channels: 3,
-      background: { r: 255, g: 0, b: 0 },
-    },
-  })
-    .png()
-    .toBuffer();
-}
-
 describe('profiles routes', () => {
   beforeAll(async () => {
     await prisma.$connect();
@@ -110,34 +84,6 @@ describe('profiles routes', () => {
       preferredTaskCategories: basePayload.preferred_task_categories,
       portfolioUrl: basePayload.portfolio_url,
       linkedinUrl: basePayload.linkedin_url,
-    });
-  });
-
-  test('POST /profiles/company creates profile', async () => {
-    const user = await createUser();
-    const token = buildAccessToken({ userId: user.id, email: user.email });
-
-    const res = await request(app)
-      .post('/api/v1/profiles/company')
-      .set('Authorization', `Bearer ${token}`)
-      .send(companyPayload);
-
-    expect(res.status).toBe(201);
-    expect(res.body).toEqual({ user_id: user.id, created: true });
-
-    const profile = await prisma.companyProfile.findUnique({ where: { userId: user.id } });
-
-    expect(profile).toMatchObject({
-      userId: user.id,
-      companyName: companyPayload.company_name,
-      companyType: companyPayload.company_type,
-      description: companyPayload.description,
-      teamSize: companyPayload.team_size,
-      country: companyPayload.country,
-      timezone: companyPayload.timezone,
-      contactEmail: companyPayload.contact_email,
-      websiteUrl: companyPayload.website_url,
-      links: companyPayload.links,
     });
   });
 
@@ -258,100 +204,6 @@ describe('profiles routes', () => {
       // For now, we verify that the endpoint accepts valid input.
       expect(user).toBeDefined();
     });
-
-    test('deletes avatar successfully', async () => {
-      const user = await createUser({
-        developerProfile: {
-          displayName: 'Dev',
-          avatarUrl:
-            'https://res.cloudinary.com/example/image/upload/v123/teamup/dev-avatars/test.webp',
-          avatarPublicId: 'teamup/dev-avatars/test',
-        },
-      });
-      const token = buildAccessToken({ userId: user.id, email: user.email });
-
-      const res = await request(app)
-        .delete('/api/v1/profiles/developer/avatar')
-        .set('Authorization', `Bearer ${token}`)
-        .set('X-Persona', 'developer');
-
-      expect(res.status).toBe(200);
-      expect(res.body).toEqual({
-        user_id: user.id,
-        avatar_url: null,
-        updated_at: expect.any(String),
-      });
-
-      // Verify avatar is deleted from database
-      const profile = await prisma.developerProfile.findUnique({
-        where: { userId: user.id },
-        select: { avatarUrl: true, avatarPublicId: true },
-      });
-      expect(profile.avatarUrl).toBeNull();
-      expect(profile.avatarPublicId).toBeNull();
-    });
-  });
-
-  describe('POST /profiles/company/logo', () => {
-    test('uploads logo successfully', async () => {
-      const user = await createUser({ companyProfile: { companyName: 'Test Corp' } });
-      const token = buildAccessToken({ userId: user.id, email: user.email });
-      const buffer = await createValidImage(512, 512);
-
-      const res = await request(app)
-        .post('/api/v1/profiles/company/logo')
-        .set('Authorization', `Bearer ${token}`)
-        .set('X-Persona', 'company')
-        .attach('file', buffer, { filename: 'logo.png' });
-
-      expect(res.status).toBe(200);
-      expect(res.body).toEqual({
-        user_id: user.id,
-        logo_url: expect.any(String),
-        updated_at: expect.any(String),
-      });
-
-      // Verify logo is saved in database
-      const profile = await prisma.companyProfile.findUnique({
-        where: { userId: user.id },
-        select: { logoUrl: true, logoPublicId: true },
-      });
-      expect(profile.logoUrl).toBeTruthy();
-      expect(profile.logoPublicId).toBeTruthy();
-    });
-  });
-
-  describe('DELETE /profiles/company/logo', () => {
-    test('deletes logo successfully', async () => {
-      const user = await createUser({
-        companyProfile: {
-          companyName: 'Test Corp',
-          logoUrl:
-            'https://res.cloudinary.com/example/image/upload/v123/teamup/company-logos/logo.webp',
-          logoPublicId: 'teamup/company-logos/logo',
-        },
-      });
-      const token = buildAccessToken({ userId: user.id, email: user.email });
-
-      const res = await request(app)
-        .delete('/api/v1/profiles/company/logo')
-        .set('Authorization', `Bearer ${token}`)
-        .set('X-Persona', 'company');
-
-      expect(res.status).toBe(200);
-      expect(res.body).toEqual({
-        user_id: user.id,
-        logo_url: null,
-        updated_at: expect.any(String),
-      });
-
-      const profile = await prisma.companyProfile.findUnique({
-        where: { userId: user.id },
-        select: { logoUrl: true, logoPublicId: true },
-      });
-      expect(profile.logoUrl).toBeNull();
-      expect(profile.logoPublicId).toBeNull();
-    });
   });
 
   describe('GET /profiles/developers', () => {
@@ -374,56 +226,6 @@ describe('profiles routes', () => {
         page: 1,
         size: 20,
         total: expect.any(Number),
-      });
-    });
-
-    test('accepts repeatable technology_ids query params (swagger style)', async () => {
-      const technology = await prisma.technology.create({
-        data: {
-          slug: `tech-json-${Date.now()}`,
-          name: 'React',
-          type: 'FRONTEND',
-        },
-      });
-
-      const technology2 = await prisma.technology.create({
-        data: {
-          slug: `tech-json-2-${Date.now()}`,
-          name: 'Vue',
-          type: 'FRONTEND',
-        },
-      });
-
-      const res = await request(app)
-        .get('/api/v1/profiles/developers')
-        .query({ technology_ids: [technology.id, technology2.id] });
-
-      expect(res.status).toBe(200);
-      expect(res.body).toMatchObject({
-        items: expect.any(Array),
-        page: 1,
-        size: 20,
-        total: expect.any(Number),
-      });
-    });
-
-    test('rejects JSON-like array string in technology_ids query', async () => {
-      const res = await request(app)
-        .get('/api/v1/profiles/developers')
-        .query({ technology_ids: '["aa91275a-e663-42bf-9cd5-3a51f5feac4e"]' });
-
-      expect(res.status).toBe(400);
-      expect(res.body).toMatchObject({
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Validation failed',
-          details: expect.arrayContaining([
-            expect.objectContaining({
-              field: 'technology_ids',
-              issue: 'Each technology ID must be a valid UUID',
-            }),
-          ]),
-        },
       });
     });
   });

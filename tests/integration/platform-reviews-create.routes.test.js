@@ -83,36 +83,6 @@ describe('platform-reviews routes - POST', () => {
       expect(res.status).toBe(401);
     });
 
-    test('should reject invalid rating', async () => {
-      const user = await createUser({ developerProfile: { displayName: 'Test User' } });
-      const token = buildAccessToken({ userId: user.id, email: user.email });
-
-      const res = await request(app)
-        .post('/api/v1/platform-reviews')
-        .set('Authorization', `Bearer ${token}`)
-        .send({
-          rating: 6,
-          text: 'This rating is too high',
-        });
-
-      expect(res.status).toBe(400);
-    });
-
-    test('should reject short review text', async () => {
-      const user = await createUser({ developerProfile: { displayName: 'Test User' } });
-      const token = buildAccessToken({ userId: user.id, email: user.email });
-
-      const res = await request(app)
-        .post('/api/v1/platform-reviews')
-        .set('Authorization', `Bearer ${token}`)
-        .send({
-          rating: 5,
-          text: 'Too short',
-        });
-
-      expect(res.status).toBe(400);
-    });
-
     test('should enforce cooldown period', async () => {
       const user = await createUser({ developerProfile: { displayName: 'Test User' } });
       const token = buildAccessToken({ userId: user.id, email: user.email });

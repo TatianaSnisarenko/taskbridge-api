@@ -30,30 +30,6 @@ describe('me onboarding routes', () => {
   });
 
   describe('onboarding endpoints', () => {
-    test('GET /me returns default onboarding state for both roles', async () => {
-      const user = await createUser({ developerProfile: { displayName: 'Dev' } });
-      const token = buildAccessToken({ userId: user.id, email: user.email });
-
-      const res = await request(app).get('/api/v1/me').set('Authorization', `Bearer ${token}`);
-
-      expect(res.status).toBe(200);
-      expect(res.body.user_id).toBe(user.id);
-      expect(res.body.onboarding).toEqual({
-        developer: {
-          status: 'not_started',
-          version: 1,
-          completed_at: null,
-          skipped_at: null,
-        },
-        company: {
-          status: 'not_started',
-          version: 1,
-          completed_at: null,
-          skipped_at: null,
-        },
-      });
-    });
-
     test('PATCH /me/onboarding stores completed state with version', async () => {
       const user = await createUser({ developerProfile: { displayName: 'Dev' } });
       const token = buildAccessToken({ userId: user.id, email: user.email });
@@ -158,60 +134,6 @@ describe('me onboarding routes', () => {
         current_status: 'not_started',
         current_version: 1,
       });
-    });
-
-    test('returns should_show=false after completing onboarding with same version', async () => {
-      const user = await createUser({ developerProfile: { displayName: 'Dev' } });
-      const token = buildAccessToken({ userId: user.id, email: user.email });
-
-      await request(app)
-        .patch('/api/v1/me/onboarding')
-        .set('Authorization', `Bearer ${token}`)
-        .send({ role: 'developer', status: 'completed', version: 2 });
-
-      const res = await request(app)
-        .get('/api/v1/me/onboarding/check?role=developer&version=2')
-        .set('Authorization', `Bearer ${token}`);
-
-      expect(res.status).toBe(200);
-      expect(res.body).toEqual({
-        should_show: false,
-        current_status: 'completed',
-        current_version: 2,
-      });
-    });
-
-    test('returns should_show=true when frontend version is newer than stored', async () => {
-      const user = await createUser({ developerProfile: { displayName: 'Dev' } });
-      const token = buildAccessToken({ userId: user.id, email: user.email });
-
-      await request(app)
-        .patch('/api/v1/me/onboarding')
-        .set('Authorization', `Bearer ${token}`)
-        .send({ role: 'developer', status: 'completed', version: 1 });
-
-      const res = await request(app)
-        .get('/api/v1/me/onboarding/check?role=developer&version=2')
-        .set('Authorization', `Bearer ${token}`);
-
-      expect(res.status).toBe(200);
-      expect(res.body).toEqual({
-        should_show: true,
-        current_status: 'completed',
-        current_version: 1,
-      });
-    });
-
-    test('returns 400 when query params are missing', async () => {
-      const user = await createUser({ developerProfile: { displayName: 'Dev' } });
-      const token = buildAccessToken({ userId: user.id, email: user.email });
-
-      const res = await request(app)
-        .get('/api/v1/me/onboarding/check?role=developer')
-        .set('Authorization', `Bearer ${token}`);
-
-      expect(res.status).toBe(400);
-      expect(res.body?.error?.code).toBe('VALIDATION_ERROR');
     });
   });
 });

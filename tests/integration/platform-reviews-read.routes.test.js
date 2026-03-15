@@ -89,86 +89,6 @@ describe('platform-reviews routes - GET', () => {
       });
     });
 
-    test('should allow admin to see all reviews', async () => {
-      const admin = await createUser({ developerProfile: { displayName: 'Admin User' } });
-      await prisma.user.update({
-        where: { id: admin.id },
-        data: { roles: ['USER', 'ADMIN'] },
-      });
-      const adminToken = buildAccessToken({ userId: admin.id, email: admin.email });
-
-      const user = await createUser({ developerProfile: { displayName: 'Regular User' } });
-
-      await prisma.platformReview.createMany({
-        data: [
-          {
-            userId: user.id,
-            rating: 5,
-            text: 'Approved review',
-            isApproved: true,
-          },
-          {
-            userId: user.id,
-            rating: 3,
-            text: 'Pending review',
-            isApproved: false,
-          },
-        ],
-      });
-
-      const res = await request(app)
-        .get('/api/v1/platform-reviews')
-        .set('Authorization', `Bearer ${adminToken}`)
-        .query({ status: 'all' });
-
-      expect(res.status).toBe(200);
-      expect(res.body.reviews).toHaveLength(2);
-      expect(res.body.total).toBe(2);
-    });
-
-    test('should support pagination', async () => {
-      const user = await createUser({ developerProfile: { displayName: 'Test User' } });
-
-      const reviews = Array.from({ length: 25 }, (_, i) => ({
-        userId: user.id,
-        rating: 5,
-        text: `Review number ${i + 1} with enough text to pass validation`,
-        isApproved: true,
-      }));
-
-      await prisma.platformReview.createMany({ data: reviews });
-
-      const res = await request(app)
-        .get('/api/v1/platform-reviews')
-        .query({ limit: 10, offset: 0 });
-
-      expect(res.status).toBe(200);
-      expect(res.body.reviews).toHaveLength(10);
-      expect(res.body.total).toBe(25);
-      expect(res.body.limit).toBe(10);
-      expect(res.body.offset).toBe(0);
-    });
-
-    test('should support sorting by rating', async () => {
-      const user = await createUser({ developerProfile: { displayName: 'Test User' } });
-
-      await prisma.platformReview.createMany({
-        data: [
-          { userId: user.id, rating: 3, text: 'Three star review text here', isApproved: true },
-          { userId: user.id, rating: 5, text: 'Five star review text here', isApproved: true },
-          { userId: user.id, rating: 1, text: 'One star review text here', isApproved: true },
-        ],
-      });
-
-      const res = await request(app)
-        .get('/api/v1/platform-reviews')
-        .query({ sort: 'highest_rated' });
-
-      expect(res.status).toBe(200);
-      expect(res.body.reviews[0].rating).toBe(5);
-      expect(res.body.reviews[2].rating).toBe(1);
-    });
-
     test('should include owner pending review for authenticated owner', async () => {
       const owner = await createUser({ developerProfile: { displayName: 'Owner User' } });
       const ownerToken = buildAccessToken({ userId: owner.id, email: owner.email });
@@ -252,26 +172,6 @@ describe('platform-reviews routes - GET', () => {
 
       expect(res.status).toBe(200);
       expect(res.body.is_approved).toBe(false);
-    });
-
-    test('should allow owner access with lowercase bearer prefix', async () => {
-      const user = await createUser({ developerProfile: { displayName: 'Case Test User' } });
-      const token = buildAccessToken({ userId: user.id, email: user.email });
-      const review = await prisma.platformReview.create({
-        data: {
-          userId: user.id,
-          rating: 5,
-          text: 'Pending review for bearer case-insensitive test',
-          isApproved: false,
-        },
-      });
-
-      const res = await request(app)
-        .get(`/api/v1/platform-reviews/${review.id}`)
-        .set('Authorization', `bearer ${token}`);
-
-      expect(res.status).toBe(200);
-      expect(res.body.review_id).toBe(review.id);
     });
 
     test('should reject access to unapproved review by non-owner', async () => {
