@@ -24,6 +24,11 @@ export const signup = asyncHandler(async (req, res) => {
   });
 });
 
+export const checkEmail = asyncHandler(async (req, res) => {
+  const result = await authService.checkEmail({ email: req.query?.email });
+  return res.status(200).json(result);
+});
+
 export const login = asyncHandler(async (req, res) => {
   const { accessToken, expiresIn, refreshToken } = await authService.login(req.body);
   res.cookie('refresh_token', refreshToken, refreshCookieOptions());

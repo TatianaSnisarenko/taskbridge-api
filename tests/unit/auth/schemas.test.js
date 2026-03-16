@@ -1,4 +1,5 @@
 import {
+  checkEmailSchema,
   signupSchema,
   loginSchema,
   resendVerificationSchema,
@@ -266,5 +267,15 @@ describe('auth.schemas', () => {
   test('resendVerification validates email', () => {
     const { error } = resendVerificationSchema.validate({ email: 'bad' });
     expect(error).toBeTruthy();
+  });
+
+  test('checkEmail validates email in query', () => {
+    const { error } = checkEmailSchema.validate({ email: 'bad' });
+    expect(error).toBeTruthy();
+  });
+
+  test('checkEmail accepts valid email', () => {
+    const { error } = checkEmailSchema.validate({ email: 'valid@example.com' });
+    expect(error).toBeUndefined();
   });
 });

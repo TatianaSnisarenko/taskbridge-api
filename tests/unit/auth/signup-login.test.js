@@ -51,6 +51,24 @@ describe('auth.service', () => {
     jest.clearAllMocks();
   });
 
+  test('checkEmail returns in_use false when user does not exist', async () => {
+    findUserByEmailMock.mockResolvedValue(null);
+
+    const result = await authService.checkEmail({ email: 'free@example.com' });
+
+    expect(findUserByEmailMock).toHaveBeenCalledWith('free@example.com');
+    expect(result).toEqual({ email: 'free@example.com', in_use: false });
+  });
+
+  test('checkEmail returns in_use true when user exists', async () => {
+    findUserByEmailMock.mockResolvedValue({ id: 'u1', email: 'taken@example.com' });
+
+    const result = await authService.checkEmail({ email: 'taken@example.com' });
+
+    expect(findUserByEmailMock).toHaveBeenCalledWith('taken@example.com');
+    expect(result).toEqual({ email: 'taken@example.com', in_use: true });
+  });
+
   test('signup throws when email exists', async () => {
     findUserByEmailMock.mockResolvedValue({ id: 'u1' });
 

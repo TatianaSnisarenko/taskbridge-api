@@ -55,6 +55,14 @@ export async function signup({ email, password, developerProfile, companyProfile
   };
 }
 
+export async function checkEmail({ email }) {
+  const existing = await findUserByEmail(email);
+  return {
+    email,
+    in_use: Boolean(existing),
+  };
+}
+
 export async function login({ email, password }) {
   const user = await findUserByEmail(email);
   if (!user) {

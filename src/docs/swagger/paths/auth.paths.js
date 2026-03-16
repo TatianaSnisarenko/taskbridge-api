@@ -140,6 +140,65 @@
       },
     },
   },
+  '/api/v1/auth/check-email': {
+    get: {
+      tags: ['Auth'],
+      summary: 'Check whether email is already in use',
+      parameters: [
+        {
+          name: 'email',
+          in: 'query',
+          required: true,
+          schema: { type: 'string', format: 'email' },
+          example: 'user@example.com',
+        },
+      ],
+      responses: {
+        200: {
+          description: 'Email usage check result',
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/CheckEmailResponse' },
+            },
+          },
+        },
+        400: {
+          description: 'Validation error',
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/ErrorResponse' },
+              example: {
+                error: {
+                  code: 'VALIDATION_ERROR',
+                  message: 'Validation failed',
+                  details: [
+                    {
+                      field: 'email',
+                      issue: 'Email format is invalid',
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        },
+        429: {
+          description: 'Too many requests',
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/ErrorResponse' },
+              example: {
+                error: {
+                  code: 'RATE_LIMIT_EXCEEDED',
+                  message: 'Too many requests. Please try again later.',
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
   '/api/v1/auth/login': {
     post: {
       tags: ['Auth'],

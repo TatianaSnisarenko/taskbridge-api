@@ -175,6 +175,14 @@
       hasCompanyProfile: { type: 'boolean' },
     },
   },
+  CheckEmailResponse: {
+    type: 'object',
+    required: ['email', 'in_use'],
+    properties: {
+      email: { type: 'string', format: 'email', example: 'developer@example.com' },
+      in_use: { type: 'boolean', example: false },
+    },
+  },
   AccessTokenResponse: {
     type: 'object',
     properties: {

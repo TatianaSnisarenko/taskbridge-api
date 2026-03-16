@@ -2,6 +2,7 @@ import { jest } from '@jest/globals';
 
 const authServiceMock = {
   signup: jest.fn(),
+  checkEmail: jest.fn(),
   login: jest.fn(),
   refresh: jest.fn(),
   logout: jest.fn(),
@@ -58,6 +59,26 @@ describe('auth.controller', () => {
       email: 'new@example.com',
       hasDeveloperProfile: true,
       hasCompanyProfile: false,
+    });
+  });
+
+  test('checkEmail returns email usage payload', async () => {
+    authServiceMock.checkEmail.mockResolvedValue({
+      email: 'new@example.com',
+      in_use: false,
+    });
+
+    const req = { query: { email: 'new@example.com' } };
+    const res = createResponseMock();
+    const next = jest.fn();
+
+    await authController.checkEmail(req, res, next);
+
+    expect(authServiceMock.checkEmail).toHaveBeenCalledWith({ email: 'new@example.com' });
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith({
+      email: 'new@example.com',
+      in_use: false,
     });
   });
 
