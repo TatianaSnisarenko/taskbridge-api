@@ -24,7 +24,7 @@ const timezoneMessages = {
 export { emailRegexp, passRegexp };
 
 export const signupSchema = Joi.object({
-  email: Joi.string().pattern(emailRegexp).required().messages({
+  email: Joi.string().trim().lowercase().pattern(emailRegexp).required().messages({
     'string.pattern.base': 'Email format is invalid',
     'string.empty': 'Email is required',
     'any.required': 'Email is required',
@@ -128,7 +128,7 @@ export const signupSchema = Joi.object({
       'string.max': 'Country must not exceed 100 characters',
     }),
     timezone: Joi.string().trim().custom(validTimezone).messages(timezoneMessages),
-    contactEmail: Joi.string().pattern(emailRegexp).messages({
+    contactEmail: Joi.string().trim().lowercase().pattern(emailRegexp).messages({
       'string.pattern.base': 'Contact email must be a valid email',
     }),
     websiteUrl: Joi.string().uri().messages({
@@ -154,7 +154,7 @@ export const signupSchema = Joi.object({
   });
 
 export const loginSchema = Joi.object({
-  email: Joi.string().pattern(emailRegexp).required().messages({
+  email: Joi.string().trim().lowercase().pattern(emailRegexp).required().messages({
     'string.pattern.base': 'Email format is invalid',
     'string.empty': 'Email is required',
     'any.required': 'Email is required',
@@ -163,7 +163,7 @@ export const loginSchema = Joi.object({
 });
 
 export const checkEmailSchema = Joi.object({
-  email: Joi.string().trim().pattern(emailRegexp).required().messages({
+  email: Joi.string().trim().lowercase().pattern(emailRegexp).required().messages({
     'string.pattern.base': 'Email format is invalid',
     'string.empty': 'Email is required',
     'any.required': 'Email is required',
@@ -178,7 +178,7 @@ export const verifyEmailSchema = Joi.object({
 });
 
 export const resendVerificationSchema = Joi.object({
-  email: Joi.string().pattern(emailRegexp).required().messages({
+  email: Joi.string().trim().lowercase().pattern(emailRegexp).required().messages({
     'string.pattern.base': 'Email format is invalid',
     'string.empty': 'Email is required',
     'any.required': 'Email is required',
@@ -194,7 +194,7 @@ export const setPasswordSchema = Joi.object({
 });
 
 export const forgotPasswordSchema = Joi.object({
-  email: Joi.string().pattern(emailRegexp).required().messages({
+  email: Joi.string().trim().lowercase().pattern(emailRegexp).required().messages({
     'string.pattern.base': 'Email format is invalid',
     'string.empty': 'Email is required',
     'any.required': 'Email is required',

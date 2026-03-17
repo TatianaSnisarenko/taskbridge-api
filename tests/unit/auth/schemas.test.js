@@ -278,4 +278,27 @@ describe('auth.schemas', () => {
     const { error } = checkEmailSchema.validate({ email: 'valid@example.com' });
     expect(error).toBeUndefined();
   });
+
+  test('auth email schemas normalize mixed-case and spaces to lowercase', () => {
+    const mixedEmail = '  User.NameTag@Example.COM  ';
+
+    const signup = signupSchema.validate({
+      email: mixedEmail,
+      password: 'Passw0rd!',
+      developerProfile: { displayName: 'Dev' },
+    });
+    const login = loginSchema.validate({ email: mixedEmail, password: 'Passw0rd!' });
+    const checkEmail = checkEmailSchema.validate({ email: mixedEmail });
+    const resend = resendVerificationSchema.validate({ email: mixedEmail });
+
+    expect(signup.error).toBeUndefined();
+    expect(login.error).toBeUndefined();
+    expect(checkEmail.error).toBeUndefined();
+    expect(resend.error).toBeUndefined();
+
+    expect(signup.value.email).toBe('user.nametag@example.com');
+    expect(login.value.email).toBe('user.nametag@example.com');
+    expect(checkEmail.value.email).toBe('user.nametag@example.com');
+    expect(resend.value.email).toBe('user.nametag@example.com');
+  });
 });

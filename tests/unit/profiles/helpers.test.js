@@ -147,6 +147,18 @@ describe('profiles.helpers', () => {
 
       expect(result.links).toEqual([]);
     });
+
+    test('normalizes contact_email with trim and lowercase', () => {
+      const input = {
+        company_name: 'Company',
+        company_type: 'ENTERPRISE',
+        contact_email: '  Contact@Company.COM  ',
+      };
+
+      const result = mapCompanyProfileInput(input);
+
+      expect(result.contactEmail).toBe('contact@company.com');
+    });
   });
 
   describe('toNumber', () => {

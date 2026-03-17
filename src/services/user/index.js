@@ -21,6 +21,7 @@ function normalizeRoles(roles) {
 }
 
 export async function createUser({ email, password, developerProfile, companyProfile }) {
+  const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : email;
   const passwordHash = await hashPassword(password);
 
   const { technologyIds, technologies, ...developerProfileData } = developerProfile || {};
@@ -37,7 +38,7 @@ export async function createUser({ email, password, developerProfile, companyPro
 
   const user = await prisma.user.create({
     data: {
-      email,
+      email: normalizedEmail,
       passwordHash,
       roles: [USER_ROLE],
       developerProfile: developerProfile
@@ -76,9 +77,11 @@ export async function createUser({ email, password, developerProfile, companyPro
 }
 
 export async function findUserByEmail(email) {
+  if (!email) return null;
+  const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : email;
   return prisma.user.findFirst({
     where: {
-      email,
+      email: normalizedEmail,
       deletedAt: null,
     },
   });

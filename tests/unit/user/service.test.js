@@ -172,6 +172,43 @@ describe('user.service', () => {
     expect(user).toEqual({ id: 'u1' });
   });
 
+  test('createUser normalizes email with trim and lowercase', async () => {
+    hashPasswordMock.mockResolvedValue('hash');
+    prismaMock.user.create.mockResolvedValue({ id: 'u1' });
+
+    await userService.createUser({
+      email: '  User@Example.COM  ',
+      password: 'Passw0rd!',
+    });
+
+    expect(prismaMock.user.create).toHaveBeenCalledWith({
+      data: {
+        email: 'user@example.com',
+        passwordHash: 'hash',
+        roles: ['USER'],
+        developerProfile: undefined,
+        companyProfile: undefined,
+      },
+      include: {
+        developerProfile: true,
+        companyProfile: true,
+      },
+    });
+  });
+
+  test('findUserByEmail normalizes email with trim and lowercase', async () => {
+    prismaMock.user.findFirst.mockResolvedValue({ id: 'u1' });
+
+    await userService.findUserByEmail('  User@Example.COM  ');
+
+    expect(prismaMock.user.findFirst).toHaveBeenCalledWith({
+      where: {
+        email: 'user@example.com',
+        deletedAt: null,
+      },
+    });
+  });
+
   test('verifyUserPassword delegates to verifyPassword', async () => {
     verifyPasswordMock.mockResolvedValue(true);
 

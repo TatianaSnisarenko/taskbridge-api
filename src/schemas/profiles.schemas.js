@@ -132,7 +132,7 @@ const companyProfileFields = {
     'string.max': 'Country must not exceed 100 characters',
   }),
   timezone: Joi.string().trim().custom(validTimezone).messages(timezoneMessages),
-  contact_email: Joi.string().pattern(emailRegexp).messages({
+  contact_email: Joi.string().trim().lowercase().pattern(emailRegexp).messages({
     'string.pattern.base': 'Contact email must be a valid email',
   }),
   website_url: Joi.string().uri().messages({

@@ -21,7 +21,10 @@ function mapCompanyProfileInput(input) {
     teamSize: input.team_size,
     country: input.country,
     timezone: input.timezone,
-    contactEmail: input.contact_email,
+    contactEmail:
+      typeof input.contact_email === 'string'
+        ? input.contact_email.trim().toLowerCase()
+        : input.contact_email,
     websiteUrl: input.website_url,
     links: input.links,
   };
