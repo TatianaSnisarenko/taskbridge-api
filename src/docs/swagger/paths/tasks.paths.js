@@ -176,8 +176,9 @@ export const tasksPaths = {
           name: 'X-Persona',
           in: 'header',
           required: false,
-          schema: { type: 'string', enum: ['company'] },
-          description: 'Required for owner access to non-public tasks',
+          schema: { type: 'string', enum: ['company', 'developer'] },
+          description:
+            'Required for non-public tasks. Use company for owner access, developer for accessing your assigned tasks',
         },
       ],
       responses: {

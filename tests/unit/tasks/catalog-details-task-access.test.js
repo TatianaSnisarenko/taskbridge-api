@@ -132,6 +132,7 @@ describe('tasks.service - Task Details & Applications', () => {
         status: 'DRAFT',
         visibility: 'UNLISTED',
         deletedAt: null,
+        acceptedApplication: null,
         owner: { companyProfile: { companyName: 'TeamUp', verified: false } },
       });
 
@@ -139,7 +140,79 @@ describe('tasks.service - Task Details & Applications', () => {
         tasksService.getTaskById({ taskId: 't1', userId: 'u2', persona: 'company' })
       ).rejects.toMatchObject({
         status: 403,
-        code: 'NOT_OWNER',
+        code: 'FORBIDDEN',
+      });
+    });
+
+    test('allows accepted developer to access non-public task with developer persona', async () => {
+      prismaMock.task.findUnique.mockResolvedValue({
+        id: 't1',
+        ownerUserId: 'u1',
+        status: 'IN_PROGRESS',
+        visibility: 'UNLISTED',
+        deletedAt: null,
+        acceptedApplicationId: 'app1',
+        acceptedApplication: {
+          developerUserId: 'u2',
+        },
+        publishedAt: new Date(),
+        createdAt: new Date(),
+        title: 'Test Task',
+        description: 'Test Description',
+        category: 'WEB',
+        type: 'FEATURE',
+        difficulty: 'INTERMEDIATE',
+        estimatedEffortHours: 40,
+        expectedDuration: '1 week',
+        communicationLanguage: 'ENGLISH',
+        timezonePreference: 'UTC',
+        applicationDeadline: new Date(),
+        deadline: new Date(),
+        deliverables: ['Feature implementation'],
+        requirements: ['Node.js'],
+        niceToHave: ['TypeScript'],
+        technologies: [],
+        project: null,
+        owner: {
+          companyProfile: {
+            companyName: 'TeamUp',
+            verified: false,
+            avgRating: null,
+            reviewsCount: 0,
+          },
+        },
+      });
+      prismaMock.application.count.mockResolvedValue(1);
+
+      const result = await tasksService.getTaskById({
+        taskId: 't1',
+        userId: 'u2',
+        persona: 'developer',
+      });
+      expect(result).toBeDefined();
+      expect(result.task_id).toBe('t1');
+      expect(result.is_accepted_developer).toBe(true);
+    });
+
+    test('rejects accepted developer access with company persona', async () => {
+      prismaMock.task.findUnique.mockResolvedValue({
+        id: 't1',
+        ownerUserId: 'u1',
+        status: 'IN_PROGRESS',
+        visibility: 'UNLISTED',
+        deletedAt: null,
+        acceptedApplicationId: 'app1',
+        acceptedApplication: {
+          developerUserId: 'u2',
+        },
+        owner: { companyProfile: { companyName: 'TeamUp', verified: false } },
+      });
+
+      await expect(
+        tasksService.getTaskById({ taskId: 't1', userId: 'u2', persona: 'company' })
+      ).rejects.toMatchObject({
+        status: 403,
+        code: 'PERSONA_NOT_AVAILABLE',
       });
     });
 
@@ -184,6 +257,7 @@ describe('tasks.service - Task Details & Applications', () => {
         status: 'DRAFT',
         visibility: 'UNLISTED',
         deletedAt: null,
+        acceptedApplication: null,
         owner: { companyProfile: { companyName: 'TeamUp', verified: false } },
       });
 
@@ -193,6 +267,54 @@ describe('tasks.service - Task Details & Applications', () => {
         status: 403,
         code: 'PERSONA_NOT_AVAILABLE',
       });
+    });
+
+    test('allows owner to access non-public task with company persona', async () => {
+      prismaMock.task.findUnique.mockResolvedValue({
+        id: 't1',
+        ownerUserId: 'u1',
+        status: 'DRAFT',
+        visibility: 'UNLISTED',
+        deletedAt: null,
+        acceptedApplicationId: null,
+        publishedAt: null,
+        createdAt: new Date(),
+        title: 'My Draft Task',
+        description: 'Task description',
+        category: 'BACKEND',
+        type: 'PAID',
+        difficulty: 'MIDDLE',
+        estimatedEffortHours: 20,
+        expectedDuration: '1 week',
+        communicationLanguage: 'ENGLISH',
+        timezonePreference: 'UTC',
+        applicationDeadline: new Date(),
+        deadline: new Date(),
+        deliverables: ['Code'],
+        requirements: ['Node.js'],
+        niceToHave: [],
+        technologies: [],
+        project: null,
+        owner: {
+          companyProfile: {
+            companyName: 'My Company',
+            verified: true,
+            avgRating: 4.5,
+            reviewsCount: 10,
+          },
+        },
+      });
+      prismaMock.application.count.mockResolvedValue(0);
+
+      const result = await tasksService.getTaskById({
+        taskId: 't1',
+        userId: 'u1',
+        persona: 'company',
+      });
+      expect(result).toBeDefined();
+      expect(result.task_id).toBe('t1');
+      expect(result.is_owner).toBe(true);
+      expect(result.is_accepted_developer).toBe(false);
     });
 
     test('rejects owner access when company profile is missing for non-public task', async () => {

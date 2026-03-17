@@ -15,14 +15,17 @@ export async function getTaskById({ userId, taskId, persona }) {
   }
 
   const isPublicVisible = task.status === 'PUBLISHED' && task.visibility === 'PUBLIC';
+  const isOwner = !!userId && task.ownerUserId === userId;
+  const isAcceptedDeveloper = !!userId && task.acceptedApplication?.developerUserId === userId;
 
   if (!isPublicVisible) {
     if (!userId) {
       throw new ApiError(401, 'AUTH_REQUIRED', 'Authorization required');
     }
 
-    if (task.ownerUserId !== userId) {
-      throw new ApiError(403, 'NOT_OWNER', 'Task does not belong to user');
+    // Allow access if user is owner or accepted developer
+    if (!isOwner && !isAcceptedDeveloper) {
+      throw new ApiError(403, 'FORBIDDEN', 'Access denied');
     }
 
     if (!persona) {
@@ -33,21 +36,35 @@ export async function getTaskById({ userId, taskId, persona }) {
       throw new ApiError(400, 'PERSONA_INVALID', 'X-Persona must be developer or company');
     }
 
-    if (persona !== 'company') {
-      throw new ApiError(403, 'PERSONA_NOT_AVAILABLE', 'Company profile does not exist');
+    // Check persona requirements: owner needs company, developer needs developer persona
+    if (isOwner) {
+      if (persona !== 'company') {
+        throw new ApiError(
+          403,
+          'PERSONA_NOT_AVAILABLE',
+          'Only company persona allowed for task owner'
+        );
+      }
+
+      if (!task.owner.companyProfile) {
+        throw new ApiError(403, 'PERSONA_NOT_AVAILABLE', 'Company profile does not exist');
+      }
     }
 
-    if (!task.owner.companyProfile) {
-      throw new ApiError(403, 'PERSONA_NOT_AVAILABLE', 'Company profile does not exist');
+    if (isAcceptedDeveloper) {
+      if (persona !== 'developer') {
+        throw new ApiError(
+          403,
+          'PERSONA_NOT_AVAILABLE',
+          'Only developer persona allowed for accepted developers'
+        );
+      }
     }
   }
 
   const applicationsCount = await prisma.application.count({
     where: { taskId: task.id },
   });
-
-  const isOwner = !!userId && task.ownerUserId === userId;
-  const isAcceptedDeveloper = !!userId && task.acceptedApplication?.developerUserId === userId;
 
   let canApply = false;
   if (userId && persona === 'developer' && task.status === 'PUBLISHED' && !isOwner) {
