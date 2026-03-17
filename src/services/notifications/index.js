@@ -18,7 +18,9 @@ export async function createNotification({
   client = prisma,
   userId,
   actorUserId,
-  taskId,
+  projectId = null,
+  taskId = null,
+  threadId = null,
   type,
   payload,
 }) {
@@ -26,7 +28,9 @@ export async function createNotification({
     data: {
       userId,
       actorUserId,
+      projectId,
       taskId,
+      threadId,
       type,
       payload,
     },

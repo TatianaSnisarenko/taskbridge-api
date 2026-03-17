@@ -6,6 +6,7 @@ import { hashPassword } from '../src/utils/password.js';
 const TARGET_PROJECTS_PER_COMPANY = 3;
 const TARGET_TASKS_PER_PROJECT = 5;
 const MIN_PROJECT_MAX_TALENTS = 8;
+const DEMO_MAX_TALENTS_PROJECT_TITLE = 'Seed Demo: Archived by Max Talents';
 
 function generateEmail(name) {
   return `${name.toLowerCase().replace(/\s+/g, '.')}@example.com`;
@@ -103,6 +104,8 @@ async function createNotificationIfMissing({
       userId,
       actorUserId,
       taskId,
+      threadId,
+      projectId,
       type,
     },
   });
@@ -946,6 +949,9 @@ async function main() {
         where: {
           ownerUserId: company.user.id,
           deletedAt: null,
+          title: {
+            not: DEMO_MAX_TALENTS_PROJECT_TITLE,
+          },
         },
       });
 
@@ -1445,6 +1451,114 @@ async function main() {
     }
 
     console.log(`✅ Reconciled ${reconciledProjectsCount} projects`);
+
+    // Add deterministic archived project demo for max-talents scenario (idempotent)
+    // Why here: reconcile block enforces MIN_PROJECT_MAX_TALENTS and would overwrite maxTalents=3.
+    console.log('\n📌 Ensuring archived project demo with max-talents notification...');
+    const demoOwner = companies[0]?.user;
+    if (demoOwner) {
+      const demoProjectDescription =
+        'Deterministic seed project to demonstrate archive behavior when max talents are fully used.';
+
+      let demoProject = await prisma.project.findFirst({
+        where: {
+          ownerUserId: demoOwner.id,
+          title: DEMO_MAX_TALENTS_PROJECT_TITLE,
+        },
+      });
+
+      if (!demoProject) {
+        demoProject = await prisma.project.create({
+          data: {
+            ownerUserId: demoOwner.id,
+            title: DEMO_MAX_TALENTS_PROJECT_TITLE,
+            shortDescription: 'Demo project archived after reaching max talents limit',
+            description: demoProjectDescription,
+            maxTalents: 3,
+            visibility: 'PUBLIC',
+            status: 'ARCHIVED',
+            publishedTasksCount: 0,
+          },
+        });
+        console.log(`➕ Created demo project: ${demoProject.title}`);
+      }
+
+      const demoTaskTemplates = [
+        {
+          title: 'Seed Demo: Delivered backend MVP',
+          status: 'COMPLETED',
+          completedAt: new Date('2026-03-01T09:00:00.000Z'),
+          failedAt: null,
+        },
+        {
+          title: 'Seed Demo: Finished frontend integration',
+          status: 'COMPLETED',
+          completedAt: new Date('2026-03-02T09:00:00.000Z'),
+          failedAt: null,
+        },
+        {
+          title: 'Seed Demo: Cancelled analytics rollout',
+          status: 'FAILED',
+          completedAt: null,
+          failedAt: new Date('2026-03-03T09:00:00.000Z'),
+        },
+      ];
+
+      for (const template of demoTaskTemplates) {
+        const existingDemoTask = await prisma.task.findFirst({
+          where: {
+            projectId: demoProject.id,
+            title: template.title,
+            deletedAt: null,
+          },
+          select: { id: true },
+        });
+
+        if (existingDemoTask) continue;
+
+        await prisma.task.create({
+          data: {
+            ownerUserId: demoOwner.id,
+            projectId: demoProject.id,
+            title: template.title,
+            description: 'Seed demo task for archived max-talents project scenario.',
+            category: 'BACKEND',
+            type: 'VOLUNTEER',
+            difficulty: 'MIDDLE',
+            communicationLanguage: 'English',
+            visibility: 'PUBLIC',
+            status: template.status,
+            completedAt: template.completedAt,
+            failedAt: template.failedAt,
+          },
+        });
+      }
+
+      await createNotificationIfMissing({
+        userId: demoOwner.id,
+        actorUserId: null,
+        projectId: demoProject.id,
+        taskId: null,
+        type: 'PROJECT_ARCHIVED_LIMIT_REACHED',
+        payload: {
+          project_id: demoProject.id,
+          project_title: demoProject.title,
+          max_talents: 3,
+          completed_count: 2,
+          failed_count: 1,
+        },
+      });
+
+      projects.push(demoProject);
+      const demoTasks = await prisma.task.findMany({
+        where: {
+          projectId: demoProject.id,
+          deletedAt: null,
+        },
+      });
+      tasks.push(...demoTasks);
+    }
+    console.log('✅ Archived project demo ensured');
 
     // Update avg_rating and reviews_count for all profiles
     console.log('\n📊 Updating profile statistics...');

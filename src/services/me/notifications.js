@@ -71,6 +71,10 @@ function buildNotificationMessage({ type, payload, taskTitle, projectTitle }) {
       return `Task invite declined${taskContext}`;
     case 'TASK_INVITE_CANCELLED':
       return `Task invite cancelled${taskContext}`;
+    case 'PROJECT_ARCHIVED_LIMIT_REACHED':
+      return `Project archived after reaching max talents${projectContext}`;
+    case 'PROJECT_ARCHIVED_MODERATION':
+      return `Project archived by moderation${projectContext}`;
     default:
       return `Notification${projectContext || taskContext}`;
   }

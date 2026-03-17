@@ -279,6 +279,8 @@ describe('tasks.service - workflows completion confirm', () => {
           project: {
             findUnique: jest.fn().mockResolvedValue({
               id: 'p1',
+              ownerUserId: 'c1',
+              title: 'Talent Growth Project',
               maxTalents: 3,
               status: 'ACTIVE',
             }),
@@ -305,6 +307,20 @@ describe('tasks.service - workflows completion confirm', () => {
 
       expect(result.status).toBe('COMPLETED');
       expect(prismaMock.$transaction).toHaveBeenCalled();
+      expect(notificationsServiceMock.createNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 'c1',
+          projectId: 'p1',
+          type: 'PROJECT_ARCHIVED_LIMIT_REACHED',
+          payload: {
+            project_id: 'p1',
+            project_title: 'Talent Growth Project',
+            max_talents: 3,
+            completed_count: 2,
+            failed_count: 1,
+          },
+        })
+      );
     });
   });
 });

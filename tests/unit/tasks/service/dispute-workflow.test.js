@@ -397,6 +397,8 @@ describe('tasks.service - dispute workflow', () => {
     });
     prismaMock.project.findUnique.mockResolvedValue({
       id: 'p1',
+      ownerUserId: 'owner1',
+      title: 'Disputed Project',
       maxTalents: 2,
       status: 'ACTIVE',
     });
@@ -413,6 +415,20 @@ describe('tasks.service - dispute workflow', () => {
       where: { id: 'p1' },
       data: { status: 'ARCHIVED' },
     });
+    expect(notificationsServiceMock.createNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'owner1',
+        projectId: 'p1',
+        type: 'PROJECT_ARCHIVED_LIMIT_REACHED',
+        payload: {
+          project_id: 'p1',
+          project_title: 'Disputed Project',
+          max_talents: 2,
+          completed_count: 1,
+          failed_count: 1,
+        },
+      })
+    );
 
     expect(result).toMatchObject({
       taskId: 't1',

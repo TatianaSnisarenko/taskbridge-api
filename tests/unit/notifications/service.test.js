@@ -58,7 +58,9 @@ describe('notifications.service', () => {
       data: {
         userId: 'owner2',
         actorUserId: 'actor2',
+        projectId: null,
         taskId: 't2',
+        threadId: null,
         type: 'CHAT_MESSAGE',
         payload: { task_id: 't2', thread_id: 'th-1' },
       },
@@ -80,7 +82,9 @@ describe('notifications.service', () => {
       data: {
         userId: 'owner1',
         actorUserId: 'dev1',
+        projectId: null,
         taskId: 't1',
+        threadId: null,
         type: 'APPLICATION_CREATED',
         payload: {
           task_id: 't1',

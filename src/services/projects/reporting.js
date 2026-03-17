@@ -1,6 +1,7 @@
 import { prisma } from '../../db/prisma.js';
 import { ApiError } from '../../utils/ApiError.js';
 import { findProjectForReport } from '../../db/queries/projects.queries.js';
+import { createNotification } from '../notifications/index.js';
 
 export async function reportProject({ userId, persona, projectId, report }) {
   await findProjectForReport(projectId);
@@ -86,6 +87,8 @@ export async function resolveProjectReport({ userId, reportId, action, note }) {
       project: {
         select: {
           id: true,
+          title: true,
+          ownerUserId: true,
           deletedAt: true,
         },
       },
@@ -120,6 +123,21 @@ export async function resolveProjectReport({ userId, reportId, action, note }) {
         data: {
           status: 'DELETED',
           deletedAt: resolvedAt,
+        },
+      });
+
+      await createNotification({
+        client: tx,
+        userId: report.project.ownerUserId,
+        actorUserId: userId,
+        projectId: report.projectId,
+        type: 'PROJECT_ARCHIVED_MODERATION',
+        payload: {
+          project_id: report.projectId,
+          project_title: report.project.title,
+          reason: report.reason,
+          resolution_action: 'DELETE',
+          resolution_note: note || '',
         },
       });
     }

@@ -21,6 +21,9 @@ const prismaMock = {
     findUnique: jest.fn(),
     update: jest.fn(),
   },
+  notification: {
+    create: jest.fn(),
+  },
   projectTechnology: {
     createMany: jest.fn(),
     deleteMany: jest.fn(),
@@ -244,7 +247,8 @@ describe('projects.service - reports', () => {
         id: 'rp1',
         projectId: 'p1',
         status: 'RESOLVED',
-        project: { id: 'p1', deletedAt: null },
+        reason: 'SPAM',
+        project: { id: 'p1', title: 'Alpha Project', ownerUserId: 'owner1', deletedAt: null },
       });
 
       await expect(
@@ -256,16 +260,18 @@ describe('projects.service - reports', () => {
       ).rejects.toMatchObject({ status: 409, code: 'ALREADY_RESOLVED' });
     });
 
-    test('DELETE action archives project, deletes tasks and resolves report', async () => {
+    test('DELETE action archives project, deletes tasks, notifies owner and resolves report', async () => {
       const resolvedAt = new Date('2026-03-12T11:00:00Z');
       prismaMock.projectReport.findUnique.mockResolvedValue({
         id: 'rp1',
         projectId: 'p1',
         status: 'OPEN',
-        project: { id: 'p1', deletedAt: null },
+        reason: 'SPAM',
+        project: { id: 'p1', title: 'Alpha Project', ownerUserId: 'owner1', deletedAt: null },
       });
       prismaMock.project.update.mockResolvedValue({ id: 'p1' });
       prismaMock.task.updateMany.mockResolvedValue({ count: 2 });
+      prismaMock.notification.create.mockResolvedValue({ id: 'n1' });
       prismaMock.projectReport.update.mockResolvedValue({
         id: 'rp1',
         status: 'RESOLVED',
@@ -297,6 +303,23 @@ describe('projects.service - reports', () => {
           deletedAt: expect.any(Date),
         },
       });
+      expect(prismaMock.notification.create).toHaveBeenCalledWith({
+        data: {
+          userId: 'owner1',
+          actorUserId: 'm1',
+          projectId: 'p1',
+          taskId: null,
+          threadId: null,
+          type: 'PROJECT_ARCHIVED_MODERATION',
+          payload: {
+            project_id: 'p1',
+            project_title: 'Alpha Project',
+            reason: 'SPAM',
+            resolution_action: 'DELETE',
+            resolution_note: 'Violation confirmed',
+          },
+        },
+      });
       expect(prismaMock.projectReport.update).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { id: 'rp1' },
@@ -322,7 +345,8 @@ describe('projects.service - reports', () => {
         id: 'rp2',
         projectId: 'p2',
         status: 'OPEN',
-        project: { id: 'p2', deletedAt: null },
+        reason: 'OTHER',
+        project: { id: 'p2', title: 'Beta Project', ownerUserId: 'owner2', deletedAt: null },
       });
       prismaMock.projectReport.update.mockResolvedValue({
         id: 'rp2',
@@ -339,6 +363,7 @@ describe('projects.service - reports', () => {
 
       expect(prismaMock.project.update).not.toHaveBeenCalled();
       expect(prismaMock.task.updateMany).not.toHaveBeenCalled();
+      expect(prismaMock.notification.create).not.toHaveBeenCalled();
       expect(prismaMock.projectReport.update).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
