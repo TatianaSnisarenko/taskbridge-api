@@ -220,6 +220,13 @@
           'TASK_DISPUTE_OPENED',
           'TASK_COMPLETED',
           'REVIEW_CREATED',
+          'CHAT_MESSAGE',
+          'TASK_INVITE_CREATED',
+          'TASK_INVITE_ACCEPTED',
+          'TASK_INVITE_DECLINED',
+          'TASK_INVITE_CANCELLED',
+          'PROJECT_ARCHIVED_LIMIT_REACHED',
+          'PROJECT_ARCHIVED_MODERATION',
         ],
       },
       actor_user_id: {
