@@ -14,6 +14,12 @@ const prismaMock = {
     groupBy: jest.fn(),
     findMany: jest.fn(),
   },
+  application: {
+    findMany: jest.fn(),
+  },
+  notification: {
+    create: jest.fn(),
+  },
   projectReport: {
     create: jest.fn(),
   },
@@ -45,6 +51,8 @@ describe('projects.service - crud', () => {
     jest.clearAllMocks();
     prismaMock.projectTechnology.createMany.mockResolvedValue({ count: 0 });
     prismaMock.projectTechnology.deleteMany.mockResolvedValue({ count: 0 });
+    prismaMock.application.findMany.mockResolvedValue([]);
+    prismaMock.notification.create.mockResolvedValue({ id: 'n1' });
   });
 
   test('createProject creates project', async () => {
@@ -291,7 +299,11 @@ describe('projects.service - crud', () => {
 
   test('deleteProject soft deletes project and tasks', async () => {
     const deletedAt = new Date('2026-02-14T12:30:00Z');
-    prismaMock.project.findUnique.mockResolvedValue({ id: 'p1', ownerUserId: 'u1' });
+    prismaMock.project.findUnique.mockResolvedValue({
+      id: 'p1',
+      ownerUserId: 'u1',
+      title: 'TeamUp MVP',
+    });
     prismaMock.project.update.mockResolvedValue({ id: 'p1', deletedAt });
     prismaMock.task.updateMany.mockResolvedValue({ count: 2 });
 
@@ -307,5 +319,54 @@ describe('projects.service - crud', () => {
       data: { deletedAt: expect.any(Date), status: 'DELETED' },
     });
     expect(result).toEqual({ projectId: 'p1', deletedAt });
+  });
+
+  test('deleteProject notifies developers who applied to project tasks', async () => {
+    const deletedAt = new Date('2026-02-14T12:35:00Z');
+    prismaMock.project.findUnique.mockResolvedValue({
+      id: 'p1',
+      ownerUserId: 'u1',
+      title: 'TeamUp MVP',
+    });
+    prismaMock.project.update.mockResolvedValue({ id: 'p1', deletedAt });
+    prismaMock.task.updateMany.mockResolvedValue({ count: 2 });
+    prismaMock.application.findMany.mockResolvedValue([
+      { developerUserId: 'd1' },
+      { developerUserId: 'd2' },
+    ]);
+
+    await projectsService.deleteProject({ userId: 'u1', projectId: 'p1' });
+
+    expect(prismaMock.application.findMany).toHaveBeenCalledWith({
+      where: {
+        task: {
+          projectId: 'p1',
+        },
+      },
+      select: { developerUserId: true },
+      distinct: ['developerUserId'],
+    });
+
+    expect(prismaMock.notification.create).toHaveBeenCalledTimes(2);
+    expect(prismaMock.notification.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          userId: 'd1',
+          actorUserId: 'u1',
+          projectId: 'p1',
+          type: 'PROJECT_DELETED',
+        }),
+      })
+    );
+    expect(prismaMock.notification.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          userId: 'd2',
+          actorUserId: 'u1',
+          projectId: 'p1',
+          type: 'PROJECT_DELETED',
+        }),
+      })
+    );
   });
 });

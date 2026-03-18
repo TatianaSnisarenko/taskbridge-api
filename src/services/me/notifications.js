@@ -59,6 +59,8 @@ function buildNotificationMessage({ type, payload, taskTitle, projectTitle }) {
       return `Task dispute opened${taskContext}`;
     case 'TASK_COMPLETED':
       return `Task status updated${taskContext}`;
+    case 'TASK_DELETED':
+      return `Task was deleted${taskContext}`;
     case 'REVIEW_CREATED':
       return 'New review received';
     case 'CHAT_MESSAGE':
@@ -71,6 +73,8 @@ function buildNotificationMessage({ type, payload, taskTitle, projectTitle }) {
       return `Task invite declined${taskContext}`;
     case 'TASK_INVITE_CANCELLED':
       return `Task invite cancelled${taskContext}`;
+    case 'PROJECT_DELETED':
+      return `Project was deleted${projectContext}`;
     case 'PROJECT_ARCHIVED_LIMIT_REACHED':
       return `Project archived after reaching max talents${projectContext}`;
     case 'PROJECT_ARCHIVED_MODERATION':

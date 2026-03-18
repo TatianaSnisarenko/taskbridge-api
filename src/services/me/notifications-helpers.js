@@ -21,6 +21,10 @@ export function isNotificationRelevantForPersona(notif, userId, persona) {
     case 'TASK_COMPLETED':
       // Sent to developer when company confirms or final-rejects task
       return persona === 'developer';
+    case 'TASK_DELETED':
+    case 'PROJECT_DELETED':
+      // Sent to developers who applied to the deleted task/project tasks
+      return persona === 'developer';
     case 'TASK_INVITE_CREATED':
     case 'TASK_INVITE_CANCELLED':
       // Sent to developer

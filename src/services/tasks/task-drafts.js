@@ -3,6 +3,7 @@ import { ApiError } from '../../utils/ApiError.js';
 import { validateTechnologyIds, incrementTechnologyPopularity } from '../technologies/index.js';
 import { findTaskForOwnership, findProjectForOwnership } from '../../db/queries/tasks.queries.js';
 import { mapTaskInput } from './helpers.js';
+import { createNotification } from '../notifications/index.js';
 
 export async function createTaskDraft({ userId, task }) {
   const projectId = task.project_id ?? null;
@@ -175,7 +176,7 @@ export async function publishTask({ userId, taskId }) {
 
 export async function deleteTask({ userId, taskId }) {
   const existingTask = await findTaskForOwnership(taskId, userId, {
-    select: { projectId: true },
+    select: { projectId: true, title: true },
   });
 
   const allowedStatuses = ['DRAFT', 'PUBLISHED', 'CLOSED'];
@@ -183,13 +184,44 @@ export async function deleteTask({ userId, taskId }) {
     throw new ApiError(409, 'INVALID_STATE', 'Task cannot be deleted in current state');
   }
 
-  const deleted = await prisma.task.update({
-    where: { id: taskId },
-    data: {
-      status: 'DELETED',
-      deletedAt: new Date(),
-    },
-    select: { id: true, status: true, deletedAt: true },
+  const deleted = await prisma.$transaction(async (tx) => {
+    const deletedAt = new Date();
+
+    const updatedTask = await tx.task.update({
+      where: { id: taskId },
+      data: {
+        status: 'DELETED',
+        deletedAt,
+      },
+      select: { id: true, status: true, deletedAt: true },
+    });
+
+    const taskApplicants = await tx.application.findMany({
+      where: { taskId },
+      select: { developerUserId: true },
+      distinct: ['developerUserId'],
+    });
+
+    await Promise.all(
+      taskApplicants.map((application) =>
+        createNotification({
+          client: tx,
+          userId: application.developerUserId,
+          actorUserId: userId,
+          projectId: existingTask.projectId,
+          taskId,
+          type: 'TASK_DELETED',
+          payload: {
+            task_id: taskId,
+            task_title: existingTask.title,
+            project_id: existingTask.projectId,
+            deleted_at: updatedTask.deletedAt.toISOString(),
+          },
+        })
+      )
+    );
+
+    return updatedTask;
   });
 
   return { taskId: deleted.id, status: deleted.status, deletedAt: deleted.deletedAt };

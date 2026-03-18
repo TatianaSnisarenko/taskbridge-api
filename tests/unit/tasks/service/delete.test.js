@@ -83,6 +83,7 @@ describe('tasks.service - delete', () => {
     });
     prismaMock.taskTechnology.createMany.mockResolvedValue({ count: 0 });
     prismaMock.taskTechnology.deleteMany.mockResolvedValue({ count: 0 });
+    prismaMock.application.findMany.mockResolvedValue([]);
   });
 
   test('deleteTask rejects task not found', async () => {
@@ -288,5 +289,54 @@ describe('tasks.service - delete', () => {
       status: 'DELETED',
       deletedAt,
     });
+  });
+
+  test('deleteTask notifies developers who applied to task', async () => {
+    const deletedAt = new Date('2026-02-14T14:00:00Z');
+    prismaMock.task.findUnique.mockResolvedValue({
+      id: 't1',
+      ownerUserId: 'u1',
+      status: 'PUBLISHED',
+      deletedAt: null,
+      title: 'Task to remove',
+      projectId: 'p1',
+    });
+    prismaMock.task.update.mockResolvedValue({
+      id: 't1',
+      status: 'DELETED',
+      deletedAt,
+    });
+    prismaMock.application.findMany.mockResolvedValue([
+      { developerUserId: 'd1' },
+      { developerUserId: 'd2' },
+    ]);
+
+    await tasksService.deleteTask({ userId: 'u1', taskId: 't1' });
+
+    expect(prismaMock.application.findMany).toHaveBeenCalledWith({
+      where: { taskId: 't1' },
+      select: { developerUserId: true },
+      distinct: ['developerUserId'],
+    });
+
+    expect(notificationsServiceMock.createNotification).toHaveBeenCalledTimes(2);
+    expect(notificationsServiceMock.createNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'd1',
+        actorUserId: 'u1',
+        projectId: 'p1',
+        taskId: 't1',
+        type: 'TASK_DELETED',
+      })
+    );
+    expect(notificationsServiceMock.createNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'd2',
+        actorUserId: 'u1',
+        projectId: 'p1',
+        taskId: 't1',
+        type: 'TASK_DELETED',
+      })
+    );
   });
 });

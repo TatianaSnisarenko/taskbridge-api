@@ -3,6 +3,7 @@ import { ApiError } from '../../utils/ApiError.js';
 import { findProjectForOwnership } from '../../db/queries/projects.queries.js';
 import { validateTechnologyIds, incrementTechnologyPopularity } from '../technologies/index.js';
 import { mapProjectInput } from './helpers.js';
+import { createNotification } from '../notifications/index.js';
 
 export async function createProject({ userId, project }) {
   const existing = await prisma.project.findFirst({
@@ -100,20 +101,53 @@ export async function updateProject({ userId, projectId, project }) {
 }
 
 export async function deleteProject({ userId, projectId }) {
-  await findProjectForOwnership(projectId, userId);
+  const project = await findProjectForOwnership(projectId, userId, {
+    select: { title: true },
+  });
 
-  const deletedAt = new Date();
-  const [updated] = await prisma.$transaction([
-    prisma.project.update({
+  const updated = await prisma.$transaction(async (tx) => {
+    const deletedAt = new Date();
+
+    const updatedProject = await tx.project.update({
       where: { id: projectId },
       data: { deletedAt, status: 'ARCHIVED' },
       select: { id: true, deletedAt: true },
-    }),
-    prisma.task.updateMany({
+    });
+
+    await tx.task.updateMany({
       where: { projectId, deletedAt: null },
       data: { deletedAt, status: 'DELETED' },
-    }),
-  ]);
+    });
+
+    const applicants = await tx.application.findMany({
+      where: {
+        task: {
+          projectId,
+        },
+      },
+      select: { developerUserId: true },
+      distinct: ['developerUserId'],
+    });
+
+    await Promise.all(
+      applicants.map((application) =>
+        createNotification({
+          client: tx,
+          userId: application.developerUserId,
+          actorUserId: userId,
+          projectId,
+          type: 'PROJECT_DELETED',
+          payload: {
+            project_id: projectId,
+            project_title: project.title,
+            deleted_at: updatedProject.deletedAt.toISOString(),
+          },
+        })
+      )
+    );
+
+    return updatedProject;
+  });
 
   return { projectId: updated.id, deletedAt: updated.deletedAt };
 }
