@@ -406,6 +406,7 @@
         },
       },
       unread_count: { type: 'integer', example: 2 },
+      important_at: { type: 'string', format: 'date-time', nullable: true, example: null },
       created_at: { type: 'string', format: 'date-time' },
     },
   },
@@ -495,6 +496,20 @@
       },
     },
   },
+  MarkMessageAsImportantResponse: {
+    type: 'object',
+    properties: {
+      id: { type: 'string', format: 'uuid', example: '95a53834-d6bb-4b2f-9f6b-e1a9173f12f8' },
+      important_at: { type: 'string', format: 'date-time', example: '2026-03-18T09:15:00Z' },
+    },
+  },
+  MarkMessageAsUnimportantResponse: {
+    type: 'object',
+    properties: {
+      id: { type: 'string', format: 'uuid', example: '95a53834-d6bb-4b2f-9f6b-e1a9173f12f8' },
+      important_at: { type: 'string', format: 'date-time', nullable: true, example: null },
+    },
+  },
   MarkThreadAsReadResponse: {
     type: 'object',
     properties: {
@@ -504,6 +519,28 @@
         example: 'a65f07fe-8ed2-4862-ae89-590520f89f59',
       },
       read_at: { type: 'string', format: 'date-time', example: '2026-02-14T15:00:00Z' },
+    },
+  },
+  MarkThreadAsImportantResponse: {
+    type: 'object',
+    properties: {
+      thread_id: {
+        type: 'string',
+        format: 'uuid',
+        example: 'a65f07fe-8ed2-4862-ae89-590520f89f59',
+      },
+      important_at: { type: 'string', format: 'date-time', example: '2026-03-18T12:40:00Z' },
+    },
+  },
+  MarkThreadAsUnimportantResponse: {
+    type: 'object',
+    properties: {
+      thread_id: {
+        type: 'string',
+        format: 'uuid',
+        example: 'a65f07fe-8ed2-4862-ae89-590520f89f59',
+      },
+      important_at: { type: 'string', format: 'date-time', nullable: true, example: null },
     },
   },
   FavoriteTaskItem: {

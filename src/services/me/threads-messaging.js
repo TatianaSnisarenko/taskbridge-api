@@ -98,16 +98,12 @@ async function uploadMessageAttachments(files) {
   }
 }
 
-/**
- * Create a new message in a chat thread
- * User must be a participant in the thread with matching persona
- * Creates notification for the other participant
- */
-export async function createMessage({ userId, persona, threadId, text = '', files = [] }) {
+async function getAuthorizedThread({ userId, persona, threadId }) {
   const thread = await prisma.chatThread.findUnique({
     where: { id: threadId },
     select: {
       id: true,
+      createdAt: true,
       taskId: true,
       companyUserId: true,
       developerUserId: true,
@@ -140,8 +136,19 @@ export async function createMessage({ userId, persona, threadId, text = '', file
   }
 
   if (!['IN_PROGRESS', 'DISPUTE', 'COMPLETED', 'FAILED'].includes(thread.task.status)) {
-    throw new ApiError(403, 'FORBIDDEN', 'Cannot send messages for this task status');
+    throw new ApiError(403, 'FORBIDDEN', 'Cannot access messages for this task status');
   }
+
+  return thread;
+}
+
+/**
+ * Create a new message in a chat thread
+ * User must be a participant in the thread with matching persona
+ * Creates notification for the other participant
+ */
+export async function createMessage({ userId, persona, threadId, text = '', files = [] }) {
+  const thread = await getAuthorizedThread({ userId, persona, threadId });
 
   const now = new Date();
   const normalizedText = typeof text === 'string' ? text.trim() : '';
@@ -223,44 +230,7 @@ export async function createMessage({ userId, persona, threadId, text = '', file
  * User must be a participant in the thread with matching persona
  */
 export async function markThreadAsRead({ userId, persona, threadId }) {
-  const thread = await prisma.chatThread.findUnique({
-    where: { id: threadId },
-    select: {
-      id: true,
-      taskId: true,
-      companyUserId: true,
-      developerUserId: true,
-      task: {
-        select: {
-          id: true,
-          status: true,
-          deletedAt: true,
-        },
-      },
-    },
-  });
-
-  if (!thread) {
-    throw new ApiError(404, 'NOT_FOUND', 'Chat thread not found');
-  }
-
-  if (thread.task.deletedAt) {
-    throw new ApiError(404, 'NOT_FOUND', 'Chat thread not found');
-  }
-
-  if (persona === 'developer') {
-    if (thread.developerUserId !== userId) {
-      throw new ApiError(403, 'FORBIDDEN', 'You are not the developer in this thread');
-    }
-  } else if (persona === 'company') {
-    if (thread.companyUserId !== userId) {
-      throw new ApiError(403, 'FORBIDDEN', 'You are not the company representative in this thread');
-    }
-  }
-
-  if (!['IN_PROGRESS', 'DISPUTE', 'COMPLETED', 'FAILED'].includes(thread.task.status)) {
-    throw new ApiError(403, 'FORBIDDEN', 'Cannot mark messages as read for this task status');
-  }
+  await getAuthorizedThread({ userId, persona, threadId });
 
   const now = new Date();
 
@@ -284,5 +254,122 @@ export async function markThreadAsRead({ userId, persona, threadId }) {
   return {
     thread_id: threadId,
     read_at: now.toISOString(),
+  };
+}
+
+/**
+ * Mark a thread as important for the current user
+ */
+export async function markThreadAsImportant({ userId, persona, threadId }) {
+  const thread = await getAuthorizedThread({ userId, persona, threadId });
+  const now = new Date();
+
+  const updated = await prisma.chatThreadRead.upsert({
+    where: {
+      threadId_userId: {
+        threadId,
+        userId,
+      },
+    },
+    create: {
+      threadId,
+      userId,
+      lastReadAt: thread.createdAt,
+      importantAt: now,
+    },
+    update: {
+      importantAt: now,
+    },
+    select: {
+      threadId: true,
+      importantAt: true,
+    },
+  });
+
+  return {
+    thread_id: updated.threadId,
+    important_at: updated.importantAt.toISOString(),
+  };
+}
+
+/**
+ * Remove important mark from a thread for the current user
+ */
+export async function markThreadAsUnimportant({ userId, persona, threadId }) {
+  await getAuthorizedThread({ userId, persona, threadId });
+
+  await prisma.chatThreadRead.updateMany({
+    where: {
+      threadId,
+      userId,
+    },
+    data: {
+      importantAt: null,
+    },
+  });
+
+  return {
+    thread_id: threadId,
+    important_at: null,
+  };
+}
+
+/**
+ * Mark a message as important in a chat thread for an authorized participant
+ */
+export async function markMessageAsImportant({ userId, persona, threadId, messageId }) {
+  await getAuthorizedThread({ userId, persona, threadId });
+
+  const message = await prisma.chatMessage.findFirst({
+    where: {
+      id: messageId,
+      threadId,
+    },
+    select: { id: true },
+  });
+
+  if (!message) {
+    throw new ApiError(404, 'NOT_FOUND', 'Message not found');
+  }
+
+  const updated = await prisma.chatMessage.update({
+    where: { id: messageId },
+    data: { importantAt: new Date() },
+    select: { id: true, importantAt: true },
+  });
+
+  return {
+    id: updated.id,
+    important_at: updated.importantAt.toISOString(),
+  };
+}
+
+/**
+ * Remove important mark from a message in a chat thread for an authorized participant
+ */
+export async function markMessageAsUnimportant({ userId, persona, threadId, messageId }) {
+  await getAuthorizedThread({ userId, persona, threadId });
+
+  const message = await prisma.chatMessage.findFirst({
+    where: {
+      id: messageId,
+      threadId,
+    },
+    select: { id: true },
+  });
+
+  if (!message) {
+    throw new ApiError(404, 'NOT_FOUND', 'Message not found');
+  }
+
+  const updated = await prisma.chatMessage.update({
+    where: { id: messageId },
+    data: { importantAt: null },
+    select: { id: true, importantAt: true },
+  });
+
+  return {
+    id: updated.id,
+    important_at: updated.importantAt?.toISOString() || null,
   };
 }

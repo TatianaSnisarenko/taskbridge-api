@@ -14,6 +14,7 @@ import {
   notificationIdParamSchema,
   getMyThreadsQuerySchema,
   threadIdParamSchema,
+  threadMessageIdParamSchema,
   threadMessagesQuerySchema,
   favoriteTaskParamSchema,
   getMyFavoriteTasksQuerySchema,
@@ -161,11 +162,43 @@ meRouter.post(
 );
 
 meRouter.post(
+  '/chat/threads/:threadId/messages/:messageId/important',
+  requireAuth,
+  requirePersona('developer', 'company'),
+  validate(threadMessageIdParamSchema, 'params'),
+  meController.markMessageAsImportant
+);
+
+meRouter.post(
+  '/chat/threads/:threadId/messages/:messageId/unimportant',
+  requireAuth,
+  requirePersona('developer', 'company'),
+  validate(threadMessageIdParamSchema, 'params'),
+  meController.markMessageAsUnimportant
+);
+
+meRouter.post(
   '/chat/threads/:threadId/read',
   requireAuth,
   requirePersona('developer', 'company'),
   validate(threadIdParamSchema, 'params'),
   meController.markThreadAsRead
+);
+
+meRouter.post(
+  '/chat/threads/:threadId/important',
+  requireAuth,
+  requirePersona('developer', 'company'),
+  validate(threadIdParamSchema, 'params'),
+  meController.markThreadAsImportant
+);
+
+meRouter.post(
+  '/chat/threads/:threadId/unimportant',
+  requireAuth,
+  requirePersona('developer', 'company'),
+  validate(threadIdParamSchema, 'params'),
+  meController.markThreadAsUnimportant
 );
 
 meRouter.get(

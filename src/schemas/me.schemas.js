@@ -105,12 +105,28 @@ export const getMyThreadsQuerySchema = Joi.object({
   search: Joi.string().allow('').default('').messages({
     'string.base': 'Search must be a string',
   }),
+  important_only: Joi.boolean().default(false).messages({
+    'boolean.base': 'The important_only parameter must be true or false',
+  }),
 });
 export const threadIdParamSchema = Joi.object({
   threadId: Joi.string().guid({ version: 'uuidv4' }).required().messages({
     'string.empty': 'Thread id is required',
     'string.guid': 'Thread id must be a valid UUID',
     'any.required': 'Thread id is required',
+  }),
+});
+
+export const threadMessageIdParamSchema = Joi.object({
+  threadId: Joi.string().guid({ version: 'uuidv4' }).required().messages({
+    'string.empty': 'Thread id is required',
+    'string.guid': 'Thread id must be a valid UUID',
+    'any.required': 'Thread id is required',
+  }),
+  messageId: Joi.string().guid({ version: 'uuidv4' }).required().messages({
+    'string.empty': 'Message id is required',
+    'string.guid': 'Message id must be a valid UUID',
+    'any.required': 'Message id is required',
   }),
 });
 
@@ -133,6 +149,9 @@ export const threadMessagesQuerySchema = Joi.object({
     'number.integer': 'Size must be an integer',
     'number.min': 'Size must be at least 1',
     'number.max': 'Size must not exceed 50',
+  }),
+  important_only: Joi.boolean().default(false).messages({
+    'boolean.base': 'The important_only parameter must be true or false',
   }),
 });
 

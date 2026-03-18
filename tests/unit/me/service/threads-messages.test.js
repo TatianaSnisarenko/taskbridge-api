@@ -14,6 +14,8 @@ const prismaMock = {
     findMany: jest.fn(),
     count: jest.fn(),
     create: jest.fn(),
+    findFirst: jest.fn(),
+    update: jest.fn(),
   },
   chatThreadRead: {
     upsert: jest.fn(),
@@ -290,5 +292,139 @@ describe('me.service threads - getThreadMessages', () => {
     );
     expect(result.total).toBe(1);
     expect(result.items[0].read_at).toBeNull();
+  });
+
+  test('filters messages by important_only flag', async () => {
+    const createdAt = new Date('2026-03-01T10:00:00Z');
+
+    prismaMock.chatThread.findUnique.mockResolvedValue({
+      id: 'th4',
+      companyUserId: 'c1',
+      developerUserId: 'd1',
+      taskId: 't4',
+      createdAt,
+      task: { id: 't4', status: 'IN_PROGRESS', deletedAt: null },
+      reads: [],
+    });
+    prismaMock.chatMessage.findMany.mockResolvedValue([]);
+    prismaMock.chatMessage.count.mockResolvedValue(0);
+
+    await meService.getThreadMessages({
+      userId: 'd1',
+      persona: 'developer',
+      threadId: 'th4',
+      page: 1,
+      size: 20,
+      importantOnly: true,
+    });
+
+    expect(prismaMock.chatMessage.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          threadId: 'th4',
+          importantAt: { not: null },
+        },
+      })
+    );
+
+    expect(prismaMock.chatMessage.count).toHaveBeenCalledWith({
+      where: {
+        threadId: 'th4',
+        importantAt: { not: null },
+      },
+    });
+  });
+});
+
+describe('me.service threads - mark message important flags', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('markMessageAsImportant sets important_at timestamp', async () => {
+    const importantAt = new Date('2026-03-18T09:15:00.000Z');
+
+    prismaMock.chatThread.findUnique.mockResolvedValue({
+      id: 'th1',
+      companyUserId: 'c1',
+      developerUserId: 'd1',
+      taskId: 't1',
+      task: { id: 't1', status: 'IN_PROGRESS', deletedAt: null },
+    });
+    prismaMock.chatMessage.findFirst.mockResolvedValue({ id: 'm1' });
+    prismaMock.chatMessage.update.mockResolvedValue({
+      id: 'm1',
+      importantAt,
+    });
+
+    const result = await meService.markMessageAsImportant({
+      userId: 'd1',
+      persona: 'developer',
+      threadId: 'th1',
+      messageId: 'm1',
+    });
+
+    expect(result).toEqual({
+      id: 'm1',
+      important_at: importantAt.toISOString(),
+    });
+    expect(prismaMock.chatMessage.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'm1' },
+        data: { importantAt: expect.any(Date) },
+      })
+    );
+  });
+
+  test('markMessageAsUnimportant clears important_at timestamp', async () => {
+    prismaMock.chatThread.findUnique.mockResolvedValue({
+      id: 'th1',
+      companyUserId: 'c1',
+      developerUserId: 'd1',
+      taskId: 't1',
+      task: { id: 't1', status: 'IN_PROGRESS', deletedAt: null },
+    });
+    prismaMock.chatMessage.findFirst.mockResolvedValue({ id: 'm1' });
+    prismaMock.chatMessage.update.mockResolvedValue({
+      id: 'm1',
+      importantAt: null,
+    });
+
+    const result = await meService.markMessageAsUnimportant({
+      userId: 'c1',
+      persona: 'company',
+      threadId: 'th1',
+      messageId: 'm1',
+    });
+
+    expect(result).toEqual({
+      id: 'm1',
+      important_at: null,
+    });
+    expect(prismaMock.chatMessage.update).toHaveBeenCalledWith({
+      where: { id: 'm1' },
+      data: { importantAt: null },
+      select: { id: true, importantAt: true },
+    });
+  });
+
+  test('markMessageAsImportant returns 404 when message is missing in thread', async () => {
+    prismaMock.chatThread.findUnique.mockResolvedValue({
+      id: 'th1',
+      companyUserId: 'c1',
+      developerUserId: 'd1',
+      taskId: 't1',
+      task: { id: 't1', status: 'IN_PROGRESS', deletedAt: null },
+    });
+    prismaMock.chatMessage.findFirst.mockResolvedValue(null);
+
+    await expect(
+      meService.markMessageAsImportant({
+        userId: 'd1',
+        persona: 'developer',
+        threadId: 'th1',
+        messageId: 'm-missing',
+      })
+    ).rejects.toMatchObject({ status: 404, code: 'NOT_FOUND' });
   });
 });

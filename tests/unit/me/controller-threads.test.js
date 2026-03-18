@@ -6,6 +6,10 @@ const meServiceMock = {
   getThreadMessages: jest.fn(),
   createMessage: jest.fn(),
   markThreadAsRead: jest.fn(),
+  markThreadAsImportant: jest.fn(),
+  markThreadAsUnimportant: jest.fn(),
+  markMessageAsImportant: jest.fn(),
+  markMessageAsUnimportant: jest.fn(),
 };
 
 jest.unstable_mockModule('../../src/services/me/index.js', () => meServiceMock);
@@ -35,7 +39,7 @@ describe('me.controller - chat threads', () => {
     const req = {
       user: { id: 'u-1' },
       headers: { 'x-persona': 'developer' },
-      query: { page: '1', size: '20', search: 'keyword' },
+      query: { page: '1', size: '20', search: 'keyword', important_only: 'true' },
     };
     const res = createResponseMock();
     const next = jest.fn();
@@ -48,6 +52,7 @@ describe('me.controller - chat threads', () => {
       page: 1,
       size: 20,
       search: 'keyword',
+      importantOnly: true,
     });
     expect(res.status).toHaveBeenCalledWith(200);
   });
@@ -76,6 +81,7 @@ describe('me.controller - chat threads', () => {
       page: 1,
       size: 20,
       search: '',
+      importantOnly: false,
     });
   });
 
@@ -128,6 +134,7 @@ describe('me.controller - chat threads', () => {
       threadId: 'th-1',
       page: 1,
       size: 50,
+      importantOnly: false,
     });
     expect(res.status).toHaveBeenCalledWith(200);
   });
@@ -157,6 +164,36 @@ describe('me.controller - chat threads', () => {
       threadId: 'th-1',
       page: 1,
       size: 50,
+      importantOnly: false,
+    });
+  });
+
+  test('getThreadMessages parses important_only query flag', async () => {
+    meServiceMock.getThreadMessages.mockResolvedValue({
+      items: [],
+      page: 1,
+      size: 50,
+      total: 0,
+    });
+
+    const req = {
+      user: { id: 'u-1' },
+      headers: { 'x-persona': 'developer' },
+      params: { threadId: 'th-1' },
+      query: { important_only: 'true' },
+    };
+    const res = createResponseMock();
+    const next = jest.fn();
+
+    await meController.getThreadMessages(req, res, next);
+
+    expect(meServiceMock.getThreadMessages).toHaveBeenCalledWith({
+      userId: 'u-1',
+      persona: 'developer',
+      threadId: 'th-1',
+      page: 1,
+      size: 50,
+      importantOnly: true,
     });
   });
 
@@ -240,5 +277,119 @@ describe('me.controller - chat threads', () => {
       threadId: 'th-1',
     });
     expect(res.status).toHaveBeenCalledWith(200);
+  });
+
+  test('markMessageAsImportant marks message as important in thread', async () => {
+    meServiceMock.markMessageAsImportant.mockResolvedValue({
+      id: 'm-1',
+      important_at: '2026-03-18T09:15:00.000Z',
+    });
+
+    const req = {
+      user: { id: 'u-1' },
+      persona: 'developer',
+      params: { threadId: 'th-1', messageId: 'm-1' },
+    };
+    const res = createResponseMock();
+    const next = jest.fn();
+
+    await meController.markMessageAsImportant(req, res, next);
+
+    expect(meServiceMock.markMessageAsImportant).toHaveBeenCalledWith({
+      userId: 'u-1',
+      persona: 'developer',
+      threadId: 'th-1',
+      messageId: 'm-1',
+    });
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith({
+      id: 'm-1',
+      important_at: '2026-03-18T09:15:00.000Z',
+    });
+  });
+
+  test('markMessageAsUnimportant removes important mark from message', async () => {
+    meServiceMock.markMessageAsUnimportant.mockResolvedValue({
+      id: 'm-1',
+      important_at: null,
+    });
+
+    const req = {
+      user: { id: 'u-1' },
+      persona: 'company',
+      params: { threadId: 'th-1', messageId: 'm-1' },
+    };
+    const res = createResponseMock();
+    const next = jest.fn();
+
+    await meController.markMessageAsUnimportant(req, res, next);
+
+    expect(meServiceMock.markMessageAsUnimportant).toHaveBeenCalledWith({
+      userId: 'u-1',
+      persona: 'company',
+      threadId: 'th-1',
+      messageId: 'm-1',
+    });
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith({
+      id: 'm-1',
+      important_at: null,
+    });
+  });
+
+  test('markThreadAsImportant marks thread as important', async () => {
+    meServiceMock.markThreadAsImportant.mockResolvedValue({
+      thread_id: 'th-1',
+      important_at: '2026-03-18T12:40:00.000Z',
+    });
+
+    const req = {
+      user: { id: 'u-1' },
+      persona: 'developer',
+      params: { threadId: 'th-1' },
+    };
+    const res = createResponseMock();
+    const next = jest.fn();
+
+    await meController.markThreadAsImportant(req, res, next);
+
+    expect(meServiceMock.markThreadAsImportant).toHaveBeenCalledWith({
+      userId: 'u-1',
+      persona: 'developer',
+      threadId: 'th-1',
+    });
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith({
+      thread_id: 'th-1',
+      important_at: '2026-03-18T12:40:00.000Z',
+    });
+  });
+
+  test('markThreadAsUnimportant clears thread important mark', async () => {
+    meServiceMock.markThreadAsUnimportant.mockResolvedValue({
+      thread_id: 'th-1',
+      important_at: null,
+    });
+
+    const req = {
+      user: { id: 'u-1' },
+      persona: 'company',
+      params: { threadId: 'th-1' },
+    };
+    const res = createResponseMock();
+    const next = jest.fn();
+
+    await meController.markThreadAsUnimportant(req, res, next);
+
+    expect(meServiceMock.markThreadAsUnimportant).toHaveBeenCalledWith({
+      userId: 'u-1',
+      persona: 'company',
+      threadId: 'th-1',
+    });
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith({
+      thread_id: 'th-1',
+      important_at: null,
+    });
   });
 });

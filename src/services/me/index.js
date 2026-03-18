@@ -7,7 +7,14 @@ export {
   markNotificationAsUnimportant,
 } from './notifications-mark.js';
 export { getMyThreads, getThreadById, getThreadMessages } from './threads-read.js';
-export { createMessage, markThreadAsRead } from './threads-messaging.js';
+export {
+  createMessage,
+  markThreadAsRead,
+  markThreadAsImportant,
+  markThreadAsUnimportant,
+  markMessageAsImportant,
+  markMessageAsUnimportant,
+} from './threads-messaging.js';
 export { addFavoriteTask, removeFavoriteTask, getMyFavoriteTasks } from './favorites.js';
 export { deactivateMyAccount } from './account.js';
 export {

@@ -126,6 +126,47 @@ describe('me.service threads - getMyThreads', () => {
       );
     });
 
+    test('filters threads by important_only marker for current user', async () => {
+      prismaMock.chatThread.findMany.mockResolvedValue([]);
+      prismaMock.chatThread.count.mockResolvedValue(0);
+
+      await meService.getMyThreads({
+        userId: 'd1',
+        persona: 'developer',
+        page: 1,
+        size: 20,
+        importantOnly: true,
+      });
+
+      expect(prismaMock.chatThread.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            developerUserId: 'd1',
+            reads: {
+              some: {
+                userId: 'd1',
+                importantAt: { not: null },
+              },
+            },
+          }),
+        })
+      );
+
+      expect(prismaMock.chatThread.count).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            developerUserId: 'd1',
+            reads: {
+              some: {
+                userId: 'd1',
+                importantAt: { not: null },
+              },
+            },
+          }),
+        })
+      );
+    });
+
     test('uses allowed DISPUTE and FAILED statuses in thread list filters', async () => {
       prismaMock.chatThread.findMany.mockResolvedValue([]);
       prismaMock.chatThread.count.mockResolvedValue(0);
@@ -210,6 +251,7 @@ describe('me.service threads - getMyThreads', () => {
         },
         last_message: null,
         unread_count: 0,
+        important_at: null,
         created_at: createdAt.toISOString(),
       });
     });

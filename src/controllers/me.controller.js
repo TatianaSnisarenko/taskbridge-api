@@ -211,6 +211,7 @@ export const getMyThreads = asyncHandler(async (req, res) => {
     page: parseInt(req.query.page) || 1,
     size: parseInt(req.query.size) || 20,
     search: req.query.search || '',
+    importantOnly: req.query.important_only === 'true' || req.query.important_only === true,
   });
 
   return res.status(200).json({
@@ -236,6 +237,7 @@ export const getThreadMessages = asyncHandler(async (req, res) => {
     threadId: req.params.threadId,
     page: parseInt(req.query.page) || 1,
     size: parseInt(req.query.size) || 50,
+    importantOnly: req.query.important_only === 'true' || req.query.important_only === true,
   });
 
   return res.status(200).json({
@@ -258,6 +260,34 @@ export const createMessage = asyncHandler(async (req, res) => {
   return res.status(201).json(result);
 });
 
+export const markMessageAsImportant = asyncHandler(async (req, res) => {
+  const result = await meService.markMessageAsImportant({
+    userId: req.user.id,
+    persona: req.persona,
+    threadId: req.params.threadId,
+    messageId: req.params.messageId,
+  });
+
+  return res.status(200).json({
+    id: result.id,
+    important_at: result.important_at,
+  });
+});
+
+export const markMessageAsUnimportant = asyncHandler(async (req, res) => {
+  const result = await meService.markMessageAsUnimportant({
+    userId: req.user.id,
+    persona: req.persona,
+    threadId: req.params.threadId,
+    messageId: req.params.messageId,
+  });
+
+  return res.status(200).json({
+    id: result.id,
+    important_at: result.important_at,
+  });
+});
+
 export const markThreadAsRead = asyncHandler(async (req, res) => {
   const result = await meService.markThreadAsRead({
     userId: req.user.id,
@@ -266,6 +296,32 @@ export const markThreadAsRead = asyncHandler(async (req, res) => {
   });
 
   return res.status(200).json(result);
+});
+
+export const markThreadAsImportant = asyncHandler(async (req, res) => {
+  const result = await meService.markThreadAsImportant({
+    userId: req.user.id,
+    persona: req.persona,
+    threadId: req.params.threadId,
+  });
+
+  return res.status(200).json({
+    thread_id: result.thread_id,
+    important_at: result.important_at,
+  });
+});
+
+export const markThreadAsUnimportant = asyncHandler(async (req, res) => {
+  const result = await meService.markThreadAsUnimportant({
+    userId: req.user.id,
+    persona: req.persona,
+    threadId: req.params.threadId,
+  });
+
+  return res.status(200).json({
+    thread_id: result.thread_id,
+    important_at: result.important_at,
+  });
 });
 
 export const addFavoriteTask = asyncHandler(async (req, res) => {

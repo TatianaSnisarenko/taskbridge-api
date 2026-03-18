@@ -7,7 +7,14 @@ import { mapChatMessageOutput } from './chat-message-output.js';
  * Thread exists only for tasks with status IN_PROGRESS, DISPUTE, COMPLETED or FAILED
  * Caller must be either the company owner or accepted developer
  */
-export async function getMyThreads({ userId, persona, page = 1, size = 20, search = '' }) {
+export async function getMyThreads({
+  userId,
+  persona,
+  page = 1,
+  size = 20,
+  search = '',
+  importantOnly = false,
+}) {
   const skip = (page - 1) * size;
 
   const taskTitleFilter = search.trim()
@@ -20,10 +27,22 @@ export async function getMyThreads({ userId, persona, page = 1, size = 20, searc
   const personaFilter =
     persona === 'developer' ? { developerUserId: userId } : { companyUserId: userId };
 
+  const importantFilter = importantOnly
+    ? {
+        reads: {
+          some: {
+            userId,
+            importantAt: { not: null },
+          },
+        },
+      }
+    : {};
+
   const [items, total] = await Promise.all([
     prisma.chatThread.findMany({
       where: {
         ...personaFilter,
+        ...importantFilter,
         task: {
           status: {
             in: ['IN_PROGRESS', 'DISPUTE', 'COMPLETED', 'FAILED'],
@@ -60,6 +79,7 @@ export async function getMyThreads({ userId, persona, page = 1, size = 20, searc
           select: {
             userId: true,
             lastReadAt: true,
+            importantAt: true,
           },
         },
       },
@@ -72,6 +92,7 @@ export async function getMyThreads({ userId, persona, page = 1, size = 20, searc
     prisma.chatThread.count({
       where: {
         ...personaFilter,
+        ...importantFilter,
         task: {
           status: {
             in: ['IN_PROGRESS', 'DISPUTE', 'COMPLETED', 'FAILED'],
@@ -102,6 +123,7 @@ export async function getMyThreads({ userId, persona, page = 1, size = 20, searc
       const userRead = thread.reads.find((r) => r.userId === userId);
       const lastReadAt = userRead?.lastReadAt || thread.createdAt;
       const unreadCount = thread.messages.filter((msg) => new Date(msg.sentAt) > lastReadAt).length;
+      const importantAt = userRead?.importantAt || null;
 
       const mostRecentMessage = thread.messages.length > 0 ? thread.messages[0] : null;
 
@@ -128,6 +150,7 @@ export async function getMyThreads({ userId, persona, page = 1, size = 20, searc
             }
           : null,
         unread_count: unreadCount,
+        important_at: importantAt ? importantAt.toISOString() : null,
         created_at: thread.createdAt.toISOString(),
       };
     })
@@ -177,6 +200,7 @@ export async function getThreadById({ userId, persona, threadId }) {
         select: {
           userId: true,
           lastReadAt: true,
+          importantAt: true,
         },
       },
     },
@@ -221,6 +245,7 @@ export async function getThreadById({ userId, persona, threadId }) {
   const userRead = thread.reads.find((r) => r.userId === userId);
   const lastReadAt = userRead?.lastReadAt || thread.createdAt;
   const unreadCount = thread.messages.filter((msg) => new Date(msg.sentAt) > lastReadAt).length;
+  const importantAt = userRead?.importantAt || null;
 
   const mostRecentMessage = thread.messages.length > 0 ? thread.messages[0] : null;
 
@@ -247,6 +272,7 @@ export async function getThreadById({ userId, persona, threadId }) {
         }
       : null,
     unread_count: unreadCount,
+    important_at: importantAt ? importantAt.toISOString() : null,
     created_at: thread.createdAt.toISOString(),
   };
 }
@@ -256,7 +282,14 @@ export async function getThreadById({ userId, persona, threadId }) {
  * Messages are returned in chronological order (oldest first).
  * User must be a participant in the thread and task must be IN_PROGRESS, DISPUTE, COMPLETED or FAILED.
  */
-export async function getThreadMessages({ userId, persona, threadId, page = 1, size = 50 }) {
+export async function getThreadMessages({
+  userId,
+  persona,
+  threadId,
+  page = 1,
+  size = 50,
+  importantOnly = false,
+}) {
   const skip = (page - 1) * size;
 
   const thread = await prisma.chatThread.findUnique({
@@ -310,7 +343,10 @@ export async function getThreadMessages({ userId, persona, threadId, page = 1, s
 
   const [items, total] = await Promise.all([
     prisma.chatMessage.findMany({
-      where: { threadId },
+      where: {
+        threadId,
+        ...(importantOnly ? { importantAt: { not: null } } : {}),
+      },
       select: {
         id: true,
         senderUserId: true,
@@ -335,7 +371,10 @@ export async function getThreadMessages({ userId, persona, threadId, page = 1, s
       },
     }),
     prisma.chatMessage.count({
-      where: { threadId },
+      where: {
+        threadId,
+        ...(importantOnly ? { importantAt: { not: null } } : {}),
+      },
     }),
   ]);
 

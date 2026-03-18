@@ -581,12 +581,13 @@ model ChatThread {
 }
 
 model ChatMessage {
-  id            String   @id @default(uuid()) @db.Uuid
-  threadId      String   @map("thread_id") @db.Uuid
-  senderUserId  String   @map("sender_user_id") @db.Uuid
-  senderPersona Persona? @map("sender_persona")
-  text          String   @db.VarChar(2000)
-  sentAt        DateTime @default(now()) @map("sent_at") @db.Timestamptz(6)
+  id            String    @id @default(uuid()) @db.Uuid
+  threadId      String    @map("thread_id") @db.Uuid
+  senderUserId  String    @map("sender_user_id") @db.Uuid
+  senderPersona Persona?  @map("sender_persona")
+  text          String    @db.VarChar(2000)
+  sentAt        DateTime  @default(now()) @map("sent_at") @db.Timestamptz(6)
+  importantAt   DateTime? @map("important_at") @db.Timestamptz(6)
 
   thread      ChatThread              @relation(fields: [threadId], references: [id], onDelete: Cascade)
   sender      User                    @relation(fields: [senderUserId], references: [id], onDelete: Cascade)
@@ -611,9 +612,10 @@ model ChatMessageAttachment {
 }
 
 model ChatThreadRead {
-  threadId   String   @map("thread_id") @db.Uuid
-  userId     String   @map("user_id") @db.Uuid
-  lastReadAt DateTime @map("last_read_at") @db.Timestamptz(6)
+  threadId    String    @map("thread_id") @db.Uuid
+  userId      String    @map("user_id") @db.Uuid
+  lastReadAt  DateTime  @map("last_read_at") @db.Timestamptz(6)
+  importantAt DateTime? @map("important_at") @db.Timestamptz(6)
 
   thread ChatThread @relation("ChatThreadRead", fields: [threadId], references: [id], onDelete: Cascade)
   user   User       @relation("ChatThreadRead", fields: [userId], references: [id], onDelete: Cascade)

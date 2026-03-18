@@ -130,4 +130,171 @@ describe('me routes - chat', () => {
       });
     });
   });
+
+  describe('POST /me/chat/threads/{threadId}/important', () => {
+    test('marks thread as important for developer participant', async () => {
+      const developer = await createUser({ developerProfile: { displayName: 'Dev' } });
+      const company = await createUser({ companyProfile: { companyName: 'Company' } });
+      const devToken = buildAccessToken({ userId: developer.id, email: developer.email });
+
+      const task = await prisma.task.create({
+        data: {
+          ownerUserId: company.id,
+          status: 'IN_PROGRESS',
+          title: 'Task',
+          description: 'Description',
+        },
+      });
+
+      const thread = await prisma.chatThread.create({
+        data: {
+          taskId: task.id,
+          companyUserId: company.id,
+          developerUserId: developer.id,
+        },
+      });
+
+      const res = await request(app)
+        .post(`/api/v1/me/chat/threads/${thread.id}/important`)
+        .set('Authorization', `Bearer ${devToken}`)
+        .set('X-Persona', 'developer');
+
+      expect(res.status).toBe(200);
+      expect(res.body).toMatchObject({
+        thread_id: thread.id,
+        important_at: expect.any(String),
+      });
+
+      const readMarker = await prisma.chatThreadRead.findUnique({
+        where: {
+          threadId_userId: {
+            threadId: thread.id,
+            userId: developer.id,
+          },
+        },
+      });
+
+      expect(readMarker).toBeTruthy();
+      expect(readMarker.importantAt).toBeInstanceOf(Date);
+    });
+  });
+
+  describe('GET /me/chat/threads', () => {
+    test('returns only important threads when important_only=true', async () => {
+      const developer = await createUser({ developerProfile: { displayName: 'Dev' } });
+      const company = await createUser({ companyProfile: { companyName: 'Company' } });
+      const devToken = buildAccessToken({ userId: developer.id, email: developer.email });
+
+      const taskImportant = await prisma.task.create({
+        data: {
+          ownerUserId: company.id,
+          status: 'IN_PROGRESS',
+          title: 'Important Task',
+          description: 'Description',
+        },
+      });
+
+      const taskRegular = await prisma.task.create({
+        data: {
+          ownerUserId: company.id,
+          status: 'IN_PROGRESS',
+          title: 'Regular Task',
+          description: 'Description',
+        },
+      });
+
+      const importantThread = await prisma.chatThread.create({
+        data: {
+          taskId: taskImportant.id,
+          companyUserId: company.id,
+          developerUserId: developer.id,
+        },
+      });
+
+      await prisma.chatThread.create({
+        data: {
+          taskId: taskRegular.id,
+          companyUserId: company.id,
+          developerUserId: developer.id,
+        },
+      });
+
+      await prisma.chatThreadRead.create({
+        data: {
+          threadId: importantThread.id,
+          userId: developer.id,
+          lastReadAt: new Date(),
+          importantAt: new Date(),
+        },
+      });
+
+      const res = await request(app)
+        .get('/api/v1/me/chat/threads?important_only=true')
+        .set('Authorization', `Bearer ${devToken}`)
+        .set('X-Persona', 'developer');
+
+      expect(res.status).toBe(200);
+      expect(res.body.items).toHaveLength(1);
+      expect(res.body.items[0]).toMatchObject({
+        thread_id: importantThread.id,
+        important_at: expect.any(String),
+      });
+    });
+  });
+
+  describe('GET /me/chat/threads/{threadId}/messages', () => {
+    test('returns only important messages when important_only=true', async () => {
+      const developer = await createUser({ developerProfile: { displayName: 'Dev' } });
+      const company = await createUser({ companyProfile: { companyName: 'Company' } });
+      const devToken = buildAccessToken({ userId: developer.id, email: developer.email });
+
+      const task = await prisma.task.create({
+        data: {
+          ownerUserId: company.id,
+          status: 'IN_PROGRESS',
+          title: 'Task',
+          description: 'Description',
+        },
+      });
+
+      const thread = await prisma.chatThread.create({
+        data: {
+          taskId: task.id,
+          companyUserId: company.id,
+          developerUserId: developer.id,
+        },
+      });
+
+      const importantMessage = await prisma.chatMessage.create({
+        data: {
+          threadId: thread.id,
+          senderUserId: developer.id,
+          senderPersona: 'developer',
+          text: 'Important message',
+          importantAt: new Date(),
+        },
+      });
+
+      await prisma.chatMessage.create({
+        data: {
+          threadId: thread.id,
+          senderUserId: company.id,
+          senderPersona: 'company',
+          text: 'Regular message',
+        },
+      });
+
+      const res = await request(app)
+        .get(`/api/v1/me/chat/threads/${thread.id}/messages?important_only=true`)
+        .set('Authorization', `Bearer ${devToken}`)
+        .set('X-Persona', 'developer');
+
+      expect(res.status).toBe(200);
+      expect(res.body.items).toHaveLength(1);
+      expect(res.body.items[0]).toMatchObject({
+        id: importantMessage.id,
+        text: 'Important message',
+      });
+    });
+  });
 });

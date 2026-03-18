@@ -17,6 +17,7 @@ const prismaMock = {
   },
   chatThreadRead: {
     upsert: jest.fn(),
+    updateMany: jest.fn(),
   },
   developerProfile: {
     findUnique: jest.fn(),
@@ -184,6 +185,169 @@ describe('me.service threads - markThreadAsRead', () => {
     expect(result).toEqual({
       thread_id: 'th2',
       read_at: readAt.toISOString(),
+    });
+
+    globalThis.Date = RealDate;
+  });
+});
+
+describe('me.service threads - mark thread important flags', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('markThreadAsImportant rejects missing thread', async () => {
+    prismaMock.chatThread.findUnique.mockResolvedValue(null);
+
+    await expect(
+      meService.markThreadAsImportant({ userId: 'd1', persona: 'developer', threadId: 'th1' })
+    ).rejects.toMatchObject({ status: 404, code: 'NOT_FOUND' });
+  });
+
+  test('markThreadAsUnimportant rejects missing thread', async () => {
+    prismaMock.chatThread.findUnique.mockResolvedValue(null);
+
+    await expect(
+      meService.markThreadAsUnimportant({ userId: 'd1', persona: 'developer', threadId: 'th1' })
+    ).rejects.toMatchObject({ status: 404, code: 'NOT_FOUND' });
+  });
+
+  test('markThreadAsImportant upserts important_at for user', async () => {
+    const createdAt = new Date('2026-03-01T10:00:00Z');
+    const importantAt = new Date('2026-03-18T12:40:00Z');
+    const RealDate = Date;
+    globalThis.Date = class extends Date {
+      constructor(...args) {
+        if (args.length === 0) {
+          return importantAt;
+        }
+        return new RealDate(...args);
+      }
+      static now() {
+        return importantAt.getTime();
+      }
+    };
+
+    prismaMock.chatThread.findUnique.mockResolvedValue({
+      id: 'th1',
+      createdAt,
+      taskId: 't1',
+      companyUserId: 'c1',
+      developerUserId: 'd1',
+      task: { id: 't1', status: 'IN_PROGRESS', deletedAt: null },
+    });
+    prismaMock.chatThreadRead.upsert.mockResolvedValue({
+      threadId: 'th1',
+      importantAt,
+    });
+
+    const result = await meService.markThreadAsImportant({
+      userId: 'd1',
+      persona: 'developer',
+      threadId: 'th1',
+    });
+
+    expect(prismaMock.chatThreadRead.upsert).toHaveBeenCalledWith({
+      where: {
+        threadId_userId: {
+          threadId: 'th1',
+          userId: 'd1',
+        },
+      },
+      create: {
+        threadId: 'th1',
+        userId: 'd1',
+        lastReadAt: createdAt,
+        importantAt,
+      },
+      update: {
+        importantAt,
+      },
+      select: {
+        threadId: true,
+        importantAt: true,
+      },
+    });
+
+    expect(result).toEqual({
+      thread_id: 'th1',
+      important_at: importantAt.toISOString(),
+    });
+
+    globalThis.Date = RealDate;
+  });
+
+  test('markThreadAsUnimportant clears thread important flag', async () => {
+    prismaMock.chatThread.findUnique.mockResolvedValue({
+      id: 'th1',
+      createdAt: new Date('2026-03-01T10:00:00Z'),
+      taskId: 't1',
+      companyUserId: 'c1',
+      developerUserId: 'd1',
+      task: { id: 't1', status: 'IN_PROGRESS', deletedAt: null },
+    });
+    prismaMock.chatThreadRead.updateMany.mockResolvedValue({ count: 1 });
+
+    const result = await meService.markThreadAsUnimportant({
+      userId: 'd1',
+      persona: 'developer',
+      threadId: 'th1',
+    });
+
+    expect(prismaMock.chatThreadRead.updateMany).toHaveBeenCalledWith({
+      where: {
+        threadId: 'th1',
+        userId: 'd1',
+      },
+      data: {
+        importantAt: null,
+      },
+    });
+
+    expect(result).toEqual({
+      thread_id: 'th1',
+      important_at: null,
+    });
+  });
+
+  test('markThreadAsImportant allows FAILED task status', async () => {
+    const createdAt = new Date('2026-03-01T10:00:00Z');
+    const importantAt = new Date('2026-03-18T12:41:00Z');
+    const RealDate = Date;
+    globalThis.Date = class extends Date {
+      constructor(...args) {
+        if (args.length === 0) {
+          return importantAt;
+        }
+        return new RealDate(...args);
+      }
+      static now() {
+        return importantAt.getTime();
+      }
+    };
+
+    prismaMock.chatThread.findUnique.mockResolvedValue({
+      id: 'th2',
+      createdAt,
+      taskId: 't2',
+      companyUserId: 'c1',
+      developerUserId: 'd1',
+      task: { id: 't2', status: 'FAILED', deletedAt: null },
+    });
+    prismaMock.chatThreadRead.upsert.mockResolvedValue({
+      threadId: 'th2',
+      importantAt,
+    });
+
+    const result = await meService.markThreadAsImportant({
+      userId: 'd1',
+      persona: 'developer',
+      threadId: 'th2',
+    });
+
+    expect(result).toEqual({
+      thread_id: 'th2',
+      important_at: importantAt.toISOString(),
     });
 
     globalThis.Date = RealDate;

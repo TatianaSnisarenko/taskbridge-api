@@ -565,6 +565,12 @@
           schema: { type: 'string' },
           description: 'Search for threads by task title (optional, case-insensitive)',
         },
+        {
+          name: 'important_only',
+          in: 'query',
+          schema: { type: 'boolean', default: false },
+          description: 'When true, return only threads marked as important by the current user',
+        },
       ],
       responses: {
         200: {
@@ -653,6 +659,12 @@
           schema: { type: 'integer', minimum: 1, maximum: 50, default: 50 },
           description: 'Number of items per page',
         },
+        {
+          name: 'important_only',
+          in: 'query',
+          schema: { type: 'boolean', default: false },
+          description: 'When true, return only messages marked as important',
+        },
       ],
       responses: {
         200: {
@@ -739,6 +751,98 @@
       },
     },
   },
+  '/api/v1/me/chat/threads/{threadId}/messages/{messageId}/important': {
+    post: {
+      tags: ['Me'],
+      summary: 'Mark chat message as important',
+      description:
+        'Mark a specific message in a chat thread as important. User must be a participant in the thread and the associated task must have status IN_PROGRESS, DISPUTE, COMPLETED or FAILED.',
+      security: [{ bearerAuth: [] }],
+      parameters: [
+        {
+          name: 'X-Persona',
+          in: 'header',
+          required: true,
+          schema: { type: 'string', enum: ['developer', 'company'] },
+          description: 'User persona - must match user role in thread',
+        },
+        {
+          name: 'threadId',
+          in: 'path',
+          required: true,
+          schema: { type: 'string', format: 'uuid' },
+          description: 'Chat thread ID',
+        },
+        {
+          name: 'messageId',
+          in: 'path',
+          required: true,
+          schema: { type: 'string', format: 'uuid' },
+          description: 'Message ID',
+        },
+      ],
+      responses: {
+        200: {
+          description: 'Message marked as important',
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/MarkMessageAsImportantResponse' },
+            },
+          },
+        },
+        400: { description: 'Validation error' },
+        401: { description: 'Unauthorized' },
+        403: { description: 'Forbidden - user is not a participant or task status is invalid' },
+        404: { description: 'Chat thread or message not found' },
+      },
+    },
+  },
+  '/api/v1/me/chat/threads/{threadId}/messages/{messageId}/unimportant': {
+    post: {
+      tags: ['Me'],
+      summary: 'Remove important mark from chat message',
+      description:
+        'Remove important mark from a specific message in a chat thread. User must be a participant in the thread and the associated task must have status IN_PROGRESS, DISPUTE, COMPLETED or FAILED.',
+      security: [{ bearerAuth: [] }],
+      parameters: [
+        {
+          name: 'X-Persona',
+          in: 'header',
+          required: true,
+          schema: { type: 'string', enum: ['developer', 'company'] },
+          description: 'User persona - must match user role in thread',
+        },
+        {
+          name: 'threadId',
+          in: 'path',
+          required: true,
+          schema: { type: 'string', format: 'uuid' },
+          description: 'Chat thread ID',
+        },
+        {
+          name: 'messageId',
+          in: 'path',
+          required: true,
+          schema: { type: 'string', format: 'uuid' },
+          description: 'Message ID',
+        },
+      ],
+      responses: {
+        200: {
+          description: 'Important mark removed from message',
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/MarkMessageAsUnimportantResponse' },
+            },
+          },
+        },
+        400: { description: 'Validation error' },
+        401: { description: 'Unauthorized' },
+        403: { description: 'Forbidden - user is not a participant or task status is invalid' },
+        404: { description: 'Chat thread or message not found' },
+      },
+    },
+  },
   '/api/v1/me/chat/threads/{threadId}/read': {
     post: {
       tags: ['Me'],
@@ -768,6 +872,84 @@
           content: {
             'application/json': {
               schema: { $ref: '#/components/schemas/MarkThreadAsReadResponse' },
+            },
+          },
+        },
+        400: { description: 'Validation error' },
+        401: { description: 'Unauthorized' },
+        403: { description: 'Forbidden - user is not a participant or task status is invalid' },
+        404: { description: 'Chat thread not found' },
+      },
+    },
+  },
+  '/api/v1/me/chat/threads/{threadId}/important': {
+    post: {
+      tags: ['Me'],
+      summary: 'Mark chat thread as important',
+      description:
+        'Mark a specific chat thread as important for the current user. User must be a participant in the thread and the associated task must have status IN_PROGRESS, DISPUTE, COMPLETED or FAILED.',
+      security: [{ bearerAuth: [] }],
+      parameters: [
+        {
+          name: 'X-Persona',
+          in: 'header',
+          required: true,
+          schema: { type: 'string', enum: ['developer', 'company'] },
+          description: 'User persona - must match user role in thread',
+        },
+        {
+          name: 'threadId',
+          in: 'path',
+          required: true,
+          schema: { type: 'string', format: 'uuid' },
+          description: 'Chat thread ID',
+        },
+      ],
+      responses: {
+        200: {
+          description: 'Thread marked as important',
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/MarkThreadAsImportantResponse' },
+            },
+          },
+        },
+        400: { description: 'Validation error' },
+        401: { description: 'Unauthorized' },
+        403: { description: 'Forbidden - user is not a participant or task status is invalid' },
+        404: { description: 'Chat thread not found' },
+      },
+    },
+  },
+  '/api/v1/me/chat/threads/{threadId}/unimportant': {
+    post: {
+      tags: ['Me'],
+      summary: 'Remove important mark from chat thread',
+      description:
+        'Remove important mark from a specific chat thread for the current user. User must be a participant in the thread and the associated task must have status IN_PROGRESS, DISPUTE, COMPLETED or FAILED.',
+      security: [{ bearerAuth: [] }],
+      parameters: [
+        {
+          name: 'X-Persona',
+          in: 'header',
+          required: true,
+          schema: { type: 'string', enum: ['developer', 'company'] },
+          description: 'User persona - must match user role in thread',
+        },
+        {
+          name: 'threadId',
+          in: 'path',
+          required: true,
+          schema: { type: 'string', format: 'uuid' },
+          description: 'Chat thread ID',
+        },
+      ],
+      responses: {
+        200: {
+          description: 'Important mark removed from thread',
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/MarkThreadAsUnimportantResponse' },
             },
           },
         },
