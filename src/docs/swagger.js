@@ -1,4 +1,5 @@
 ﻿import { authPaths } from './swagger/paths/auth.paths.js';
+import { docsPaths } from './swagger/paths/docs.paths.js';
 import { healthPaths } from './swagger/paths/health.paths.js';
 import { mePaths } from './swagger/paths/me.paths.js';
 import { platformReviewsPaths } from './swagger/paths/platform-reviews.paths.js';
@@ -31,6 +32,7 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
   servers: [{ url: appBaseUrl }],
   tags: [
     { name: 'Health' },
+    { name: 'Docs' },
     { name: 'Auth' },
     { name: 'Me' },
     { name: 'Users' },
@@ -68,6 +70,7 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
   },
   paths: {
     ...healthPaths,
+    ...docsPaths,
     ...authPaths,
     ...mePaths,
     ...profilesPaths,

@@ -1,7 +1,8 @@
 import { jest } from '@jest/globals';
 
 const appUseMock = jest.fn();
-const appInstance = { use: appUseMock };
+const appGetMock = jest.fn();
+const appInstance = { use: appUseMock, get: appGetMock };
 const expressJsonMock = jest.fn(() => 'json-mw');
 const expressFactoryMock = jest.fn(() => appInstance);
 expressFactoryMock.json = expressJsonMock;
@@ -58,6 +59,12 @@ describe('createApp', () => {
     expect(appUseMock).toHaveBeenCalledWith('cors-mw');
     expect(appUseMock).toHaveBeenCalledWith('json-mw');
     expect(appUseMock).toHaveBeenCalledWith('cookie-mw');
+    expect(appGetMock).toHaveBeenCalledWith(
+      '/api/v1/docs/openapi.json',
+      expect.any(Function),
+      expect.any(Function),
+      expect.any(Function)
+    );
     expect(appUseMock).toHaveBeenCalledWith('/api/v1/docs', 'swagger-serve-mw', 'swagger-setup-mw');
     expect(appUseMock).toHaveBeenCalledWith('/api/v1', 'api-router');
     expect(appUseMock).toHaveBeenCalledWith('error-mw');
