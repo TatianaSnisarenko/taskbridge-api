@@ -586,6 +586,45 @@
       },
     },
   },
+  '/api/v1/me/chat/tasks/{taskId}/thread': {
+    get: {
+      tags: ['Me'],
+      summary: 'Get chat thread by task ID',
+      description:
+        'Get chat thread for a specific task. If thread does not exist yet and task status is IN_PROGRESS, backend creates the thread and returns it. User must be a participant in the thread.',
+      security: [{ bearerAuth: [] }],
+      parameters: [
+        {
+          name: 'X-Persona',
+          in: 'header',
+          required: true,
+          schema: { type: 'string', enum: ['developer', 'company'] },
+          description: 'User persona - must match user role in thread',
+        },
+        {
+          name: 'taskId',
+          in: 'path',
+          required: true,
+          schema: { type: 'string', format: 'uuid' },
+          description: 'Task ID',
+        },
+      ],
+      responses: {
+        200: {
+          description: 'Chat thread details',
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/ChatThreadItem' },
+            },
+          },
+        },
+        400: { description: 'Validation error' },
+        401: { description: 'Unauthorized' },
+        403: { description: 'Forbidden - user is not a participant or task status is invalid' },
+        404: { description: 'Chat thread not found' },
+      },
+    },
+  },
   '/api/v1/me/chat/threads/{threadId}': {
     get: {
       tags: ['Me'],

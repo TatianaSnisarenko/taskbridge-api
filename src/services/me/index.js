@@ -7,6 +7,7 @@ export {
   markNotificationAsUnimportant,
 } from './notifications-mark.js';
 export { getMyThreads, getThreadById, getThreadMessages } from './threads-read.js';
+export { getThreadByTaskId } from './threads-by-task.js';
 export {
   createMessage,
   markThreadAsRead,

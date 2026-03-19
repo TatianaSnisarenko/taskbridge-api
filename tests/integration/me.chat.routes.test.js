@@ -297,4 +297,115 @@ describe('me routes - chat', () => {
       });
     });
   });
+
+  describe('GET /me/chat/tasks/{taskId}/thread', () => {
+    test('returns existing thread by task id', async () => {
+      const developer = await createUser({ developerProfile: { displayName: 'Dev' } });
+      const company = await createUser({ companyProfile: { companyName: 'Company' } });
+      const companyToken = buildAccessToken({ userId: company.id, email: company.email });
+
+      const task = await prisma.task.create({
+        data: {
+          ownerUserId: company.id,
+          status: 'IN_PROGRESS',
+          title: 'Task',
+          description: 'Description',
+        },
+      });
+
+      const acceptedApplication = await prisma.application.create({
+        data: {
+          taskId: task.id,
+          developerUserId: developer.id,
+          status: 'ACCEPTED',
+        },
+      });
+
+      await prisma.task.update({
+        where: { id: task.id },
+        data: { acceptedApplicationId: acceptedApplication.id },
+      });
+
+      const thread = await prisma.chatThread.create({
+        data: {
+          taskId: task.id,
+          companyUserId: company.id,
+          developerUserId: developer.id,
+        },
+      });
+
+      const res = await request(app)
+        .get(`/api/v1/me/chat/tasks/${task.id}/thread`)
+        .set('Authorization', `Bearer ${companyToken}`)
+        .set('X-Persona', 'company');
+
+      expect(res.status).toBe(200);
+      expect(res.body.thread_id).toBe(thread.id);
+      expect(res.body.task.task_id).toBe(task.id);
+    });
+
+    test('creates thread when missing and task is IN_PROGRESS', async () => {
+      const developer = await createUser({ developerProfile: { displayName: 'Dev' } });
+      const company = await createUser({ companyProfile: { companyName: 'Company' } });
+      const companyToken = buildAccessToken({ userId: company.id, email: company.email });
+
+      const task = await prisma.task.create({
+        data: {
+          ownerUserId: company.id,
+          status: 'IN_PROGRESS',
+          title: 'Task',
+          description: 'Description',
+        },
+      });
+
+      const acceptedApplication = await prisma.application.create({
+        data: {
+          taskId: task.id,
+          developerUserId: developer.id,
+          status: 'ACCEPTED',
+        },
+      });
+
+      await prisma.task.update({
+        where: { id: task.id },
+        data: { acceptedApplicationId: acceptedApplication.id },
+      });
+
+      const before = await prisma.chatThread.count({ where: { taskId: task.id } });
+      expect(before).toBe(0);
+
+      const res = await request(app)
+        .get(`/api/v1/me/chat/tasks/${task.id}/thread`)
+        .set('Authorization', `Bearer ${companyToken}`)
+        .set('X-Persona', 'company');
+
+      expect(res.status).toBe(200);
+      expect(res.body.task.task_id).toBe(task.id);
+      expect(res.body.thread_id).toEqual(expect.any(String));
+
+      const after = await prisma.chatThread.count({ where: { taskId: task.id } });
+      expect(after).toBe(1);
+    });
+
+    test('returns 401 when authorization header is missing', async () => {
+      const res = await request(app)
+        .get('/api/v1/me/chat/tasks/00000000-0000-4000-8000-000000000001/thread')
+        .set('X-Persona', 'company');
+
+      expect(res.status).toBe(401);
+    });
+
+    test('returns 400 for invalid task id', async () => {
+      const developer = await createUser({ developerProfile: { displayName: 'Dev' } });
+      const token = buildAccessToken({ userId: developer.id, email: developer.email });
+
+      const res = await request(app)
+        .get('/api/v1/me/chat/tasks/not-a-uuid/thread')
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'developer');
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    });
+  });
 });

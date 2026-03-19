@@ -230,6 +230,15 @@ export const getThreadById = asyncHandler(async (req, res) => {
 
   return res.status(200).json(result);
 });
+export const getThreadByTaskId = asyncHandler(async (req, res) => {
+  const result = await meService.getThreadByTaskId({
+    userId: req.user.id,
+    persona: req.headers['x-persona'],
+    taskId: req.params.taskId,
+  });
+
+  return res.status(200).json(result);
+});
 export const getThreadMessages = asyncHandler(async (req, res) => {
   const result = await meService.getThreadMessages({
     userId: req.user.id,

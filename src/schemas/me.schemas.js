@@ -117,6 +117,14 @@ export const threadIdParamSchema = Joi.object({
   }),
 });
 
+export const threadTaskIdParamSchema = Joi.object({
+  taskId: Joi.string().guid({ version: 'uuidv4' }).required().messages({
+    'string.empty': 'Task id is required',
+    'string.guid': 'Task id must be a valid UUID',
+    'any.required': 'Task id is required',
+  }),
+});
+
 export const threadMessageIdParamSchema = Joi.object({
   threadId: Joi.string().guid({ version: 'uuidv4' }).required().messages({
     'string.empty': 'Thread id is required',

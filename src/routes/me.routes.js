@@ -14,6 +14,7 @@ import {
   notificationIdParamSchema,
   getMyThreadsQuerySchema,
   threadIdParamSchema,
+  threadTaskIdParamSchema,
   threadMessageIdParamSchema,
   threadMessagesQuerySchema,
   favoriteTaskParamSchema,
@@ -132,6 +133,14 @@ meRouter.get(
   requirePersona('developer', 'company'),
   validate(getMyThreadsQuerySchema, 'query'),
   meController.getMyThreads
+);
+
+meRouter.get(
+  '/chat/tasks/:taskId/thread',
+  requireAuth,
+  requirePersona('developer', 'company'),
+  validate(threadTaskIdParamSchema, 'params'),
+  meController.getThreadByTaskId
 );
 
 meRouter.get(

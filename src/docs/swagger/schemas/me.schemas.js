@@ -421,6 +421,9 @@
       total: { type: 'integer', example: 1 },
     },
   },
+  GetThreadByTaskResponse: {
+    allOf: [{ $ref: '#/components/schemas/ChatThreadItem' }],
+  },
   ChatMessageAttachment: {
     type: 'object',
     properties: {
