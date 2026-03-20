@@ -84,6 +84,51 @@ function buildNotificationMessage({ type, payload, taskTitle, projectTitle }) {
   }
 }
 
+function resolveActorRole({ notif, userId }) {
+  if (!notif.actorUserId) return null;
+
+  switch (notif.type) {
+    case 'APPLICATION_CREATED':
+      return 'developer';
+    case 'APPLICATION_ACCEPTED':
+    case 'APPLICATION_REJECTED':
+    case 'TASK_COMPLETED':
+    case 'TASK_DELETED':
+    case 'PROJECT_DELETED':
+    case 'TASK_INVITE_CREATED':
+    case 'TASK_INVITE_CANCELLED':
+      return 'company';
+    case 'TASK_INVITE_ACCEPTED':
+    case 'TASK_INVITE_DECLINED':
+      return 'developer';
+    case 'COMPLETION_REQUESTED':
+      return notif.task?.ownerUserId === userId ? 'developer' : 'company';
+    case 'TASK_DISPUTE_OPENED':
+      return notif.task?.ownerUserId === notif.actorUserId ? 'company' : 'developer';
+    case 'REVIEW_CREATED':
+      if (notif.actor?.developerProfile) return 'developer';
+      if (notif.actor?.companyProfile) return 'company';
+      return null;
+    case 'CHAT_MESSAGE':
+      if (notif.task?.ownerUserId) {
+        return notif.actorUserId === notif.task.ownerUserId ? 'company' : 'developer';
+      }
+      break;
+    default:
+      break;
+  }
+
+  if (notif.actor?.developerProfile) return 'developer';
+  if (notif.actor?.companyProfile) return 'company';
+  return null;
+}
+
+function resolveActorName({ actorRole, developerName, companyName }) {
+  if (actorRole === 'developer') return developerName || companyName || 'Unknown';
+  if (actorRole === 'company') return companyName || developerName || 'Unknown';
+  return 'Unknown';
+}
+
 /**
  * Get notifications for the current user with pagination
  * @param {string} persona - Required persona filter ('developer' or 'company')
@@ -174,11 +219,14 @@ export async function getMyNotifications({
 
   return {
     items: paginatedItems.map((notif) => {
-      const actorName =
-        notif.actor?.developerProfile?.displayName ||
-        notif.actor?.companyProfile?.companyName ||
-        null;
+      const developerName = notif.actor?.developerProfile?.displayName || null;
       const companyName = notif.actor?.companyProfile?.companyName || null;
+      const actorRole = resolveActorRole({ notif, userId });
+      const actorName = resolveActorName({
+        actorRole,
+        developerName,
+        companyName,
+      });
       const projectTitle = notif.project?.title || null;
       const taskTitle = notif.task?.title || null;
       const category = mapNotificationCategory(notif.type);
@@ -192,7 +240,9 @@ export async function getMyNotifications({
         id: notif.id,
         type: notif.type,
         actor_user_id: notif.actorUserId,
+        actor_role: actorRole,
         actor_name: actorName,
+        developer_name: developerName,
         company_name: companyName,
         project_id: notif.projectId,
         project_title: projectTitle,

@@ -16,7 +16,9 @@ export function isNotificationRelevantForPersona(notif, userId, persona) {
       if (notif.task?.ownerUserId === userId) return persona === 'company';
       return persona === 'developer';
     case 'TASK_DISPUTE_OPENED':
-      // Sent to developer when company opens dispute
+      // Sent to developer when company opens dispute,
+      // OR sent to company when developer escalates completion dispute
+      if (notif.task?.ownerUserId === userId) return persona === 'company';
       return persona === 'developer';
     case 'TASK_COMPLETED':
       // Sent to developer when company confirms or final-rejects task

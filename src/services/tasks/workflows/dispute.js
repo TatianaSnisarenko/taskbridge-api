@@ -180,6 +180,19 @@ export async function escalateTaskCompletionDispute({ userId, taskId, reason }) 
       select: { id: true },
     });
 
+    await createNotification({
+      client: tx,
+      userId: task.ownerUserId,
+      actorUserId: userId,
+      taskId: task.id,
+      type: 'TASK_DISPUTE_OPENED',
+      payload: {
+        task_id: task.id,
+        status: updatedTask.status,
+        reason,
+      },
+    });
+
     return {
       ...updatedTask,
       disputeId: dispute.id,

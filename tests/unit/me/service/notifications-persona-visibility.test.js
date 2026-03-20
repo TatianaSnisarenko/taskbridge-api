@@ -131,6 +131,7 @@ describe('me.service - notification persona visibility', () => {
 
       expect(result.items).toHaveLength(1);
       expect(result.items[0].actor_name).toBe('Acme');
+      expect(result.items[0].actor_role).toBe('company');
     });
 
     test('keeps COMPLETION_REQUESTED for company when current user owns the task', async () => {
@@ -164,6 +165,7 @@ describe('me.service - notification persona visibility', () => {
 
       expect(result.items).toHaveLength(1);
       expect(result.items[0].type).toBe('COMPLETION_REQUESTED');
+      expect(result.items[0].actor_role).toBe('developer');
     });
 
     test('keeps TASK_COMPLETED for developer persona', async () => {
@@ -197,6 +199,42 @@ describe('me.service - notification persona visibility', () => {
 
       expect(result.items).toHaveLength(1);
       expect(result.items[0].type).toBe('TASK_COMPLETED');
+      expect(result.items[0].actor_role).toBe('company');
+    });
+
+    test('keeps developer-initiated TASK_DISPUTE_OPENED for company persona', async () => {
+      prismaMock.notification.findMany.mockResolvedValue([
+        {
+          id: 'n3',
+          type: 'TASK_DISPUTE_OPENED',
+          actorUserId: 'u1',
+          projectId: null,
+          taskId: 't1',
+          threadId: null,
+          payload: { task_id: 't1', status: 'DISPUTE', reason: 'Escalated after deadline' },
+          createdAt: new Date('2026-03-15T10:00:00Z'),
+          readAt: null,
+          task: { ownerUserId: 'c1', title: 'Task 1' },
+          project: null,
+          actor: {
+            developerProfile: { userId: 'u1', displayName: 'Dev User' },
+            companyProfile: null,
+          },
+        },
+      ]);
+      prismaMock.notification.count.mockResolvedValueOnce(1).mockResolvedValueOnce(1);
+
+      const result = await meService.getMyNotifications({
+        userId: 'c1',
+        persona: 'company',
+        page: 1,
+        size: 20,
+      });
+
+      expect(result.items).toHaveLength(1);
+      expect(result.items[0].type).toBe('TASK_DISPUTE_OPENED');
+      expect(result.items[0].actor_role).toBe('developer');
+      expect(result.items[0].actor_name).toBe('Dev User');
     });
   });
 

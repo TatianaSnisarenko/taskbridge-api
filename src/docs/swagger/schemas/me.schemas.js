@@ -237,10 +237,21 @@
         nullable: true,
         example: '5f1c3ce6-cd67-46f5-95a8-c086ecf3e9b2',
       },
+      actor_role: {
+        type: 'string',
+        enum: ['developer', 'company'],
+        nullable: true,
+        example: 'developer',
+      },
       actor_name: {
         type: 'string',
         nullable: true,
         example: 'Anonymous Developer',
+      },
+      developer_name: {
+        type: 'string',
+        nullable: true,
+        example: 'Tetiana',
       },
       company_name: {
         type: 'string',
