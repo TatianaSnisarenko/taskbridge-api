@@ -279,4 +279,47 @@ describe('Platform Reviews Service - getPlatformReviews', () => {
       include: expect.any(Object),
     });
   });
+
+  test('should use persisted authorPersona for dual-profile author', async () => {
+    const mockReviews = [
+      {
+        id: 'review-1',
+        userId: 'user-1',
+        authorPersona: 'company',
+        rating: 5,
+        text: 'Dual profile review',
+        isApproved: true,
+        createdAt: new Date('2026-03-08T10:00:00Z'),
+        updatedAt: new Date('2026-03-08T10:00:00Z'),
+        user: {
+          id: 'user-1',
+          developerProfile: {
+            displayName: 'Dev Name',
+            avatarUrl: 'https://cdn.example.com/avatars/dev.png',
+          },
+          companyProfile: {
+            companyName: 'Company Name',
+            logoUrl: 'https://cdn.example.com/logos/company.png',
+          },
+        },
+      },
+    ];
+
+    prismaMock.platformReview.findMany.mockResolvedValue(mockReviews);
+    prismaMock.platformReview.count.mockResolvedValue(1);
+
+    const result = await platformReviewsService.getPlatformReviews({
+      status: 'approved',
+      limit: 20,
+      offset: 0,
+      sort: 'newest',
+      isAdmin: false,
+    });
+
+    expect(result.reviews[0]).toMatchObject({
+      author_name: 'Company Name',
+      author_type: 'company',
+      author_image_url: 'https://cdn.example.com/logos/company.png',
+    });
+  });
 });

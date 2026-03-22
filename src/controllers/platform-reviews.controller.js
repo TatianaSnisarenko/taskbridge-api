@@ -10,6 +10,7 @@ export const createPlatformReview = asyncHandler(async (req, res) => {
     userId: req.user.id,
     rating: req.body.rating,
     text: req.body.text,
+    authorPersona: req.persona,
   });
 
   return res.status(201).json(result);

@@ -42,6 +42,7 @@ describe('Platform Reviews Service - Create', () => {
       const mockReview = {
         id: 'review-123',
         userId,
+        authorPersona: 'developer',
         rating,
         text,
         isApproved: false,
@@ -58,6 +59,7 @@ describe('Platform Reviews Service - Create', () => {
         userId,
         rating,
         text,
+        authorPersona: 'developer',
       });
 
       expect(result).toEqual({
@@ -84,6 +86,7 @@ describe('Platform Reviews Service - Create', () => {
       expect(prismaMock.platformReview.create).toHaveBeenCalledWith({
         data: {
           userId,
+          authorPersona: 'developer',
           rating,
           text,
           isApproved: false,
@@ -133,6 +136,7 @@ describe('Platform Reviews Service - Create', () => {
         userId,
         rating,
         text,
+        authorPersona: 'company',
       });
 
       expect(result.author_name).toBe('TechCorp Inc.');
@@ -148,6 +152,7 @@ describe('Platform Reviews Service - Create', () => {
           userId: 'nonexistent',
           rating: 5,
           text: 'Some review',
+          authorPersona: 'developer',
         })
       ).rejects.toThrow('User not found');
     });
@@ -172,6 +177,7 @@ describe('Platform Reviews Service - Create', () => {
           userId,
           rating: 5,
           text: 'Another review',
+          authorPersona: 'developer',
         })
       ).rejects.toThrow(/You can submit a new review in \d+ days?/);
     });
@@ -197,11 +203,12 @@ describe('Platform Reviews Service - Create', () => {
           userId,
           rating: 5,
           text: 'Another review',
+          authorPersona: 'developer',
         })
       ).rejects.toThrow('You can submit a new review in 1 day');
     });
 
-    test('should create review for user with both profiles (prefer developer)', async () => {
+    test('should create review for user with both profiles using provided company persona', async () => {
       const userId = 'user-123';
       const rating = 5;
       const text = 'Great platform!';
@@ -221,6 +228,7 @@ describe('Platform Reviews Service - Create', () => {
       const mockReview = {
         id: 'review-123',
         userId,
+        authorPersona: 'company',
         rating,
         text,
         isApproved: false,
@@ -237,11 +245,12 @@ describe('Platform Reviews Service - Create', () => {
         userId,
         rating,
         text,
+        authorPersona: 'company',
       });
 
-      expect(result.author_name).toBe('John Developer');
-      expect(result.author_type).toBe('developer');
-      expect(result.author_image_url).toBe('https://cdn.example.com/avatars/john-developer.png');
+      expect(result.author_name).toBe('TechCorp Inc.');
+      expect(result.author_type).toBe('company');
+      expect(result.author_image_url).toBe('https://cdn.example.com/logos/techcorp.png');
     });
   });
 });

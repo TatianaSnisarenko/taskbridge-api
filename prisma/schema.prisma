@@ -759,13 +759,14 @@ model TechnologySuggestion {
 }
 
 model PlatformReview {
-  id         String   @id @default(uuid()) @db.Uuid
-  userId     String   @map("user_id") @db.Uuid
-  rating     Int
-  text       String
-  isApproved Boolean  @default(false) @map("is_approved")
-  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @map("user_id") @db.Uuid
+  authorPersona Persona? @map("author_persona")
+  rating        Int
+  text          String
+  isApproved    Boolean  @default(false) @map("is_approved")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   user User @relation("PlatformReviewAuthor", fields: [userId], references: [id], onDelete: Cascade)
 

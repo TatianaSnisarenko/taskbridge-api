@@ -5,6 +5,7 @@ import {
   optionalAuth,
   loadAdminOrModeratorStatus,
 } from '../middleware/auth.middleware.js';
+import { requirePersona } from '../middleware/persona.middleware.js';
 import { validate } from '../middleware/validate.middleware.js';
 import * as platformReviewsController from '../controllers/platform-reviews.controller.js';
 import {
@@ -37,6 +38,7 @@ platformReviewsRouter.get(
 platformReviewsRouter.post(
   '/',
   requireAuth,
+  requirePersona(),
   validate(createPlatformReviewSchema),
   platformReviewsController.createPlatformReview
 );

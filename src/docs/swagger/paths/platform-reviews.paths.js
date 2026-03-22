@@ -67,6 +67,19 @@ export const platformReviewsPaths = {
       description:
         'Create a review about the platform. Users can submit one review per cooldown period (30 days by default).',
       security: [{ bearerAuth: [] }],
+      parameters: [
+        {
+          name: 'X-Persona',
+          in: 'header',
+          required: true,
+          schema: {
+            type: 'string',
+            enum: ['developer', 'company'],
+            default: 'developer',
+          },
+          description: 'Persona used to publish the review',
+        },
+      ],
       requestBody: {
         required: true,
         content: {
@@ -90,6 +103,7 @@ export const platformReviewsPaths = {
         },
         400: { description: 'Validation error' },
         401: { description: 'Unauthorized' },
+        403: { description: 'Persona profile does not exist' },
         404: { description: 'User not found' },
         429: {
           description: 'Too many reviews - cooldown period not passed',

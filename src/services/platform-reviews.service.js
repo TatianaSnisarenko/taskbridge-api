@@ -12,7 +12,23 @@ const reviewAuthorSelect = {
   },
 };
 
-function buildReviewAuthor(user) {
+function buildReviewAuthor(user, authorPersona = null) {
+  if (authorPersona === 'developer') {
+    return {
+      author_name: user.developerProfile?.displayName || null,
+      author_type: 'developer',
+      author_image_url: user.developerProfile?.avatarUrl || null,
+    };
+  }
+
+  if (authorPersona === 'company') {
+    return {
+      author_name: user.companyProfile?.companyName || null,
+      author_type: 'company',
+      author_image_url: user.companyProfile?.logoUrl || null,
+    };
+  }
+
   if (user.developerProfile) {
     return {
       author_name: user.developerProfile.displayName,
@@ -37,7 +53,7 @@ function buildReviewAuthor(user) {
 }
 
 function mapPlatformReview(review) {
-  const author = buildReviewAuthor(review.user);
+  const author = buildReviewAuthor(review.user, review.authorPersona || null);
 
   return {
     review_id: review.id,
@@ -54,7 +70,7 @@ function mapPlatformReview(review) {
 /**
  * Create a platform review
  */
-export async function createPlatformReview({ userId, rating, text }) {
+export async function createPlatformReview({ userId, rating, text, authorPersona = null }) {
   // Check if user exists with profile information
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -102,10 +118,18 @@ export async function createPlatformReview({ userId, rating, text }) {
     );
   }
 
+  const fallbackPersona = user.developerProfile
+    ? 'developer'
+    : user.companyProfile
+      ? 'company'
+      : null;
+  const resolvedAuthorPersona = authorPersona || fallbackPersona;
+
   // Create review
   const review = await prisma.platformReview.create({
     data: {
       userId,
+      authorPersona: resolvedAuthorPersona,
       rating,
       text,
       isApproved: false,

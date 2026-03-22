@@ -37,6 +37,7 @@ describe('platform-reviews routes - POST', () => {
       const res = await request(app)
         .post('/api/v1/platform-reviews')
         .set('Authorization', `Bearer ${devToken}`)
+        .set('X-Persona', 'developer')
         .send({
           rating: 5,
           text: 'Excellent platform for finding great projects!',
@@ -62,6 +63,7 @@ describe('platform-reviews routes - POST', () => {
       const res = await request(app)
         .post('/api/v1/platform-reviews')
         .set('Authorization', `Bearer ${companyToken}`)
+        .set('X-Persona', 'company')
         .send({
           rating: 4,
           text: 'Great place to find talented developers.',
@@ -83,6 +85,22 @@ describe('platform-reviews routes - POST', () => {
       expect(res.status).toBe(401);
     });
 
+    test('should reject authenticated request without X-Persona header', async () => {
+      const developer = await createUser({ developerProfile: { displayName: 'John Doe' } });
+      const devToken = buildAccessToken({ userId: developer.id, email: developer.email });
+
+      const res = await request(app)
+        .post('/api/v1/platform-reviews')
+        .set('Authorization', `Bearer ${devToken}`)
+        .send({
+          rating: 5,
+          text: 'Excellent platform for finding great projects!',
+        });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('PERSONA_REQUIRED');
+    });
+
     test('should enforce cooldown period', async () => {
       const user = await createUser({ developerProfile: { displayName: 'Test User' } });
       const token = buildAccessToken({ userId: user.id, email: user.email });
@@ -91,6 +109,7 @@ describe('platform-reviews routes - POST', () => {
       await request(app)
         .post('/api/v1/platform-reviews')
         .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'developer')
         .send({
           rating: 5,
           text: 'First review with enough characters',
@@ -100,6 +119,7 @@ describe('platform-reviews routes - POST', () => {
       const res = await request(app)
         .post('/api/v1/platform-reviews')
         .set('Authorization', `Bearer ${token}`)
+        .set('X-Persona', 'developer')
         .send({
           rating: 4,
           text: 'Second review with enough characters',

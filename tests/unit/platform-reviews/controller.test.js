@@ -31,7 +31,7 @@ describe('platform-reviews.controller', () => {
   test('createPlatformReview forwards payload and returns 201', async () => {
     const result = { id: 'r-1' };
     platformReviewsServiceMock.createPlatformReview.mockResolvedValue(result);
-    const req = { user: { id: 'u-1' }, body: { rating: 5, text: 'Great' } };
+    const req = { user: { id: 'u-1' }, persona: 'developer', body: { rating: 5, text: 'Great' } };
     const res = createResponseMock();
     const next = jest.fn();
 
@@ -41,6 +41,7 @@ describe('platform-reviews.controller', () => {
       userId: 'u-1',
       rating: 5,
       text: 'Great',
+      authorPersona: 'developer',
     });
     expect(res.status).toHaveBeenCalledWith(201);
     expect(res.json).toHaveBeenCalledWith(result);
