@@ -1,4 +1,5 @@
 import { jest } from '@jest/globals';
+import crypto from 'crypto';
 import request from 'supertest';
 import { prisma } from '../../src/db/prisma.js';
 import { resetCheckEmailRateLimiters } from '../../src/middleware/rate-limit.middleware.js';
@@ -117,5 +118,94 @@ describe('auth routes', () => {
       code: 'RATE_LIMIT_EXCEEDED',
       message: 'Too many requests. Please try again later.',
     });
+  });
+
+  test('GET /auth/verify-email returns success HTML for valid token', async () => {
+    const payload = buildSignupPayload();
+    await request(app).post('/api/v1/auth/signup').send(payload);
+
+    const lastEmailCall = sendVerificationEmailMock.mock.calls.at(-1);
+    const token = lastEmailCall?.[0]?.token;
+    expect(token).toBeTruthy();
+
+    const res = await request(app).get('/api/v1/auth/verify-email').query({ token });
+
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/text\/html/);
+    expect(res.text).toContain('Email Verified!');
+    expect(res.text).toContain('Go to TeamUp IT');
+  });
+
+  test('GET /auth/verify-email returns resend form HTML for invalid token', async () => {
+    const res = await request(app)
+      .get('/api/v1/auth/verify-email')
+      .query({ token: 'invalid-token' });
+
+    expect(res.status).toBe(400);
+    expect(res.headers['content-type']).toMatch(/text\/html/);
+    expect(res.text).toContain('Invalid Link');
+    expect(res.text).toContain('Send new verification email');
+    expect(res.text).toContain('/api/v1/auth/resend-verification');
+  });
+
+  test('GET /auth/verify-email returns success HTML on second visit with same token', async () => {
+    const payload = buildSignupPayload();
+    await request(app).post('/api/v1/auth/signup').send(payload);
+
+    const token = sendVerificationEmailMock.mock.calls.at(-1)?.[0]?.token;
+    expect(token).toBeTruthy();
+
+    const firstRes = await request(app).get('/api/v1/auth/verify-email').query({ token });
+    expect(firstRes.status).toBe(200);
+    expect(firstRes.text).toContain('Email Verified!');
+
+    const secondRes = await request(app).get('/api/v1/auth/verify-email').query({ token });
+    expect(secondRes.status).toBe(200);
+    expect(secondRes.headers['content-type']).toMatch(/text\/html/);
+    expect(secondRes.text).toContain('Email Verified!');
+    expect(secondRes.text).toContain('Go to TeamUp IT');
+  });
+
+  test('GET /auth/verify-email returns already-verified HTML for second valid token', async () => {
+    const payload = buildSignupPayload();
+    const signupRes = await request(app).post('/api/v1/auth/signup').send(payload);
+
+    const userId = signupRes.body.user_id;
+    const userEmail = signupRes.body.email;
+
+    const firstToken = sendVerificationEmailMock.mock.calls.at(-1)?.[0]?.token;
+    expect(firstToken).toBeTruthy();
+
+    const firstVerifyRes = await request(app)
+      .get('/api/v1/auth/verify-email')
+      .query({ token: firstToken });
+    expect(firstVerifyRes.status).toBe(200);
+
+    const resendRes = await request(app)
+      .post('/api/v1/auth/resend-verification')
+      .send({ email: userEmail });
+    expect(resendRes.status).toBe(400);
+    expect(resendRes.body.error).toMatchObject({ code: 'EMAIL_ALREADY_VERIFIED' });
+
+    const secondTokenValue = `manual-token-${Date.now()}`;
+    const secondTokenHash = crypto.createHash('sha256').update(secondTokenValue).digest('hex');
+
+    await prisma.verificationToken.create({
+      data: {
+        userId,
+        type: 'EMAIL_VERIFY',
+        tokenHash: secondTokenHash,
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+      },
+    });
+
+    const res = await request(app)
+      .get('/api/v1/auth/verify-email')
+      .query({ token: secondTokenValue });
+
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/text\/html/);
+    expect(res.text).toContain('Email Verified!');
+    expect(res.text).toContain('Go to TeamUp IT');
   });
 });

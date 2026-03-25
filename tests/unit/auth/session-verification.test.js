@@ -159,6 +159,24 @@ describe('auth.service', () => {
     expect(result).toEqual({ email: 'a@example.com' });
   });
 
+  test('verifyEmail rejects when token is already used', async () => {
+    prismaMock.verificationToken.findFirst.mockResolvedValue({
+      id: 'vt2',
+      userId: 'u1',
+      user: { email: 'a@example.com' },
+      expiresAt: new Date(Date.now() + 10_000),
+      usedAt: new Date(Date.now() - 60_000),
+    });
+
+    await expect(authService.verifyEmail({ token: 'already-used' })).rejects.toMatchObject({
+      status: 400,
+      code: 'EMAIL_ALREADY_VERIFIED',
+      details: { email: 'a@example.com' },
+    });
+
+    expect(prismaMock.user.update).not.toHaveBeenCalled();
+  });
+
   test('resendVerificationEmail rejects unknown user', async () => {
     findUserByEmailMock.mockResolvedValue(null);
 

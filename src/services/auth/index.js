@@ -164,7 +164,6 @@ export async function verifyEmail({ token }) {
     where: {
       tokenHash,
       type: 'EMAIL_VERIFY',
-      usedAt: null,
     },
     include: { user: true },
   });
@@ -173,8 +172,22 @@ export async function verifyEmail({ token }) {
     throw new ApiError(400, 'EMAIL_VERIFICATION_INVALID', 'Verification link is invalid');
   }
 
+  if (tokenRecord.usedAt) {
+    throw new ApiError(400, 'EMAIL_ALREADY_VERIFIED', 'Email is already verified', {
+      email: tokenRecord.user?.email,
+    });
+  }
+
   if (tokenRecord.expiresAt < new Date()) {
-    throw new ApiError(400, 'EMAIL_VERIFICATION_EXPIRED', 'Verification link has expired');
+    throw new ApiError(400, 'EMAIL_VERIFICATION_EXPIRED', 'Verification link has expired', {
+      email: tokenRecord.user?.email,
+    });
+  }
+
+  if (tokenRecord.user?.emailVerified) {
+    throw new ApiError(400, 'EMAIL_ALREADY_VERIFIED', 'Email is already verified', {
+      email: tokenRecord.user?.email,
+    });
   }
 
   await prisma.user.update({

@@ -57,17 +57,56 @@ export const logout = asyncHandler(async (req, res) => {
 });
 
 export const verifyEmail = asyncHandler(async (req, res) => {
-  const { email } = await authService.verifyEmail({ token: req.query?.token });
+  try {
+    const { email } = await authService.verifyEmail({ token: req.query?.token });
 
-  // Return HTML page instead of JSON
-  const { buildVerifyEmailSuccessPage } =
-    await import('../templates/email/verify-email-success.js');
-  const html = buildVerifyEmailSuccessPage({
-    email,
-    frontendUrl: env.frontendBaseUrl,
-  });
+    const { buildVerifyEmailSuccessPage } =
+      await import('../templates/email/verify-email-success.js');
+    const html = buildVerifyEmailSuccessPage({
+      email,
+      frontendUrl: env.frontendBaseUrl,
+    });
 
-  return res.status(200).set('Content-Type', 'text/html').send(html);
+    return res.status(200).set('Content-Type', 'text/html').send(html);
+  } catch (error) {
+    if (error?.code === 'EMAIL_VERIFICATION_EXPIRED') {
+      const { buildVerifyEmailExpiredPage } =
+        await import('../templates/email/verify-email-expired.js');
+      const html = buildVerifyEmailExpiredPage({
+        resendEndpoint: '/api/v1/auth/resend-verification',
+        prefilledEmail: error?.details?.email ?? '',
+        title: 'Link Expired',
+        subtitle:
+          'Your verification link has expired. Enter your email below and we will send you a new one.',
+      });
+      return res.status(400).set('Content-Type', 'text/html').send(html);
+    }
+
+    if (error?.code === 'EMAIL_VERIFICATION_INVALID') {
+      const { buildVerifyEmailExpiredPage } =
+        await import('../templates/email/verify-email-expired.js');
+      const html = buildVerifyEmailExpiredPage({
+        resendEndpoint: '/api/v1/auth/resend-verification',
+        prefilledEmail: '',
+        title: 'Invalid Link',
+        subtitle:
+          'This verification link is invalid. Enter your email below and we will send you a new one.',
+      });
+      return res.status(400).set('Content-Type', 'text/html').send(html);
+    }
+
+    if (error?.code === 'EMAIL_ALREADY_VERIFIED') {
+      const { buildVerifyEmailSuccessPage } =
+        await import('../templates/email/verify-email-success.js');
+      const html = buildVerifyEmailSuccessPage({
+        email: error?.details?.email,
+        frontendUrl: env.frontendBaseUrl,
+      });
+      return res.status(200).set('Content-Type', 'text/html').send(html);
+    }
+
+    throw error;
+  }
 });
 
 export const resendVerification = asyncHandler(async (req, res) => {

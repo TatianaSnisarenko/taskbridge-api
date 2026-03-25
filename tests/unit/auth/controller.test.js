@@ -14,10 +14,14 @@ const authServiceMock = {
 };
 
 const buildVerifyEmailSuccessPageMock = jest.fn();
+const buildVerifyEmailExpiredPageMock = jest.fn();
 
 jest.unstable_mockModule('../../src/services/auth/index.js', () => authServiceMock);
 jest.unstable_mockModule('../../src/templates/email/verify-email-success.js', () => ({
   buildVerifyEmailSuccessPage: buildVerifyEmailSuccessPageMock,
+}));
+jest.unstable_mockModule('../../src/templates/email/verify-email-expired.js', () => ({
+  buildVerifyEmailExpiredPage: buildVerifyEmailExpiredPageMock,
 }));
 
 const authController = await import('../../../src/controllers/auth.controller.js');
@@ -163,6 +167,77 @@ describe('auth.controller', () => {
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.set).toHaveBeenCalledWith('Content-Type', 'text/html');
     expect(res.send).toHaveBeenCalledWith('<html>ok</html>');
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  test('verifyEmail returns expired html page when verification link has expired', async () => {
+    authServiceMock.verifyEmail.mockRejectedValue({
+      code: 'EMAIL_VERIFICATION_EXPIRED',
+      details: { email: 'expired@example.com' },
+    });
+    buildVerifyEmailExpiredPageMock.mockReturnValue('<html>expired</html>');
+
+    const req = { query: { token: 'expired-token' } };
+    const res = createResponseMock();
+    const next = jest.fn();
+
+    await authController.verifyEmail(req, res, next);
+
+    expect(authServiceMock.verifyEmail).toHaveBeenCalledWith({ token: 'expired-token' });
+    expect(buildVerifyEmailExpiredPageMock).toHaveBeenCalledWith(
+      expect.objectContaining({ prefilledEmail: 'expired@example.com' })
+    );
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.set).toHaveBeenCalledWith('Content-Type', 'text/html');
+    expect(res.send).toHaveBeenCalledWith('<html>expired</html>');
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  test('verifyEmail returns resend html page when verification link is invalid', async () => {
+    authServiceMock.verifyEmail.mockRejectedValue({
+      code: 'EMAIL_VERIFICATION_INVALID',
+    });
+    buildVerifyEmailExpiredPageMock.mockReturnValue('<html>invalid</html>');
+
+    const req = { query: { token: 'invalid-token' } };
+    const res = createResponseMock();
+    const next = jest.fn();
+
+    await authController.verifyEmail(req, res, next);
+
+    expect(authServiceMock.verifyEmail).toHaveBeenCalledWith({ token: 'invalid-token' });
+    expect(buildVerifyEmailExpiredPageMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Invalid Link',
+        prefilledEmail: '',
+      })
+    );
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.set).toHaveBeenCalledWith('Content-Type', 'text/html');
+    expect(res.send).toHaveBeenCalledWith('<html>invalid</html>');
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  test('verifyEmail returns success html page when email is already verified', async () => {
+    authServiceMock.verifyEmail.mockRejectedValue({
+      code: 'EMAIL_ALREADY_VERIFIED',
+      details: { email: 'verified@example.com' },
+    });
+    buildVerifyEmailSuccessPageMock.mockReturnValue('<html>already-verified</html>');
+
+    const req = { query: { token: 'any-token' } };
+    const res = createResponseMock();
+    const next = jest.fn();
+
+    await authController.verifyEmail(req, res, next);
+
+    expect(authServiceMock.verifyEmail).toHaveBeenCalledWith({ token: 'any-token' });
+    expect(buildVerifyEmailSuccessPageMock).toHaveBeenCalledWith(
+      expect.objectContaining({ email: 'verified@example.com' })
+    );
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.set).toHaveBeenCalledWith('Content-Type', 'text/html');
+    expect(res.send).toHaveBeenCalledWith('<html>already-verified</html>');
     expect(next).not.toHaveBeenCalled();
   });
 
