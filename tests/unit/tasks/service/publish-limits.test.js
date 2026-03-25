@@ -153,5 +153,51 @@ describe('tasks.service - publish limits', () => {
         publishedAt,
       });
     });
+
+    test('allows publish after increasing project max_talents', async () => {
+      const publishedAt = new Date('2026-03-25T12:00:00Z');
+
+      prismaMock.task.findUnique.mockResolvedValue({
+        id: 't2',
+        ownerUserId: 'u1',
+        status: 'DRAFT',
+        deletedAt: null,
+        projectId: 'p1',
+      });
+
+      prismaMock.project.findUnique.mockResolvedValue({
+        id: 'p1',
+        maxTalents: 3,
+        publishedTasksCount: 2,
+      });
+
+      prismaMock.$transaction.mockImplementation((cb) => cb(prismaMock));
+
+      prismaMock.task.update.mockResolvedValue({
+        id: 't2',
+        status: 'PUBLISHED',
+        publishedAt,
+      });
+
+      const result = await tasksService.publishTask({ userId: 'u1', taskId: 't2' });
+
+      expect(prismaMock.project.findUnique).toHaveBeenCalledWith({
+        where: { id: 'p1' },
+        select: {
+          id: true,
+          maxTalents: true,
+          publishedTasksCount: true,
+        },
+      });
+      expect(prismaMock.project.update).toHaveBeenCalledWith({
+        where: { id: 'p1' },
+        data: { publishedTasksCount: { increment: 1 } },
+      });
+      expect(result).toEqual({
+        taskId: 't2',
+        status: 'PUBLISHED',
+        publishedAt,
+      });
+    });
   });
 });

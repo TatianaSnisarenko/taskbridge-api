@@ -2,16 +2,11 @@ import { jest } from '@jest/globals';
 
 const prismaMock = {
   $transaction: jest.fn(),
-  project: {
-    findUnique: jest.fn(),
-    update: jest.fn(),
-  },
   task: {
     create: jest.fn(),
     findUnique: jest.fn(),
     findMany: jest.fn(),
     update: jest.fn(),
-    count: jest.fn(),
   },
   taskDispute: {
     findFirst: jest.fn(),
@@ -250,7 +245,7 @@ describe('tasks.service - workflows completion confirm', () => {
       expect(result.completedAt).toEqual(completedAt);
     });
 
-    test('confirms completion and archives project when max_talents reached', async () => {
+    test('confirms completion without auto-archiving project at max_talents', async () => {
       const completedAt = new Date('2026-03-10T16:00:00Z');
 
       prismaMock.$transaction.mockImplementation(async (callback) => {
@@ -274,20 +269,6 @@ describe('tasks.service - workflows completion confirm', () => {
               completedAt,
               projectId: 'p1',
             }),
-            count: jest.fn().mockResolvedValueOnce(2).mockResolvedValueOnce(1),
-          },
-          project: {
-            findUnique: jest.fn().mockResolvedValue({
-              id: 'p1',
-              ownerUserId: 'c1',
-              title: 'Talent Growth Project',
-              maxTalents: 3,
-              status: 'ACTIVE',
-            }),
-            update: jest.fn().mockResolvedValue({
-              id: 'p1',
-              status: 'ARCHIVED',
-            }),
           },
         };
         return await callback(tx);
@@ -307,18 +288,9 @@ describe('tasks.service - workflows completion confirm', () => {
 
       expect(result.status).toBe('COMPLETED');
       expect(prismaMock.$transaction).toHaveBeenCalled();
-      expect(notificationsServiceMock.createNotification).toHaveBeenCalledWith(
+      expect(notificationsServiceMock.createNotification).not.toHaveBeenCalledWith(
         expect.objectContaining({
-          userId: 'c1',
-          projectId: 'p1',
           type: 'PROJECT_ARCHIVED_LIMIT_REACHED',
-          payload: {
-            project_id: 'p1',
-            project_title: 'Talent Growth Project',
-            max_talents: 3,
-            completed_count: 2,
-            failed_count: 1,
-          },
         })
       );
     });

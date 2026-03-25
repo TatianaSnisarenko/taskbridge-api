@@ -3,7 +3,6 @@ import { ApiError } from '../../../utils/ApiError.js';
 import { env } from '../../../config/env.js';
 import { createNotification } from '../../notifications/index.js';
 import { sendImportantNotificationEmail } from '../../notification-email/index.js';
-import { maybeArchiveProject } from './project-archive.js';
 
 export async function requestTaskCompletion({ userId, taskId }) {
   const result = await prisma.$transaction(async (tx) => {
@@ -206,10 +205,6 @@ export async function rejectTaskCompletion({ userId, taskId, feedback }) {
       });
     }
 
-    if (isFinalRejection) {
-      await maybeArchiveProject(tx, updated.projectId);
-    }
-
     if (task.chatThread?.id) {
       const messageText = isFinalRejection
         ? `❌ **Completion Rejected (Final)**: After ${maxRejections} attempts, this task has been marked as FAILED.\n\n${feedback || 'No additional feedback provided.'}`
@@ -337,8 +332,6 @@ export async function confirmTaskCompletion({ userId, taskId }) {
         },
       });
     }
-
-    await maybeArchiveProject(tx, updated.projectId);
 
     await createNotification({
       client: tx,

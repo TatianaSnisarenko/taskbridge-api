@@ -1,7 +1,6 @@
 import { prisma } from '../../../db/prisma.js';
 import { ApiError } from '../../../utils/ApiError.js';
 import { createNotification } from '../../notifications/index.js';
-import { maybeArchiveProject } from './project-archive.js';
 import { mapDisputeListItem } from './dispute-list.js';
 
 const OPEN_DISPUTE_STATUS = 'OPEN';
@@ -269,10 +268,6 @@ export async function resolveTaskDispute({ userId, taskId, action, reason }) {
         projectId: true,
       },
     });
-
-    if (action === 'MARK_FAILED' || action === 'MARK_COMPLETED') {
-      await maybeArchiveProject(tx, updated.projectId);
-    }
 
     await tx.taskDispute.update({
       where: { id: openDispute.id },
