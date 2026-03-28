@@ -27,11 +27,13 @@ export const env = {
   emailVerificationTtlHours: Number(process.env.EMAIL_VERIFICATION_TTL_HOURS ?? 24),
   passwordResetTokenTtlMinutes: Number(process.env.PASSWORD_RESET_TOKEN_TTL_MINUTES ?? 30),
   verificationTokenRetentionDays: Number(process.env.VERIFICATION_TOKEN_RETENTION_DAYS ?? 7),
+  unverifiedUserDeletionAfterDays: Number(process.env.UNVERIFIED_USER_DELETION_AFTER_DAYS ?? 7),
   emailNotificationsEnabled:
     String(process.env.EMAIL_NOTIFICATIONS_ENABLED ?? 'false').toLowerCase() === 'true',
   emailOutboxEnabled: String(process.env.EMAIL_OUTBOX_ENABLED ?? 'true').toLowerCase() === 'true',
   emailOutboxWorkerCron: process.env.EMAIL_OUTBOX_WORKER_CRON ?? '*/1 * * * *',
   emailOutboxCleanupCron: process.env.EMAIL_OUTBOX_CLEANUP_CRON ?? '17 2 * * *',
+  unverifiedUserCleanupCron: process.env.UNVERIFIED_USER_CLEANUP_CRON ?? '43 3 * * *',
   emailOutboxBatchSize: Number(process.env.EMAIL_OUTBOX_BATCH_SIZE ?? 20),
   emailOutboxMaxAttempts: Number(process.env.EMAIL_OUTBOX_MAX_ATTEMPTS ?? 8),
   emailOutboxMessageTtlHours: Number(process.env.EMAIL_OUTBOX_MESSAGE_TTL_HOURS ?? 24),

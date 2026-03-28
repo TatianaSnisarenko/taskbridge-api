@@ -82,6 +82,8 @@ describe('env config', () => {
       APP_BASE_URL: undefined,
       EMAIL_VERIFICATION_TTL_HOURS: undefined,
       VERIFICATION_TOKEN_RETENTION_DAYS: undefined,
+      UNVERIFIED_USER_DELETION_AFTER_DAYS: undefined,
+      UNVERIFIED_USER_CLEANUP_CRON: undefined,
       TASK_COMPLETION_RESPONSE_HOURS: undefined,
     });
 
@@ -96,6 +98,8 @@ describe('env config', () => {
     expect(env.appBaseUrl).toBe('http://localhost:3000');
     expect(env.emailVerificationTtlHours).toBe(24);
     expect(env.verificationTokenRetentionDays).toBe(7);
+    expect(env.unverifiedUserDeletionAfterDays).toBe(7);
+    expect(env.unverifiedUserCleanupCron).toBe('43 3 * * *');
     expect(env.taskCompletionResponseHours).toBe(72);
   });
 });

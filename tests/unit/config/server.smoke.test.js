@@ -15,8 +15,10 @@ async function loadServer({ connectImpl, listenImpl, runOnceImpl, connectRedisIm
   const runOnceMock = jest.fn(runOnceImpl ?? (() => Promise.resolve(undefined)));
   const emailOutboxWorkerTask = { stop: jest.fn() };
   const emailOutboxCleanupTask = { stop: jest.fn() };
+  const unverifiedUserCleanupTask = { stop: jest.fn() };
   const emailOutboxWorkerRunOnceMock = jest.fn(() => Promise.resolve(undefined));
   const emailOutboxCleanupRunOnceMock = jest.fn(() => Promise.resolve(undefined));
+  const unverifiedUserCleanupRunOnceMock = jest.fn(() => Promise.resolve(undefined));
 
   const listenMock = jest.fn((port, cb) => {
     if (listenImpl) return listenImpl(port, cb);
@@ -65,6 +67,13 @@ async function loadServer({ connectImpl, listenImpl, runOnceImpl, connectRedisIm
     }),
   }));
 
+  jest.unstable_mockModule('../../src/jobs/unverified-user-cleanup.js', () => ({
+    startUnverifiedUserCleanup: () => ({
+      task: unverifiedUserCleanupTask,
+      runOnce: unverifiedUserCleanupRunOnceMock,
+    }),
+  }));
+
   jest.unstable_mockModule('../../src/cache/redis.js', () => ({
     connectRedis: connectRedisMock,
     disconnectRedis: disconnectRedisMock,
@@ -88,9 +97,11 @@ async function loadServer({ connectImpl, listenImpl, runOnceImpl, connectRedisIm
     connectRedisMock,
     disconnectRedisMock,
     runOnceMock,
+    unverifiedUserCleanupRunOnceMock,
     listenMock,
     closeMock,
     cleanupTask,
+    unverifiedUserCleanupTask,
     handlers,
     onSpy,
     exitSpy,
@@ -114,6 +125,7 @@ describe('server smoke', () => {
       queryRawMock,
       connectRedisMock,
       runOnceMock,
+      unverifiedUserCleanupRunOnceMock,
       listenMock,
       handlers,
       onSpy,
@@ -125,6 +137,7 @@ describe('server smoke', () => {
     expect(queryRawMock).toHaveBeenCalled();
     expect(connectRedisMock).toHaveBeenCalled();
     expect(runOnceMock).toHaveBeenCalled();
+    expect(unverifiedUserCleanupRunOnceMock).toHaveBeenCalled();
     expect(listenMock).toHaveBeenCalledWith(3000, expect.any(Function));
     expect(handlers.SIGINT).toEqual(expect.any(Function));
     expect(handlers.SIGTERM).toEqual(expect.any(Function));
@@ -139,6 +152,7 @@ describe('server smoke', () => {
       disconnectMock,
       disconnectRedisMock,
       cleanupTask,
+      unverifiedUserCleanupTask,
       exitSpy,
       onSpy,
     } = await loadServer({});
@@ -149,6 +163,7 @@ describe('server smoke', () => {
 
     expect(closeMock).toHaveBeenCalled();
     expect(cleanupTask.stop).toHaveBeenCalled();
+    expect(unverifiedUserCleanupTask.stop).toHaveBeenCalled();
     expect(disconnectRedisMock).toHaveBeenCalled();
     expect(disconnectMock).toHaveBeenCalled();
     expect(exitSpy).toHaveBeenCalledWith(0);
