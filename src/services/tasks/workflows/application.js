@@ -8,6 +8,7 @@ import {
 import { getOrCreateChatThread } from '../../chat/index.js';
 import { sendImportantNotificationEmail } from '../../notification-email/index.js';
 import { findTaskForApplication, findTaskForOwnership } from '../../../db/queries/tasks.queries.js';
+import { invalidateCachedCandidateCount } from '../../../cache/candidates.js';
 
 export async function applyToTask({ userId, taskId, application }) {
   const task = await findTaskForApplication(taskId);
@@ -50,6 +51,10 @@ export async function applyToTask({ userId, taskId, application }) {
 
     return applicationRecord;
   });
+
+  // Invalidate candidate count cache for this task
+  // New application changes the pool of available candidates
+  await invalidateCachedCandidateCount(taskId);
 
   return {
     applicationId: created.id,
@@ -114,6 +119,10 @@ export async function acceptApplication({ userId, applicationId }) {
       applicationId,
     });
   });
+
+  // Invalidate candidate count cache for this task
+  // Application accepted means developer is no longer available
+  await invalidateCachedCandidateCount(result.task_id);
 
   const thread = await getOrCreateChatThread({
     taskId: result.task_id,
@@ -208,10 +217,19 @@ export async function rejectApplication({ userId, applicationId }) {
       application_id: updatedApplication.id,
       status: updatedApplication.status,
       updated_at: updatedApplication.updatedAt.toISOString(),
+      task_id: application.task.id,
     };
   });
 
-  return result;
+  // Invalidate candidate count cache for this task
+  // Rejected application affects available candidates count
+  await invalidateCachedCandidateCount(result.task_id);
+
+  return {
+    application_id: result.application_id,
+    status: result.status,
+    updated_at: result.updated_at,
+  };
 }
 
 export async function startTaskWithDeveloper({

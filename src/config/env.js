@@ -35,4 +35,11 @@ export const env = {
   cloudinaryApiSecret: process.env.CLOUDINARY_API_SECRET,
   platformReviewCooldownDays: Number(process.env.PLATFORM_REVIEW_COOLDOWN_DAYS ?? 30),
   taskCompletionResponseHours: Number(process.env.TASK_COMPLETION_RESPONSE_HOURS ?? 72),
+  redisEnabled: String(process.env.REDIS_ENABLED ?? 'false').toLowerCase() === 'true',
+  redisRequired: String(process.env.REDIS_REQUIRED ?? 'false').toLowerCase() === 'true',
+  redisUrl: process.env.REDIS_URL ?? 'redis://localhost:6379',
+  redisConnectTimeoutMs: Number(process.env.REDIS_CONNECT_TIMEOUT_MS ?? 3000),
+  redisStartupRetries: Number(process.env.REDIS_STARTUP_RETRIES ?? 3),
+  redisRetryDelayMs: Number(process.env.REDIS_RETRY_DELAY_MS ?? 500),
+  candidateCacheTtlSeconds: Number(process.env.CANDIDATE_CACHE_TTL_SECONDS ?? 3600),
 };

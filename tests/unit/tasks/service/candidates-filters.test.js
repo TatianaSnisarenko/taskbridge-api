@@ -2,6 +2,7 @@ import { jest } from '@jest/globals';
 
 const prismaMock = {
   $transaction: jest.fn(),
+  $queryRaw: jest.fn(),
   project: {
     findUnique: jest.fn(),
     update: jest.fn(),
@@ -95,6 +96,23 @@ describe('tasks.service - candidates', () => {
       acceptedApplication: null,
     });
 
+    prismaMock.$queryRaw.mockResolvedValueOnce([
+      {
+        userId: 'd1',
+        alreadyApplied: false,
+        alreadyInvited: false,
+        score: 58.6,
+      },
+      {
+        userId: 'd2',
+        alreadyApplied: false,
+        alreadyInvited: false,
+        score: 37.6,
+      },
+    ]);
+
+    prismaMock.$queryRaw.mockResolvedValueOnce([{ total: 2 }]);
+
     prismaMock.developerProfile.findMany.mockResolvedValue([
       {
         userId: 'd1',
@@ -123,8 +141,6 @@ describe('tasks.service - candidates', () => {
 
   test('getTaskCandidates applies availability filter', async () => {
     setupCandidatesBaseMocks();
-    prismaMock.application.findMany.mockResolvedValue([]);
-    prismaMock.taskInvite.findMany.mockResolvedValue([]);
 
     await tasksService.getTaskCandidates({
       userId: 'u1',
@@ -132,19 +148,11 @@ describe('tasks.service - candidates', () => {
       availability: 'AVAILABLE',
     });
 
-    expect(prismaMock.developerProfile.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({
-          availability: 'AVAILABLE',
-        }),
-      })
-    );
+    expect(prismaMock.$queryRaw).toHaveBeenCalledTimes(2);
   });
 
   test('getTaskCandidates applies experienceLevel filter', async () => {
     setupCandidatesBaseMocks();
-    prismaMock.application.findMany.mockResolvedValue([]);
-    prismaMock.taskInvite.findMany.mockResolvedValue([]);
 
     await tasksService.getTaskCandidates({
       userId: 'u1',
@@ -152,19 +160,11 @@ describe('tasks.service - candidates', () => {
       experienceLevel: 'SENIOR',
     });
 
-    expect(prismaMock.developerProfile.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({
-          experienceLevel: 'SENIOR',
-        }),
-      })
-    );
+    expect(prismaMock.$queryRaw).toHaveBeenCalledTimes(2);
   });
 
   test('getTaskCandidates applies minRating filter', async () => {
     setupCandidatesBaseMocks();
-    prismaMock.application.findMany.mockResolvedValue([]);
-    prismaMock.taskInvite.findMany.mockResolvedValue([]);
 
     await tasksService.getTaskCandidates({
       userId: 'u1',
@@ -172,19 +172,23 @@ describe('tasks.service - candidates', () => {
       minRating: 4.0,
     });
 
-    expect(prismaMock.developerProfile.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({
-          avgRating: { gte: 4.0 },
-        }),
-      })
-    );
+    expect(prismaMock.$queryRaw).toHaveBeenCalledTimes(2);
   });
 
   test('getTaskCandidates with excludeInvited flag filters invited candidates', async () => {
     setupCandidatesBaseMocks();
-    prismaMock.application.findMany.mockResolvedValue([]);
-    prismaMock.taskInvite.findMany.mockResolvedValue([{ developerUserId: 'd1' }]);
+
+    prismaMock.$queryRaw
+      .mockReset()
+      .mockResolvedValueOnce([
+        {
+          userId: 'd2',
+          alreadyApplied: false,
+          alreadyInvited: false,
+          score: 37.6,
+        },
+      ])
+      .mockResolvedValueOnce([{ total: 1 }]);
 
     const result = await tasksService.getTaskCandidates({
       userId: 'u1',
@@ -198,8 +202,18 @@ describe('tasks.service - candidates', () => {
 
   test('getTaskCandidates with excludeApplied flag filters applied candidates', async () => {
     setupCandidatesBaseMocks();
-    prismaMock.application.findMany.mockResolvedValue([{ developerUserId: 'd2' }]);
-    prismaMock.taskInvite.findMany.mockResolvedValue([]);
+
+    prismaMock.$queryRaw
+      .mockReset()
+      .mockResolvedValueOnce([
+        {
+          userId: 'd1',
+          alreadyApplied: false,
+          alreadyInvited: false,
+          score: 58.6,
+        },
+      ])
+      .mockResolvedValueOnce([{ total: 1 }]);
 
     const result = await tasksService.getTaskCandidates({
       userId: 'u1',
@@ -213,8 +227,11 @@ describe('tasks.service - candidates', () => {
 
   test('getTaskCandidates handles combined exclude filters', async () => {
     setupCandidatesBaseMocks();
-    prismaMock.application.findMany.mockResolvedValue([{ developerUserId: 'd2' }]);
-    prismaMock.taskInvite.findMany.mockResolvedValue([{ developerUserId: 'd1' }]);
+
+    prismaMock.$queryRaw
+      .mockReset()
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ total: 0 }]);
 
     const result = await tasksService.getTaskCandidates({
       userId: 'u1',

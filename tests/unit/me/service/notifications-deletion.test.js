@@ -91,29 +91,8 @@ describe('me.service - deletion notifications', () => {
   });
 
   test('hides deletion notifications for company persona', async () => {
-    const createdAt = new Date('2026-03-18T10:00:00Z');
-
-    prismaMock.notification.findMany.mockResolvedValue([
-      {
-        id: 'n1',
-        type: 'TASK_DELETED',
-        actorUserId: 'c1',
-        projectId: null,
-        taskId: 't1',
-        threadId: null,
-        payload: {},
-        createdAt,
-        readAt: null,
-        importantAt: null,
-        task: { ownerUserId: 'c1', title: 'Legacy API' },
-        project: null,
-        actor: {
-          developerProfile: null,
-          companyProfile: { userId: 'c1', companyName: 'NovaTech Labs' },
-        },
-      },
-    ]);
-    prismaMock.notification.count.mockResolvedValueOnce(1).mockResolvedValueOnce(1);
+    prismaMock.notification.findMany.mockResolvedValue([]);
+    prismaMock.notification.count.mockResolvedValueOnce(0).mockResolvedValueOnce(1);
 
     const result = await meService.getMyNotifications({
       userId: 'c1',

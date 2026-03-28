@@ -2,6 +2,7 @@ import { prisma } from '../../db/prisma.js';
 import { ApiError } from '../../utils/ApiError.js';
 import { createNotification, buildTaskNotificationPayload } from '../notifications/index.js';
 import { sendImportantNotificationEmail } from '../notification-email/index.js';
+import { invalidateCachedCandidateCount } from '../../cache/candidates.js';
 
 /**
  * Create a task invite for a developer
@@ -151,6 +152,10 @@ export async function createTaskInvite({ userId, taskId, developerId, message })
       created_at: invite.createdAt.toISOString(),
     };
   });
+
+  // Invalidate candidate count cache for this task
+  // New invite means invited developer is no longer available
+  await invalidateCachedCandidateCount(result.task_id);
 
   // Send email notification to developer after transaction
   const developerUser = await prisma.user.findUnique({

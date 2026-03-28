@@ -3,6 +3,7 @@ import { ApiError } from '../../utils/ApiError.js';
 import { createNotification, buildTaskNotificationPayload } from '../notifications/index.js';
 import { getOrCreateChatThread } from '../chat/index.js';
 import { sendImportantNotificationEmail } from '../notification-email/index.js';
+import { invalidateCachedCandidateCount } from '../../cache/candidates.js';
 
 /**
  * Accept an invite (developer action)
@@ -91,6 +92,10 @@ export async function acceptInvite({ userId, inviteId }) {
       task_status: taskResult.task_status,
     };
   });
+
+  // Invalidate candidate count cache for this task
+  // Invite accepted means developer is no longer available
+  await invalidateCachedCandidateCount(result.task_id);
 
   // Create chat thread after transaction
   const thread = await getOrCreateChatThread({
@@ -204,6 +209,11 @@ export async function declineInvite({ userId, inviteId }) {
       task_id: invite.taskId,
     };
   });
+
+  // Invalidate candidate count cache for this task
+  // Declined invite doesn't change available candidates (developer still available)
+  // However, invalidate to ensure consistency
+  await invalidateCachedCandidateCount(result.task_id);
 
   // Send email notification to company after transaction
   const companyUser = await prisma.user.findUnique({

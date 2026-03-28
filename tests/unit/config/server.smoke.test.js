@@ -1,11 +1,14 @@
 import { jest } from '@jest/globals';
 import { setImmediate } from 'node:timers';
 
-async function loadServer({ connectImpl, listenImpl, runOnceImpl }) {
+async function loadServer({ connectImpl, listenImpl, runOnceImpl, connectRedisImpl }) {
   jest.resetModules();
 
   const connectMock = jest.fn(connectImpl ?? (() => Promise.resolve()));
+  const queryRawMock = jest.fn().mockResolvedValue([{ '?column?': 1 }]);
   const disconnectMock = jest.fn().mockResolvedValue(undefined);
+  const connectRedisMock = jest.fn(connectRedisImpl ?? (() => Promise.resolve(null)));
+  const disconnectRedisMock = jest.fn().mockResolvedValue(undefined);
   const closeMock = jest.fn((cb) => cb());
 
   const cleanupTask = { stop: jest.fn() };
@@ -35,12 +38,18 @@ async function loadServer({ connectImpl, listenImpl, runOnceImpl }) {
   jest.unstable_mockModule('../../src/db/prisma.js', () => ({
     prisma: {
       $connect: connectMock,
+      $queryRaw: queryRawMock,
       $disconnect: disconnectMock,
     },
   }));
 
   jest.unstable_mockModule('../../src/jobs/verification-token-cleanup.js', () => ({
     startVerificationTokenCleanup: () => ({ task: cleanupTask, runOnce: runOnceMock }),
+  }));
+
+  jest.unstable_mockModule('../../src/cache/redis.js', () => ({
+    connectRedis: connectRedisMock,
+    disconnectRedis: disconnectRedisMock,
   }));
 
   const handlers = {};
@@ -55,7 +64,10 @@ async function loadServer({ connectImpl, listenImpl, runOnceImpl }) {
 
   return {
     connectMock,
+    queryRawMock,
     disconnectMock,
+    connectRedisMock,
+    disconnectRedisMock,
     runOnceMock,
     listenMock,
     closeMock,
@@ -78,11 +90,21 @@ describe('server smoke', () => {
   });
 
   test('starts server, connects prisma, and schedules cleanup', async () => {
-    const { connectMock, runOnceMock, listenMock, handlers, onSpy } = await loadServer({});
+    const {
+      connectMock,
+      queryRawMock,
+      connectRedisMock,
+      runOnceMock,
+      listenMock,
+      handlers,
+      onSpy,
+    } = await loadServer({});
 
     await new Promise((resolve) => setImmediate(resolve));
 
     expect(connectMock).toHaveBeenCalled();
+    expect(queryRawMock).toHaveBeenCalled();
+    expect(connectRedisMock).toHaveBeenCalled();
     expect(runOnceMock).toHaveBeenCalled();
     expect(listenMock).toHaveBeenCalledWith(3000, expect.any(Function));
     expect(handlers.SIGINT).toEqual(expect.any(Function));
@@ -92,15 +114,23 @@ describe('server smoke', () => {
   });
 
   test('shutdown closes server and disconnects', async () => {
-    const { handlers, closeMock, disconnectMock, cleanupTask, exitSpy, onSpy } = await loadServer(
-      {}
-    );
+    const {
+      handlers,
+      closeMock,
+      disconnectMock,
+      disconnectRedisMock,
+      cleanupTask,
+      exitSpy,
+      onSpy,
+    } = await loadServer({});
 
     await new Promise((resolve) => setImmediate(resolve));
     await handlers.SIGINT();
+    await new Promise((resolve) => setImmediate(resolve));
 
     expect(closeMock).toHaveBeenCalled();
     expect(cleanupTask.stop).toHaveBeenCalled();
+    expect(disconnectRedisMock).toHaveBeenCalled();
     expect(disconnectMock).toHaveBeenCalled();
     expect(exitSpy).toHaveBeenCalledWith(0);
 
@@ -112,6 +142,20 @@ describe('server smoke', () => {
     const connectImpl = () => Promise.reject(new Error('DB down'));
     const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
     const { exitSpy, onSpy } = await loadServer({ connectImpl });
+
+    await new Promise((resolve) => setImmediate(resolve));
+
+    expect(exitSpy).toHaveBeenCalledWith(1);
+
+    onSpy.mockRestore();
+    exitSpy.mockRestore();
+    errorSpy.mockRestore();
+  });
+
+  test('exits when redis is required and redis startup fails', async () => {
+    const connectRedisImpl = () => Promise.reject(new Error('Redis required and down'));
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const { exitSpy, onSpy } = await loadServer({ connectRedisImpl });
 
     await new Promise((resolve) => setImmediate(resolve));
 

@@ -2,6 +2,31 @@ import { prisma } from '../../db/prisma.js';
 import { ApiError } from '../../utils/ApiError.js';
 import { mapChatMessageOutput } from './chat-message-output.js';
 
+async function loadParticipantProfiles(otherUserIds) {
+  if (otherUserIds.length === 0) {
+    return {
+      developerByUserId: new Map(),
+      companyByUserId: new Map(),
+    };
+  }
+
+  const [developerProfiles, companyProfiles] = await Promise.all([
+    prisma.developerProfile.findMany({
+      where: { userId: { in: otherUserIds } },
+      select: { userId: true, displayName: true, avatarUrl: true },
+    }),
+    prisma.companyProfile.findMany({
+      where: { userId: { in: otherUserIds } },
+      select: { userId: true, companyName: true, logoUrl: true },
+    }),
+  ]);
+
+  return {
+    developerByUserId: new Map(developerProfiles.map((profile) => [profile.userId, profile])),
+    companyByUserId: new Map(companyProfiles.map((profile) => [profile.userId, profile])),
+  };
+}
+
 /**
  * Get chat threads for the current user with pagination
  * Thread exists only for tasks with status IN_PROGRESS, DISPUTE, COMPLETED or FAILED
@@ -104,57 +129,56 @@ export async function getMyThreads({
     }),
   ]);
 
-  const threadWithParticipants = await Promise.all(
-    items.map(async (thread) => {
-      const otherUserId =
-        thread.companyUserId === userId ? thread.developerUserId : thread.companyUserId;
+  const otherUserIds = [
+    ...new Set(
+      items.map((thread) =>
+        thread.companyUserId === userId ? thread.developerUserId : thread.companyUserId
+      )
+    ),
+  ];
+  const { developerByUserId, companyByUserId } = await loadParticipantProfiles(otherUserIds);
 
-      const [devProfile, compProfile] = await Promise.all([
-        prisma.developerProfile.findUnique({
-          where: { userId: otherUserId },
-          select: { userId: true, displayName: true, avatarUrl: true },
-        }),
-        prisma.companyProfile.findUnique({
-          where: { userId: otherUserId },
-          select: { userId: true, companyName: true, logoUrl: true },
-        }),
-      ]);
+  const threadWithParticipants = items.map((thread) => {
+    const otherUserId =
+      thread.companyUserId === userId ? thread.developerUserId : thread.companyUserId;
 
-      const userRead = thread.reads.find((r) => r.userId === userId);
-      const lastReadAt = userRead?.lastReadAt || thread.createdAt;
-      const unreadCount = thread.messages.filter((msg) => new Date(msg.sentAt) > lastReadAt).length;
-      const importantAt = userRead?.importantAt || null;
+    const devProfile = developerByUserId.get(otherUserId) || null;
+    const compProfile = companyByUserId.get(otherUserId) || null;
 
-      const mostRecentMessage = thread.messages.length > 0 ? thread.messages[0] : null;
+    const userRead = thread.reads.find((r) => r.userId === userId);
+    const lastReadAt = userRead?.lastReadAt || thread.createdAt;
+    const unreadCount = thread.messages.filter((msg) => new Date(msg.sentAt) > lastReadAt).length;
+    const importantAt = userRead?.importantAt || null;
 
-      return {
-        thread_id: thread.id,
-        task: {
-          task_id: thread.task.id,
-          title: thread.task.title,
-          status: thread.task.status,
-        },
-        other_participant: {
-          user_id: otherUserId,
-          display_name: devProfile?.displayName || compProfile?.companyName,
-          company_name: compProfile?.companyName || null,
-          avatar_url: devProfile?.avatarUrl || compProfile?.logoUrl || null,
-        },
-        last_message: mostRecentMessage
-          ? {
-              id: mostRecentMessage.id,
-              text: mostRecentMessage.text,
-              sender_user_id: mostRecentMessage.senderUserId,
-              sender_persona: mostRecentMessage.senderPersona,
-              sent_at: mostRecentMessage.sentAt.toISOString(),
-            }
-          : null,
-        unread_count: unreadCount,
-        important_at: importantAt ? importantAt.toISOString() : null,
-        created_at: thread.createdAt.toISOString(),
-      };
-    })
-  );
+    const mostRecentMessage = thread.messages.length > 0 ? thread.messages[0] : null;
+
+    return {
+      thread_id: thread.id,
+      task: {
+        task_id: thread.task.id,
+        title: thread.task.title,
+        status: thread.task.status,
+      },
+      other_participant: {
+        user_id: otherUserId,
+        display_name: devProfile?.displayName || compProfile?.companyName,
+        company_name: compProfile?.companyName || null,
+        avatar_url: devProfile?.avatarUrl || compProfile?.logoUrl || null,
+      },
+      last_message: mostRecentMessage
+        ? {
+            id: mostRecentMessage.id,
+            text: mostRecentMessage.text,
+            sender_user_id: mostRecentMessage.senderUserId,
+            sender_persona: mostRecentMessage.senderPersona,
+            sent_at: mostRecentMessage.sentAt.toISOString(),
+          }
+        : null,
+      unread_count: unreadCount,
+      important_at: importantAt ? importantAt.toISOString() : null,
+      created_at: thread.createdAt.toISOString(),
+    };
+  });
 
   return {
     items: threadWithParticipants,

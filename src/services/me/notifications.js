@@ -3,6 +3,30 @@ import { isNotificationRelevantForPersona } from './notifications-helpers.js';
 
 const CHAT_NOTIFICATION_TYPES = new Set(['CHAT_MESSAGE']);
 const REVIEW_NOTIFICATION_TYPES = new Set(['REVIEW_CREATED']);
+const KNOWN_NOTIFICATION_TYPES = [
+  'APPLICATION_CREATED',
+  'APPLICATION_ACCEPTED',
+  'APPLICATION_REJECTED',
+  'COMPLETION_REQUESTED',
+  'TASK_DISPUTE_OPENED',
+  'TASK_COMPLETED',
+  'TASK_DELETED',
+  'REVIEW_CREATED',
+  'CHAT_MESSAGE',
+  'TASK_INVITE_CREATED',
+  'TASK_INVITE_ACCEPTED',
+  'TASK_INVITE_DECLINED',
+  'TASK_INVITE_CANCELLED',
+  'PROJECT_DELETED',
+  'PROJECT_ARCHIVED_LIMIT_REACHED',
+  'PROJECT_ARCHIVED_MODERATION',
+];
+
+const COMMON_VISIBLE_TYPES = [
+  'CHAT_MESSAGE',
+  'PROJECT_ARCHIVED_LIMIT_REACHED',
+  'PROJECT_ARCHIVED_MODERATION',
+];
 
 function mapNotificationCategory(type) {
   if (CHAT_NOTIFICATION_TYPES.has(type)) return 'chat';
@@ -129,6 +153,60 @@ function resolveActorName({ actorRole, developerName, companyName }) {
   return 'Unknown';
 }
 
+function buildPersonaVisibilityFilter({ userId, persona }) {
+  if (persona === 'company') {
+    return {
+      OR: [
+        { type: { in: ['APPLICATION_CREATED', 'TASK_INVITE_ACCEPTED', 'TASK_INVITE_DECLINED'] } },
+        {
+          type: { in: ['COMPLETION_REQUESTED', 'TASK_DISPUTE_OPENED'] },
+          task: { ownerUserId: userId },
+        },
+        {
+          type: 'REVIEW_CREATED',
+          task: { ownerUserId: userId },
+          AND: [{ actorUserId: { not: userId } }, { actorUserId: { not: null } }],
+        },
+        { type: { in: COMMON_VISIBLE_TYPES } },
+        { type: { notIn: KNOWN_NOTIFICATION_TYPES } },
+      ],
+    };
+  }
+
+  return {
+    OR: [
+      {
+        type: {
+          in: [
+            'APPLICATION_ACCEPTED',
+            'APPLICATION_REJECTED',
+            'TASK_COMPLETED',
+            'TASK_DELETED',
+            'PROJECT_DELETED',
+            'TASK_INVITE_CREATED',
+            'TASK_INVITE_CANCELLED',
+          ],
+        },
+      },
+      {
+        type: { in: ['COMPLETION_REQUESTED', 'TASK_DISPUTE_OPENED'] },
+        OR: [{ taskId: null }, { task: { ownerUserId: { not: userId } } }],
+      },
+      {
+        type: 'REVIEW_CREATED',
+        OR: [
+          { taskId: null },
+          { actorUserId: null },
+          { task: { ownerUserId: { not: userId } } },
+          { task: { ownerUserId: null } },
+        ],
+      },
+      { type: { in: COMMON_VISIBLE_TYPES } },
+      { type: { notIn: KNOWN_NOTIFICATION_TYPES } },
+    ],
+  };
+}
+
 /**
  * Get notifications for the current user with pagination
  * @param {string} persona - Required persona filter ('developer' or 'company')
@@ -153,9 +231,15 @@ export async function getMyNotifications({
     whereFilter.importantAt = { not: null };
   }
 
-  const [allItems, , unreadTotal] = await Promise.all([
+  const visibilityFilter = buildPersonaVisibilityFilter({ userId, persona });
+  const listWhere = {
+    ...whereFilter,
+    ...visibilityFilter,
+  };
+
+  const [items, total, unreadTotal] = await Promise.all([
     prisma.notification.findMany({
-      where: whereFilter,
+      where: listWhere,
       select: {
         id: true,
         type: true,
@@ -198,9 +282,11 @@ export async function getMyNotifications({
       orderBy: {
         createdAt: 'desc',
       },
+      skip,
+      take: size,
     }),
     prisma.notification.count({
-      where: whereFilter,
+      where: listWhere,
     }),
     prisma.notification.count({
       where: {
@@ -210,15 +296,8 @@ export async function getMyNotifications({
     }),
   ]);
 
-  const filteredItems = allItems.filter((notif) =>
-    isNotificationRelevantForPersona(notif, userId, persona)
-  );
-
-  const paginatedItems = filteredItems.slice(skip, skip + size);
-  const filteredTotal = filteredItems.length;
-
   return {
-    items: paginatedItems.map((notif) => {
+    items: items.map((notif) => {
       const developerName = notif.actor?.developerProfile?.displayName || null;
       const companyName = notif.actor?.companyProfile?.companyName || null;
       const actorRole = resolveActorRole({ notif, userId });
@@ -265,7 +344,7 @@ export async function getMyNotifications({
     }),
     page,
     size,
-    total: filteredTotal,
+    total,
     unread_total: unreadTotal,
   };
 }

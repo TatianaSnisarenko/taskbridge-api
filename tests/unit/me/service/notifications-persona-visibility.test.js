@@ -69,26 +69,8 @@ describe('me.service - notification persona visibility', () => {
     });
 
     test('filters developer-authored REVIEW_CREATED for task owner using developer persona', async () => {
-      prismaMock.notification.findMany.mockResolvedValue([
-        {
-          id: 'n1',
-          type: 'REVIEW_CREATED',
-          actorUserId: 'u1',
-          projectId: null,
-          taskId: 't1',
-          threadId: null,
-          payload: { review_id: 'r1' },
-          createdAt: new Date('2026-03-15T10:00:00Z'),
-          readAt: null,
-          task: { ownerUserId: 'c1', title: 'Task 1' },
-          project: null,
-          actor: {
-            developerProfile: { userId: 'u1', displayName: 'Dev User' },
-            companyProfile: null,
-          },
-        },
-      ]);
-      prismaMock.notification.count.mockResolvedValueOnce(1).mockResolvedValueOnce(1);
+      prismaMock.notification.findMany.mockResolvedValue([]);
+      prismaMock.notification.count.mockResolvedValueOnce(0).mockResolvedValueOnce(1);
 
       const result = await meService.getMyNotifications({
         userId: 'c1',

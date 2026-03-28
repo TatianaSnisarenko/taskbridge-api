@@ -20,9 +20,11 @@ const prismaMock = {
   },
   developerProfile: {
     findUnique: jest.fn(),
+    findMany: jest.fn(),
   },
   companyProfile: {
     findUnique: jest.fn(),
+    findMany: jest.fn(),
   },
 };
 
@@ -74,12 +76,14 @@ describe('me.service threads - getMyThreads', () => {
         },
       ]);
       prismaMock.chatThread.count.mockResolvedValue(1);
-      prismaMock.developerProfile.findUnique.mockResolvedValue(null);
-      prismaMock.companyProfile.findUnique.mockResolvedValue({
-        userId: 'c1',
-        companyName: 'Tech Corp',
-        logoUrl: 'https://cdn.example.com/logo.png',
-      });
+      prismaMock.developerProfile.findMany.mockResolvedValue([]);
+      prismaMock.companyProfile.findMany.mockResolvedValue([
+        {
+          userId: 'c1',
+          companyName: 'Tech Corp',
+          logoUrl: 'https://cdn.example.com/logo.png',
+        },
+      ]);
 
       const result = await meService.getMyThreads({
         userId: 'd1',
@@ -98,6 +102,10 @@ describe('me.service threads - getMyThreads', () => {
       });
       expect(result.items[0].unread_count).toBe(1);
       expect(result.items[0].last_message.id).toBe('m2');
+      expect(prismaMock.developerProfile.findMany).toHaveBeenCalled();
+      expect(prismaMock.companyProfile.findMany).toHaveBeenCalled();
+      expect(prismaMock.developerProfile.findUnique).not.toHaveBeenCalled();
+      expect(prismaMock.companyProfile.findUnique).not.toHaveBeenCalled();
     });
 
     test('applies search filter to task title', async () => {
@@ -222,12 +230,14 @@ describe('me.service threads - getMyThreads', () => {
         },
       ]);
       prismaMock.chatThread.count.mockResolvedValue(1);
-      prismaMock.developerProfile.findUnique.mockResolvedValue(null);
-      prismaMock.companyProfile.findUnique.mockResolvedValue({
-        userId: 'c2',
-        companyName: 'Fallback Corp',
-        logoUrl: null,
-      });
+      prismaMock.developerProfile.findMany.mockResolvedValue([]);
+      prismaMock.companyProfile.findMany.mockResolvedValue([
+        {
+          userId: 'c2',
+          companyName: 'Fallback Corp',
+          logoUrl: null,
+        },
+      ]);
 
       const result = await meService.getMyThreads({
         userId: 'd1',
@@ -273,12 +283,14 @@ describe('me.service threads - getMyThreads', () => {
         },
       ]);
       prismaMock.chatThread.count.mockResolvedValue(1);
-      prismaMock.developerProfile.findUnique.mockResolvedValue({
-        userId: 'd9',
-        displayName: 'Dev Nine',
-        avatarUrl: 'https://cdn.example.com/dev-nine.png',
-      });
-      prismaMock.companyProfile.findUnique.mockResolvedValue(null);
+      prismaMock.developerProfile.findMany.mockResolvedValue([
+        {
+          userId: 'd9',
+          displayName: 'Dev Nine',
+          avatarUrl: 'https://cdn.example.com/dev-nine.png',
+        },
+      ]);
+      prismaMock.companyProfile.findMany.mockResolvedValue([]);
 
       const result = await meService.getMyThreads({
         userId: 'c1',
