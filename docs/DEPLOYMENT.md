@@ -91,9 +91,14 @@ EMAIL_HOST=...
 Depending on your feature usage, also configure:
 
 - `EMAIL_NOTIFICATIONS_ENABLED`
+- `EMAIL_OUTBOX_ENABLED`
+- `EMAIL_OUTBOX_WORKER_CRON`
+- `EMAIL_OUTBOX_CLEANUP_CRON`
 - `CLOUDINARY_CLOUD_NAME`
 - `CLOUDINARY_API_KEY`
 - `CLOUDINARY_API_SECRET`
+- `REDIS_ENABLED`, `REDIS_REQUIRED`, `REDIS_URL`
+- cache TTL settings (`*_CACHE_TTL_SECONDS`)
 - `PLATFORM_REVIEW_COOLDOWN_DAYS`
 - `TASK_COMPLETION_RESPONSE_HOURS`
 - `EMAIL_VERIFICATION_TTL_HOURS`
@@ -153,14 +158,12 @@ For pull requests targeting `main`, CI currently runs:
 
 This is not a deployment pipeline, but it does protect code quality before merge.
 
-TODO: add release/deploy workflow (build + publish image + environment promotion).
-
 ## Deployment notes
 
 - the API depends on PostgreSQL and does not bundle a managed database setup
 - the runtime is stateless apart from database and media integrations
 - refresh tokens are persisted in the database
-- verification token cleanup runs on startup and on a daily cron schedule
+- maintenance jobs (verification tokens, email outbox, unverified users) run at startup and on configured cron schedules
 - if outbound email is disabled, SMTP variables are still required by the current env loader
 
 ## Rollback Strategy (Baseline)
@@ -170,5 +173,3 @@ Current repository-level rollback guidance:
 - roll forward when possible (apply corrective migration or hotfix)
 - keep database backups/snapshots before production deploys
 - if image rollout fails, redeploy previously known-good image tag
-
-TODO: add environment-specific rollback runbook.

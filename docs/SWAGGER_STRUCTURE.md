@@ -17,6 +17,7 @@ src/docs/swagger/
   constants.js
   paths/
     auth.paths.js
+    docs.paths.js
     health.paths.js
     me.paths.js
     platform-reviews.paths.js
@@ -24,6 +25,7 @@ src/docs/swagger/
     projects.paths.js
     tasks.paths.js
     technologies.paths.js
+    timezones.paths.js
     workflows.paths.js
   schemas/
     applications.schemas.js
@@ -38,6 +40,7 @@ src/docs/swagger/
     shared.schemas.js
     tasks.schemas.js
     technologies.schemas.js
+    timezones.schemas.js
 ```
 
 ## Rules
@@ -91,5 +94,3 @@ If Swagger/Joi consistency check fails:
 - verify Joi schema shape and required fields
 - verify Swagger requestBody/params reflect same constraints
 - verify endpoint path/method is not duplicated in multiple path files
-
-TODO: add examples of common mismatch patterns and fixes.

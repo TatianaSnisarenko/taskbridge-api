@@ -77,7 +77,11 @@ npm run db:seed
 npm run dev
 ```
 
-The server starts verification token cleanup at boot and schedules daily cleanup via cron.
+The server runs scheduled maintenance jobs at startup and via cron:
+
+- verification token cleanup
+- email outbox worker and retention cleanup
+- unverified user cleanup
 
 Useful local URLs:
 
@@ -123,20 +127,60 @@ These are required by the current env loader even if outbound notifications are 
 | `EMAIL_SECURE`                | no       |
 | `EMAIL_NOTIFICATIONS_ENABLED` | no       |
 
+### Email outbox settings
+
+| Variable                               | Required | Default       |
+| -------------------------------------- | -------- | ------------- |
+| `EMAIL_OUTBOX_ENABLED`                 | no       | `true`        |
+| `EMAIL_OUTBOX_WORKER_CRON`             | no       | `*/1 * * * *` |
+| `EMAIL_OUTBOX_CLEANUP_CRON`            | no       | `17 2 * * *`  |
+| `EMAIL_OUTBOX_BATCH_SIZE`              | no       | `20`          |
+| `EMAIL_OUTBOX_MAX_ATTEMPTS`            | no       | `8`           |
+| `EMAIL_OUTBOX_MESSAGE_TTL_HOURS`       | no       | `24`          |
+| `EMAIL_OUTBOX_BASE_DELAY_MS`           | no       | `5000`        |
+| `EMAIL_OUTBOX_MAX_DELAY_MS`            | no       | `900000`      |
+| `EMAIL_OUTBOX_JITTER_RATIO`            | no       | `0.3`         |
+| `EMAIL_OUTBOX_PROCESSING_TIMEOUT_MS`   | no       | `120000`      |
+| `EMAIL_OUTBOX_WORKER_LOCK_TTL_MS`      | no       | `55000`       |
+| `EMAIL_OUTBOX_THROTTLE_BATCH_PAUSE_MS` | no       | `60000`       |
+| `EMAIL_OUTBOX_SENT_RETENTION_DAYS`     | no       | `7`           |
+| `EMAIL_OUTBOX_FAILED_RETENTION_DAYS`   | no       | `14`          |
+
 ### Media and workflow settings
 
-| Variable                            | Required | Notes                         |
-| ----------------------------------- | -------- | ----------------------------- |
-| `CLOUDINARY_CLOUD_NAME`             | no       | image upload support          |
-| `CLOUDINARY_API_KEY`                | no       | image upload support          |
-| `CLOUDINARY_API_SECRET`             | no       | image upload support          |
-| `PLATFORM_REVIEW_COOLDOWN_DAYS`     | no       | review cooldown               |
-| `TASK_COMPLETION_RESPONSE_HOURS`    | no       | completion confirmation SLA   |
-| `EMAIL_VERIFICATION_TTL_HOURS`      | no       | verification token lifetime   |
-| `PASSWORD_RESET_TOKEN_TTL_MINUTES`  | no       | reset token lifetime          |
-| `VERIFICATION_TOKEN_RETENTION_DAYS` | no       | cleanup retention window      |
-| `ADMIN_EMAIL`                       | no       | optional seed admin bootstrap |
-| `ADMIN_PASSWORD`                    | no       | optional seed admin bootstrap |
+| Variable                              | Required | Notes                          |
+| ------------------------------------- | -------- | ------------------------------ |
+| `CLOUDINARY_CLOUD_NAME`               | no       | image upload support           |
+| `CLOUDINARY_API_KEY`                  | no       | image upload support           |
+| `CLOUDINARY_API_SECRET`               | no       | image upload support           |
+| `PLATFORM_REVIEW_COOLDOWN_DAYS`       | no       | review cooldown                |
+| `TASK_COMPLETION_RESPONSE_HOURS`      | no       | completion confirmation SLA    |
+| `EMAIL_VERIFICATION_TTL_HOURS`        | no       | verification token lifetime    |
+| `PASSWORD_RESET_TOKEN_TTL_MINUTES`    | no       | reset token lifetime           |
+| `VERIFICATION_TOKEN_RETENTION_DAYS`   | no       | cleanup retention window       |
+| `UNVERIFIED_USER_DELETION_AFTER_DAYS` | no       | unverified account retention   |
+| `UNVERIFIED_USER_CLEANUP_CRON`        | no       | unverified account cleanup job |
+| `ADMIN_EMAIL`                         | no       | optional seed admin bootstrap  |
+| `ADMIN_PASSWORD`                      | no       | optional seed admin bootstrap  |
+
+### Redis and cache settings
+
+| Variable                                    | Required | Default                  |
+| ------------------------------------------- | -------- | ------------------------ |
+| `REDIS_ENABLED`                             | no       | `false`                  |
+| `REDIS_REQUIRED`                            | no       | `false`                  |
+| `REDIS_URL`                                 | no       | `redis://localhost:6379` |
+| `REDIS_CONNECT_TIMEOUT_MS`                  | no       | `3000`                   |
+| `REDIS_STARTUP_RETRIES`                     | no       | `3`                      |
+| `REDIS_RETRY_DELAY_MS`                      | no       | `500`                    |
+| `CANDIDATE_CACHE_TTL_SECONDS`               | no       | `3600`                   |
+| `TECHNOLOGY_SEARCH_CACHE_TTL_SECONDS`       | no       | `300`                    |
+| `TECHNOLOGY_BY_ID_CACHE_TTL_SECONDS`        | no       | `3600`                   |
+| `NOTIFICATION_UNREAD_CACHE_TTL_SECONDS`     | no       | `30`                     |
+| `TASK_CATALOG_PUBLIC_CACHE_TTL_SECONDS`     | no       | `60`                     |
+| `PROJECTS_CATALOG_PUBLIC_CACHE_TTL_SECONDS` | no       | `90`                     |
+| `INVITES_CATALOG_CACHE_TTL_SECONDS`         | no       | `45`                     |
+| `THREADS_CATALOG_CACHE_TTL_SECONDS`         | no       | `30`                     |
 
 ## Docker workflows
 

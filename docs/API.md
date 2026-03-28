@@ -58,11 +58,18 @@ Always treat Swagger (`/api/v1/docs`) and Joi schemas (`src/schemas`) as source 
 | ------ | --------- | ------ |
 | GET    | `/health` | public |
 
+### Docs
+
+| Method | Endpoint             | Access             |
+| ------ | -------------------- | ------------------ |
+| GET    | `/docs/openapi.json` | admin or moderator |
+
 ### Auth
 
 | Method | Endpoint                    | Notes                                             |
 | ------ | --------------------------- | ------------------------------------------------- |
 | POST   | `/auth/signup`              | create account, optional embedded persona profile |
+| GET    | `/auth/check-email`         | email availability check with rate limiting       |
 | POST   | `/auth/login`               | returns access token and sets refresh cookie      |
 | GET    | `/auth/verify-email`        | `token` query param                               |
 | POST   | `/auth/resend-verification` | resend verification link                          |
@@ -147,28 +154,36 @@ Always treat Swagger (`/api/v1/docs`) and Joi schemas (`src/schemas`) as source 
 
 ### Current User (`/me`)
 
-| Method | Endpoint                              | Access                       |
-| ------ | ------------------------------------- | ---------------------------- |
-| GET    | `/me`                                 | authenticated                |
-| DELETE | `/me`                                 | authenticated                |
-| PATCH  | `/me/onboarding`                      | authenticated                |
-| GET    | `/me/onboarding/check`                | authenticated                |
-| POST   | `/me/onboarding/reset`                | authenticated                |
-| GET    | `/me/applications`                    | developer persona            |
-| GET    | `/me/invites`                         | developer persona            |
-| GET    | `/me/tasks`                           | developer persona            |
-| GET    | `/me/projects`                        | developer persona            |
-| GET    | `/me/notifications`                   | developer or company persona |
-| POST   | `/me/notifications/read-all`          | developer or company persona |
-| POST   | `/me/notifications/:id/read`          | developer or company persona |
-| GET    | `/me/chat/threads`                    | developer or company persona |
-| GET    | `/me/chat/threads/:threadId`          | developer or company persona |
-| GET    | `/me/chat/threads/:threadId/messages` | developer or company persona |
-| POST   | `/me/chat/threads/:threadId/messages` | developer or company persona |
-| POST   | `/me/chat/threads/:threadId/read`     | developer or company persona |
-| GET    | `/me/favorites/tasks`                 | developer persona            |
-| POST   | `/me/favorites/tasks/:taskId`         | developer persona            |
-| DELETE | `/me/favorites/tasks/:taskId`         | developer persona            |
+| Method | Endpoint                                                     | Access                       |
+| ------ | ------------------------------------------------------------ | ---------------------------- |
+| GET    | `/me`                                                        | authenticated                |
+| DELETE | `/me`                                                        | authenticated                |
+| PATCH  | `/me/onboarding`                                             | authenticated                |
+| GET    | `/me/onboarding/check`                                       | authenticated                |
+| POST   | `/me/onboarding/reset`                                       | authenticated                |
+| GET    | `/me/applications`                                           | developer persona            |
+| GET    | `/me/invites`                                                | developer persona            |
+| GET    | `/me/tasks`                                                  | developer persona            |
+| GET    | `/me/projects`                                               | developer persona            |
+| GET    | `/me/notifications`                                          | developer or company persona |
+| POST   | `/me/notifications/read-all`                                 | developer or company persona |
+| POST   | `/me/notifications/:id/read`                                 | developer or company persona |
+| POST   | `/me/notifications/:id/unread`                               | developer or company persona |
+| POST   | `/me/notifications/:id/important`                            | developer or company persona |
+| POST   | `/me/notifications/:id/unimportant`                          | developer or company persona |
+| GET    | `/me/chat/threads`                                           | developer or company persona |
+| GET    | `/me/chat/tasks/:taskId/thread`                              | developer or company persona |
+| GET    | `/me/chat/threads/:threadId`                                 | developer or company persona |
+| GET    | `/me/chat/threads/:threadId/messages`                        | developer or company persona |
+| POST   | `/me/chat/threads/:threadId/messages`                        | developer or company persona |
+| POST   | `/me/chat/threads/:threadId/messages/:messageId/important`   | developer or company persona |
+| POST   | `/me/chat/threads/:threadId/messages/:messageId/unimportant` | developer or company persona |
+| POST   | `/me/chat/threads/:threadId/read`                            | developer or company persona |
+| POST   | `/me/chat/threads/:threadId/important`                       | developer or company persona |
+| POST   | `/me/chat/threads/:threadId/unimportant`                     | developer or company persona |
+| GET    | `/me/favorites/tasks`                                        | developer persona            |
+| POST   | `/me/favorites/tasks/:taskId`                                | developer persona            |
+| DELETE | `/me/favorites/tasks/:taskId`                                | developer persona            |
 
 ### Technologies
 
@@ -176,6 +191,18 @@ Always treat Swagger (`/api/v1/docs`) and Joi schemas (`src/schemas`) as source 
 | ------ | --------------------- | ------ |
 | GET    | `/technologies/types` | public |
 | GET    | `/technologies`       | public |
+
+### Timezones
+
+| Method | Endpoint     | Access |
+| ------ | ------------ | ------ |
+| GET    | `/timezones` | public |
+
+### Admin
+
+| Method | Endpoint              | Access |
+| ------ | --------------------- | ------ |
+| GET    | `/admin/email-outbox` | admin  |
 
 ### Platform Reviews
 

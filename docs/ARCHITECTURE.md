@@ -35,7 +35,9 @@ Current route groups:
 - `applications.routes.js`
 - `invites.routes.js`
 - `users.routes.js`
+- `admin.routes.js`
 - `technologies.routes.js`
+- `timezones.routes.js`
 - `platform-reviews.routes.js`
 
 ### Middleware (`src/middleware`)
@@ -59,15 +61,21 @@ Business rules are implemented in domain modules (including workflow transitions
 
 ```text
 src/services/
+  email-outbox/
   auth/
+  chat/
+  email/
   invites/
   me/
   notification-email/
   notifications/
+  platform-reviews.service.js
   profiles/
   projects/
   tasks/
   technologies/
+  timezones.service.js
+  token/
   user/
 ```
 
@@ -122,9 +130,9 @@ This makes lifecycle transitions testable and predictable across controllers and
 ## Data Retention and Cleanup
 
 - tasks/projects use soft delete semantics (`deletedAt`)
-- verification tokens are cleaned:
+- verification tokens, unverified users, and email outbox records are processed:
   - once at startup
-  - daily by cron (`0 3 * * *`)
+  - by scheduled cron jobs (`UNVERIFIED_USER_CLEANUP_CRON`, `EMAIL_OUTBOX_WORKER_CRON`, `EMAIL_OUTBOX_CLEANUP_CRON`)
 
 ## API Documentation Architecture
 
@@ -204,5 +212,3 @@ tests/
   unit/
   integration/
 ```
-
-TODO: add component diagram for service boundaries and dependency direction.

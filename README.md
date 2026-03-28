@@ -28,6 +28,7 @@ The platform also includes moderation-oriented flows: task/project reports, task
 ### Authentication and account security
 
 - signup/login with email and password
+- email availability check endpoint with rate limiting
 - email verification and resend flow
 - forgot/reset password flow and authenticated password change
 - JWT access token auth with refresh tokens in HTTP-only cookies
@@ -95,11 +96,9 @@ Design choices visible in the implementation:
 
 - Prisma schema models explicit workflow states with enums
 - task/project soft deletion instead of immediate hard delete
-- scheduled verification token cleanup job (`node-cron`)
+- scheduled maintenance jobs for verification tokens, unverified users, and email outbox (`node-cron`)
 - modular Swagger composition under `src/docs/swagger`
 - route-level Joi validation before controller execution
-
-TODO: add architecture diagram to docs.
 
 ## Project Structure
 
@@ -186,8 +185,10 @@ Additional runtime settings used by `src/config/env.js`:
 - `COOKIE_SECURE`, `COOKIE_SAMESITE`
 - `EMAIL_VERIFICATION_TTL_HOURS`, `VERIFICATION_TOKEN_RETENTION_DAYS`, `PASSWORD_RESET_TOKEN_TTL_MINUTES`
 - `UNVERIFIED_USER_DELETION_AFTER_DAYS`, `UNVERIFIED_USER_CLEANUP_CRON`
+- email outbox settings: `EMAIL_OUTBOX_ENABLED`, cron/retry/batch/retention variables
 - `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`
 - `PLATFORM_REVIEW_COOLDOWN_DAYS`, `TASK_COMPLETION_RESPONSE_HOURS`
+- Redis and cache settings: `REDIS_*`, `CANDIDATE_CACHE_TTL_SECONDS`, `TECHNOLOGY_*`, `NOTIFICATION_UNREAD_CACHE_TTL_SECONDS`, `TASK_CATALOG_PUBLIC_CACHE_TTL_SECONDS`, `PROJECTS_CATALOG_PUBLIC_CACHE_TTL_SECONDS`, `INVITES_CATALOG_CACHE_TTL_SECONDS`, `THREADS_CATALOG_CACHE_TTL_SECONDS`
 - optional seed bootstrap: `ADMIN_EMAIL`, `ADMIN_PASSWORD`
 
 ## Running the Project
@@ -270,7 +271,9 @@ Route groups:
 - `/applications` - company accept/reject application actions
 - `/invites` - developer accept/decline and company cancel invite actions
 - `/users` - user reviews and admin moderator role toggle
+- `/admin` - admin-only email outbox overview
 - `/technologies` - technology search and type list
+- `/timezones` - timezone catalog search/listing
 - `/platform-reviews` - public and moderated platform reviews
 
 Access model:
@@ -296,8 +299,6 @@ curl "http://localhost:3000/api/v1/tasks?limit=10&page=1"
 ```
 
 See [docs/API.md](docs/API.md) for detailed endpoint documentation.
-
-TODO: add expanded end-to-end workflow examples (company + developer scenario).
 
 ## Scripts
 
@@ -355,14 +356,6 @@ On pull requests targeting `main`, the pipeline:
 - enforces coverage thresholds
 - uploads coverage artifacts
 - posts a coverage summary comment on the PR
-
-## Roadmap
-
-- strengthen API examples in `docs/API.md` with persona-based scenarios
-- add visual architecture/workflow diagrams
-- reconcile/remove `db:seed:clean` script reference if not needed
-- expand deployment examples for multi-environment setups
-- TODO: add short API demo (GIF/video) for portfolio presentation
 
 ## Contributing
 

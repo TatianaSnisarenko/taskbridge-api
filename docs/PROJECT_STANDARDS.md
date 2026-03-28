@@ -169,7 +169,7 @@ src/services/
 - Keep examples minimal, correct, and copy-pasteable.
 - Do not reference internal-only or ignored files from public docs.
 - For endpoint/workflow changes, update all impacted docs together: `README.md`, `docs/API.md`, and any affected operational guide (`docs/DEVELOPMENT.md`, `docs/DEPLOYMENT.md`, `docs/ARCHITECTURE.md`).
-- Document known gaps with explicit `TODO:` markers rather than implicit assumptions.
+- Document known gaps explicitly rather than leaving assumptions implicit.
 
 ## CI and Quality Gates
 
