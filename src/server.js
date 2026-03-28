@@ -2,12 +2,16 @@ import { createApp } from './app.js';
 import { env } from './config/env.js';
 import { prisma } from './db/prisma.js';
 import { startVerificationTokenCleanup } from './jobs/verification-token-cleanup.js';
+import { startEmailOutboxWorker } from './jobs/email-outbox-worker.js';
+import { startEmailOutboxCleanup } from './jobs/email-outbox-cleanup.js';
 import { connectRedis, disconnectRedis } from './cache/redis.js';
 
 const app = createApp(env.appBaseUrl);
 
 let server;
 let cleanupTask;
+let emailOutboxWorkerTask;
+let emailOutboxCleanupTask;
 
 async function start() {
   try {
@@ -22,6 +26,14 @@ async function start() {
     const cleanup = startVerificationTokenCleanup();
     cleanupTask = cleanup.task;
     await cleanup.runOnce();
+
+    const emailOutboxWorker = startEmailOutboxWorker();
+    emailOutboxWorkerTask = emailOutboxWorker.task;
+    await emailOutboxWorker.runOnce();
+
+    const emailOutboxCleanup = startEmailOutboxCleanup();
+    emailOutboxCleanupTask = emailOutboxCleanup.task;
+    await emailOutboxCleanup.runOnce();
 
     server = app.listen(env.port, () => {
       const baseUrl = env.appBaseUrl.replace(/\/$/, '');
@@ -44,6 +56,8 @@ async function shutdown() {
   console.log('Shutting down...');
   if (!server) {
     if (cleanupTask) cleanupTask.stop();
+    if (emailOutboxWorkerTask) emailOutboxWorkerTask.stop();
+    if (emailOutboxCleanupTask) emailOutboxCleanupTask.stop();
     await disconnectRedis();
     await prisma.$disconnect();
     process.exit(0);
@@ -51,6 +65,8 @@ async function shutdown() {
 
   server.close(async () => {
     if (cleanupTask) cleanupTask.stop();
+    if (emailOutboxWorkerTask) emailOutboxWorkerTask.stop();
+    if (emailOutboxCleanupTask) emailOutboxCleanupTask.stop();
     await disconnectRedis();
     await prisma.$disconnect();
     process.exit(0);

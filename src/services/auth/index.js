@@ -5,7 +5,10 @@ import { ApiError } from '../../utils/ApiError.js';
 import { createUser, findUserByEmail } from '../user/index.js';
 import { hashPassword, verifyPassword } from '../../utils/password.js';
 import { generateRefreshToken, signAccessToken } from '../token/index.js';
-import { sendVerificationEmail, sendResetPasswordEmail } from '../email/index.js';
+import {
+  sendResetPasswordEmailWithRecovery,
+  sendVerificationEmailWithRecovery,
+} from '../email-outbox/index.js';
 
 function hashRefresh(token) {
   return crypto.createHash('sha256').update(token).digest('hex');
@@ -45,7 +48,7 @@ export async function signup({ email, password, developerProfile, companyProfile
     },
   });
 
-  await sendVerificationEmail({ to: user.email, token: verification.token });
+  await sendVerificationEmailWithRecovery({ to: user.email, token: verification.token });
 
   return {
     userId: user.id,
@@ -242,7 +245,7 @@ export async function resendVerificationEmail({ email }) {
     },
   });
 
-  await sendVerificationEmail({ to: user.email, token: verification.token });
+  await sendVerificationEmailWithRecovery({ to: user.email, token: verification.token });
 
   return { email: user.email };
 }
@@ -292,7 +295,7 @@ export async function forgotPassword({ email }) {
     },
   });
 
-  await sendResetPasswordEmail({ to: user.email, token: resetToken.token });
+  await sendResetPasswordEmailWithRecovery({ to: user.email, token: resetToken.token });
 }
 
 export async function resetPassword({ token, newPassword }) {

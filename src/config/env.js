@@ -29,6 +29,22 @@ export const env = {
   verificationTokenRetentionDays: Number(process.env.VERIFICATION_TOKEN_RETENTION_DAYS ?? 7),
   emailNotificationsEnabled:
     String(process.env.EMAIL_NOTIFICATIONS_ENABLED ?? 'false').toLowerCase() === 'true',
+  emailOutboxEnabled: String(process.env.EMAIL_OUTBOX_ENABLED ?? 'true').toLowerCase() === 'true',
+  emailOutboxWorkerCron: process.env.EMAIL_OUTBOX_WORKER_CRON ?? '*/1 * * * *',
+  emailOutboxCleanupCron: process.env.EMAIL_OUTBOX_CLEANUP_CRON ?? '17 2 * * *',
+  emailOutboxBatchSize: Number(process.env.EMAIL_OUTBOX_BATCH_SIZE ?? 20),
+  emailOutboxMaxAttempts: Number(process.env.EMAIL_OUTBOX_MAX_ATTEMPTS ?? 8),
+  emailOutboxMessageTtlHours: Number(process.env.EMAIL_OUTBOX_MESSAGE_TTL_HOURS ?? 24),
+  emailOutboxBaseDelayMs: Number(process.env.EMAIL_OUTBOX_BASE_DELAY_MS ?? 5000),
+  emailOutboxMaxDelayMs: Number(process.env.EMAIL_OUTBOX_MAX_DELAY_MS ?? 900000),
+  emailOutboxJitterRatio: Number(process.env.EMAIL_OUTBOX_JITTER_RATIO ?? 0.3),
+  emailOutboxProcessingTimeoutMs: Number(process.env.EMAIL_OUTBOX_PROCESSING_TIMEOUT_MS ?? 120000),
+  emailOutboxWorkerLockTtlMs: Number(process.env.EMAIL_OUTBOX_WORKER_LOCK_TTL_MS ?? 55000),
+  emailOutboxThrottleBatchPauseMs: Number(
+    process.env.EMAIL_OUTBOX_THROTTLE_BATCH_PAUSE_MS ?? 60000
+  ),
+  emailOutboxSentRetentionDays: Number(process.env.EMAIL_OUTBOX_SENT_RETENTION_DAYS ?? 7),
+  emailOutboxFailedRetentionDays: Number(process.env.EMAIL_OUTBOX_FAILED_RETENTION_DAYS ?? 14),
   frontendBaseUrl: process.env.FRONTEND_BASE_URL ?? 'http://localhost:5173',
   cloudinaryCloudName: process.env.CLOUDINARY_CLOUD_NAME,
   cloudinaryApiKey: process.env.CLOUDINARY_API_KEY,

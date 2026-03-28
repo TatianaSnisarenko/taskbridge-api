@@ -165,11 +165,11 @@ function buildPersonaVisibilityFilter({ userId, persona }) {
         { type: { in: ['APPLICATION_CREATED', 'TASK_INVITE_ACCEPTED', 'TASK_INVITE_DECLINED'] } },
         {
           type: { in: ['COMPLETION_REQUESTED', 'TASK_DISPUTE_OPENED'] },
-          task: { ownerUserId: userId },
+          task: { is: { ownerUserId: userId } },
         },
         {
           type: 'REVIEW_CREATED',
-          task: { ownerUserId: userId },
+          task: { is: { ownerUserId: userId } },
           AND: [{ actorUserId: { not: userId } }, { actorUserId: { not: null } }],
         },
         { type: { in: COMMON_VISIBLE_TYPES } },
@@ -195,15 +195,14 @@ function buildPersonaVisibilityFilter({ userId, persona }) {
       },
       {
         type: { in: ['COMPLETION_REQUESTED', 'TASK_DISPUTE_OPENED'] },
-        OR: [{ taskId: null }, { task: { ownerUserId: { not: userId } } }],
+        OR: [{ taskId: null }, { task: { is: { ownerUserId: { not: userId } } } }],
       },
       {
         type: 'REVIEW_CREATED',
         OR: [
           { taskId: null },
           { actorUserId: null },
-          { task: { ownerUserId: { not: userId } } },
-          { task: { ownerUserId: null } },
+          { task: { is: { ownerUserId: { not: userId } } } },
         ],
       },
       { type: { in: COMMON_VISIBLE_TYPES } },

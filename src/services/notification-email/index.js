@@ -1,5 +1,5 @@
 import { env } from '../../config/env.js';
-import { sendEmail } from '../email/index.js';
+import { sendEmailWithRecovery } from '../email-outbox/index.js';
 import { buildNotificationEmailTemplate } from '../../templates/email/notification.js';
 
 /**
@@ -33,7 +33,7 @@ export async function sendImportantNotificationEmail({ type, recipient, task, ct
       recipientName: recipient.name,
     });
 
-    await sendEmail({
+    await sendEmailWithRecovery({
       to: recipient.email,
       subject,
       text,

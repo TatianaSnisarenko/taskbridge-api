@@ -24,8 +24,8 @@ const verifyPasswordMock = jest.fn();
 const hashPasswordMock = jest.fn();
 const generateRefreshTokenMock = jest.fn();
 const signAccessTokenMock = jest.fn();
-const sendVerificationEmailMock = jest.fn();
-const sendResetPasswordEmailMock = jest.fn();
+const sendVerificationEmailWithRecoveryMock = jest.fn();
+const sendResetPasswordEmailWithRecoveryMock = jest.fn();
 
 jest.unstable_mockModule('../../src/db/prisma.js', () => ({ prisma: prismaMock }));
 jest.unstable_mockModule('../../src/services/user/index.js', () => ({
@@ -40,9 +40,9 @@ jest.unstable_mockModule('../../src/services/token/index.js', () => ({
   generateRefreshToken: generateRefreshTokenMock,
   signAccessToken: signAccessTokenMock,
 }));
-jest.unstable_mockModule('../../src/services/email/index.js', () => ({
-  sendVerificationEmail: sendVerificationEmailMock,
-  sendResetPasswordEmail: sendResetPasswordEmailMock,
+jest.unstable_mockModule('../../src/services/email-outbox/index.js', () => ({
+  sendVerificationEmailWithRecovery: sendVerificationEmailWithRecoveryMock,
+  sendResetPasswordEmailWithRecovery: sendResetPasswordEmailWithRecoveryMock,
 }));
 
 const authService = await import('../../../src/services/auth/index.js');
@@ -227,7 +227,7 @@ describe('auth.service', () => {
     const result = await authService.resendVerificationEmail({ email: 'a@example.com' });
 
     expect(prismaMock.verificationToken.create).toHaveBeenCalled();
-    expect(sendVerificationEmailMock).toHaveBeenCalledWith({
+    expect(sendVerificationEmailWithRecoveryMock).toHaveBeenCalledWith({
       to: 'a@example.com',
       token: expect.any(String),
     });
@@ -247,6 +247,6 @@ describe('auth.service', () => {
     await authService.resendVerificationEmail({ email: 'a@example.com' });
 
     expect(prismaMock.verificationToken.create).toHaveBeenCalled();
-    expect(sendVerificationEmailMock).toHaveBeenCalled();
+    expect(sendVerificationEmailWithRecoveryMock).toHaveBeenCalled();
   });
 });

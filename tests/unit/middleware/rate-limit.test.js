@@ -1,5 +1,10 @@
 import { jest } from '@jest/globals';
-import { createRateLimitMiddleware } from '../../../src/middleware/rate-limit.middleware.js';
+import {
+  createRateLimitMiddleware,
+  checkEmailAddressRateLimit,
+  checkEmailIpRateLimit,
+  resetCheckEmailRateLimiters,
+} from '../../../src/middleware/rate-limit.middleware.js';
 
 function createResponseMock() {
   return {
@@ -80,5 +85,134 @@ describe('rate-limit.middleware', () => {
     expect(next).toHaveBeenNthCalledWith(1);
     expect(next).toHaveBeenNthCalledWith(2);
     expect(res.set).not.toHaveBeenCalled();
+  });
+
+  test('allows requests again after window expires', () => {
+    const middleware = createRateLimitMiddleware({
+      maxRequests: 1,
+      windowMs: 60_000,
+      keyExtractor: (req) => req.ip,
+    });
+
+    const req = { ip: '127.0.0.1' };
+    const res = createResponseMock();
+    const next = jest.fn();
+
+    middleware(req, res, next);
+    jest.advanceTimersByTime(60_001);
+    middleware(req, res, next);
+
+    expect(next).toHaveBeenNthCalledWith(1);
+    expect(next).toHaveBeenNthCalledWith(2);
+    expect(res.set).not.toHaveBeenCalled();
+  });
+
+  test('uses custom code and message when blocked', () => {
+    const middleware = createRateLimitMiddleware({
+      maxRequests: 1,
+      windowMs: 60_000,
+      keyExtractor: (req) => req.ip,
+      code: 'CUSTOM_LIMIT',
+      message: 'Blocked by custom limiter',
+    });
+
+    const req = { ip: '127.0.0.1' };
+    const res = createResponseMock();
+    const next = jest.fn();
+
+    middleware(req, res, next);
+    middleware(req, res, next);
+
+    expect(next).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        status: 429,
+        code: 'CUSTOM_LIMIT',
+        message: 'Blocked by custom limiter',
+      })
+    );
+  });
+
+  test('reset clears in-memory counters', () => {
+    const middleware = createRateLimitMiddleware({
+      maxRequests: 1,
+      windowMs: 60_000,
+      keyExtractor: (req) => req.ip,
+    });
+
+    const req = { ip: '127.0.0.1' };
+    const res = createResponseMock();
+    const next = jest.fn();
+
+    middleware(req, res, next);
+    middleware(req, res, next);
+    middleware.reset();
+    middleware(req, res, next);
+
+    expect(next).toHaveBeenNthCalledWith(2, expect.any(Object));
+    expect(next).toHaveBeenNthCalledWith(3);
+  });
+
+  test('checkEmailAddressRateLimit normalizes email and limits by query email', () => {
+    const req = { query: { email: '  Test@Example.COM ' } };
+    const res = createResponseMock();
+    const next = jest.fn();
+
+    for (let i = 0; i < 5; i += 1) {
+      checkEmailAddressRateLimit(req, res, next);
+    }
+    checkEmailAddressRateLimit(req, res, next);
+
+    expect(next).toHaveBeenNthCalledWith(6, expect.any(Object));
+    resetCheckEmailRateLimiters();
+  });
+
+  test('checkEmailIpRateLimit skips when ip key missing', () => {
+    const req = { ip: '' };
+    const res = createResponseMock();
+    const next = jest.fn();
+
+    checkEmailIpRateLimit(req, res, next);
+
+    expect(next).toHaveBeenCalledWith();
+    expect(res.set).not.toHaveBeenCalled();
+  });
+
+  test('checkEmailAddressRateLimit skips when query email is missing', () => {
+    const req = { query: {} };
+    const res = createResponseMock();
+    const next = jest.fn();
+
+    checkEmailAddressRateLimit(req, res, next);
+
+    expect(next).toHaveBeenCalledWith();
+    expect(res.set).not.toHaveBeenCalled();
+  });
+
+  test('checkEmailAddressRateLimit skips when email is non-string', () => {
+    const req = { query: { email: 12345 } };
+    const res = createResponseMock();
+    const next = jest.fn();
+
+    checkEmailAddressRateLimit(req, res, next);
+
+    expect(next).toHaveBeenCalledWith();
+    expect(res.set).not.toHaveBeenCalled();
+  });
+
+  test('resetCheckEmailRateLimiters resets both default limiters', () => {
+    const req = { ip: '127.0.0.1', query: { email: 'a@example.com' } };
+    const res = createResponseMock();
+    const next = jest.fn();
+
+    for (let i = 0; i < 6; i += 1) {
+      checkEmailAddressRateLimit(req, res, next);
+    }
+
+    resetCheckEmailRateLimiters();
+
+    const afterResetNext = jest.fn();
+    checkEmailAddressRateLimit(req, res, afterResetNext);
+    expect(afterResetNext).toHaveBeenCalledWith();
   });
 });

@@ -25,11 +25,13 @@ const { connectRedis, getRedisClient, disconnectRedis } =
 describe('cache/redis client', () => {
   const originalLog = console.log;
   const originalError = console.error;
+  const originalWarn = console.warn;
 
   beforeEach(() => {
     jest.clearAllMocks();
     console.log = jest.fn();
     console.error = jest.fn();
+    console.warn = jest.fn();
 
     envMock.redisEnabled = true;
     envMock.redisRequired = false;
@@ -43,6 +45,7 @@ describe('cache/redis client', () => {
     await disconnectRedis();
     console.log = originalLog;
     console.error = originalError;
+    console.warn = originalWarn;
   });
 
   function makeClient({ isOpen = false } = {}) {
@@ -91,6 +94,16 @@ describe('cache/redis client', () => {
     expect(client.ping).toHaveBeenCalled();
     expect(result).toBe(client);
     expect(getRedisClient()).toBe(client);
+  });
+
+  test('uses reconnectStrategy that disables auto-reconnect', async () => {
+    client = makeClient();
+    createClientMock.mockReturnValue(client);
+
+    await connectRedis();
+
+    const options = createClientMock.mock.calls[0][0];
+    expect(options.socket.reconnectStrategy()).toBe(false);
   });
 
   test('reuses already-open client', async () => {
@@ -142,5 +155,40 @@ describe('cache/redis client', () => {
     await expect(connectRedis()).rejects.toThrow(
       'Redis is required but unavailable after 1 attempt(s). Last error: connect failed'
     );
+  });
+
+  test('retries and then continues without cache when redis is optional', async () => {
+    envMock.redisRequired = false;
+    envMock.redisStartupRetries = 2;
+    envMock.redisRetryDelayMs = 0;
+
+    const firstClient = makeClient();
+    firstClient.connect.mockRejectedValueOnce(new Error('first fail'));
+
+    const secondClient = makeClient();
+    secondClient.connect.mockRejectedValueOnce(new Error('second fail'));
+
+    createClientMock.mockReturnValueOnce(firstClient).mockReturnValueOnce(secondClient);
+
+    const result = await connectRedis();
+
+    expect(result).toBeNull();
+    expect(createClientMock).toHaveBeenCalledTimes(2);
+    expect(console.warn).toHaveBeenCalled();
+  });
+
+  test('best-effort cleanup ignores quit errors after failed connect', async () => {
+    envMock.redisRequired = false;
+    envMock.redisStartupRetries = 1;
+
+    client = makeClient({ isOpen: true });
+    client.connect.mockRejectedValueOnce(new Error('connect failed'));
+    client.quit.mockRejectedValueOnce(new Error('quit failed'));
+    createClientMock.mockReturnValue(client);
+
+    const result = await connectRedis();
+
+    expect(result).toBeNull();
+    expect(client.quit).toHaveBeenCalled();
   });
 });

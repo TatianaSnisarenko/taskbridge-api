@@ -23,8 +23,8 @@ const verifyPasswordMock = jest.fn();
 const hashPasswordMock = jest.fn();
 const generateRefreshTokenMock = jest.fn();
 const signAccessTokenMock = jest.fn();
-const sendVerificationEmailMock = jest.fn();
-const sendResetPasswordEmailMock = jest.fn();
+const sendVerificationEmailWithRecoveryMock = jest.fn();
+const sendResetPasswordEmailWithRecoveryMock = jest.fn();
 
 jest.unstable_mockModule('../../src/db/prisma.js', () => ({ prisma: prismaMock }));
 jest.unstable_mockModule('../../src/services/user/index.js', () => ({
@@ -39,9 +39,9 @@ jest.unstable_mockModule('../../src/services/token/index.js', () => ({
   generateRefreshToken: generateRefreshTokenMock,
   signAccessToken: signAccessTokenMock,
 }));
-jest.unstable_mockModule('../../src/services/email/index.js', () => ({
-  sendVerificationEmail: sendVerificationEmailMock,
-  sendResetPasswordEmail: sendResetPasswordEmailMock,
+jest.unstable_mockModule('../../src/services/email-outbox/index.js', () => ({
+  sendVerificationEmailWithRecovery: sendVerificationEmailWithRecoveryMock,
+  sendResetPasswordEmailWithRecovery: sendResetPasswordEmailWithRecoveryMock,
 }));
 
 const authService = await import('../../../src/services/auth/index.js');
@@ -96,7 +96,7 @@ describe('auth.service', () => {
         expiresAt: expect.any(Date),
       },
     });
-    expect(sendResetPasswordEmailMock).toHaveBeenCalledWith({
+    expect(sendResetPasswordEmailWithRecoveryMock).toHaveBeenCalledWith({
       to: 'a@example.com',
       token: expect.any(String),
     });
@@ -108,7 +108,7 @@ describe('auth.service', () => {
     await authService.forgotPassword({ email: 'missing@example.com' });
 
     expect(prismaMock.verificationToken.create).not.toHaveBeenCalled();
-    expect(sendResetPasswordEmailMock).not.toHaveBeenCalled();
+    expect(sendResetPasswordEmailWithRecoveryMock).not.toHaveBeenCalled();
   });
 
   test('forgotPassword does nothing for unverified user', async () => {
@@ -121,7 +121,7 @@ describe('auth.service', () => {
     await authService.forgotPassword({ email: 'a@example.com' });
 
     expect(prismaMock.verificationToken.create).not.toHaveBeenCalled();
-    expect(sendResetPasswordEmailMock).not.toHaveBeenCalled();
+    expect(sendResetPasswordEmailWithRecoveryMock).not.toHaveBeenCalled();
   });
 
   test('resetPassword resets password with valid token', async () => {

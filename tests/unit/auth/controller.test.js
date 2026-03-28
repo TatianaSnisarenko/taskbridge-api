@@ -193,6 +193,25 @@ describe('auth.controller', () => {
     expect(next).not.toHaveBeenCalled();
   });
 
+  test('verifyEmail uses empty prefilledEmail when expired error has no details email', async () => {
+    authServiceMock.verifyEmail.mockRejectedValue({
+      code: 'EMAIL_VERIFICATION_EXPIRED',
+      details: {},
+    });
+    buildVerifyEmailExpiredPageMock.mockReturnValue('<html>expired-no-email</html>');
+
+    const req = { query: { token: 'expired-token-2' } };
+    const res = createResponseMock();
+    const next = jest.fn();
+
+    await authController.verifyEmail(req, res, next);
+
+    expect(buildVerifyEmailExpiredPageMock).toHaveBeenCalledWith(
+      expect.objectContaining({ prefilledEmail: '' })
+    );
+    expect(res.send).toHaveBeenCalledWith('<html>expired-no-email</html>');
+  });
+
   test('verifyEmail returns resend html page when verification link is invalid', async () => {
     authServiceMock.verifyEmail.mockRejectedValue({
       code: 'EMAIL_VERIFICATION_INVALID',
@@ -239,6 +258,20 @@ describe('auth.controller', () => {
     expect(res.set).toHaveBeenCalledWith('Content-Type', 'text/html');
     expect(res.send).toHaveBeenCalledWith('<html>already-verified</html>');
     expect(next).not.toHaveBeenCalled();
+  });
+
+  test('verifyEmail forwards unexpected errors to next', async () => {
+    const unexpected = new Error('unexpected failure');
+    authServiceMock.verifyEmail.mockRejectedValue(unexpected);
+
+    const req = { query: { token: 'any-token' } };
+    const res = createResponseMock();
+    const next = jest.fn();
+
+    await authController.verifyEmail(req, res, next);
+
+    expect(next).toHaveBeenCalledWith(unexpected);
+    expect(res.send).not.toHaveBeenCalled();
   });
 
   test('resendVerification returns ok with email', async () => {

@@ -7,11 +7,12 @@ import { resetDatabase } from '../helpers/db.js';
 import { buildSignupPayload } from '../helpers/factories.js';
 
 const sendVerificationEmailMock = jest.fn().mockResolvedValue(undefined);
+const sendResetPasswordEmailMock = jest.fn().mockResolvedValue(undefined);
 
-jest.unstable_mockModule('../../src/services/email/index.js', () => ({
-  sendVerificationEmail: sendVerificationEmailMock,
-  sendEmail: jest.fn(),
-  sendResetPasswordEmail: jest.fn().mockResolvedValue(undefined),
+jest.unstable_mockModule('../../src/services/email-outbox/index.js', () => ({
+  sendVerificationEmailWithRecovery: sendVerificationEmailMock,
+  sendResetPasswordEmailWithRecovery: sendResetPasswordEmailMock,
+  sendEmailWithRecovery: jest.fn().mockResolvedValue({ sent: true, queued: false }),
 }));
 
 const { createApp } = await import('../../src/app.js');

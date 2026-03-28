@@ -13,6 +13,10 @@ async function loadServer({ connectImpl, listenImpl, runOnceImpl, connectRedisIm
 
   const cleanupTask = { stop: jest.fn() };
   const runOnceMock = jest.fn(runOnceImpl ?? (() => Promise.resolve(undefined)));
+  const emailOutboxWorkerTask = { stop: jest.fn() };
+  const emailOutboxCleanupTask = { stop: jest.fn() };
+  const emailOutboxWorkerRunOnceMock = jest.fn(() => Promise.resolve(undefined));
+  const emailOutboxCleanupRunOnceMock = jest.fn(() => Promise.resolve(undefined));
 
   const listenMock = jest.fn((port, cb) => {
     if (listenImpl) return listenImpl(port, cb);
@@ -47,9 +51,24 @@ async function loadServer({ connectImpl, listenImpl, runOnceImpl, connectRedisIm
     startVerificationTokenCleanup: () => ({ task: cleanupTask, runOnce: runOnceMock }),
   }));
 
+  jest.unstable_mockModule('../../src/jobs/email-outbox-worker.js', () => ({
+    startEmailOutboxWorker: () => ({
+      task: emailOutboxWorkerTask,
+      runOnce: emailOutboxWorkerRunOnceMock,
+    }),
+  }));
+
+  jest.unstable_mockModule('../../src/jobs/email-outbox-cleanup.js', () => ({
+    startEmailOutboxCleanup: () => ({
+      task: emailOutboxCleanupTask,
+      runOnce: emailOutboxCleanupRunOnceMock,
+    }),
+  }));
+
   jest.unstable_mockModule('../../src/cache/redis.js', () => ({
     connectRedis: connectRedisMock,
     disconnectRedis: disconnectRedisMock,
+    getRedisClient: jest.fn(() => null),
   }));
 
   const handlers = {};
