@@ -15,138 +15,77 @@ import { prisma } from '../src/db/prisma.js';
  * 4. After cleanup, database remains with structure ready for new migrations
  *
  * Deletion order (important!):
- * - Notification → references User, Project, Task, ChatThread
- * - ChatThreadRead → references ChatThread, User
- * - ChatMessage → references ChatThread, User
- * - ChatThread → references Task, User
- * - Review → references Task, User
- * - Application → references Task, User
- * - Task → references Project, User, has self-reference via acceptedApplicationId
- * - ProjectReport → references Project, User
- * - Project → references User
- * - DeveloperProfile → references User
- * - CompanyProfile → references User
- * - VerificationToken → references User
- * - RefreshToken → references User
- * - User → parent table for everything
+ * - child tables first, then parents
+ * - nullify Task.acceptedApplicationId before removing applications
+ * - remove pivot tables before Technology / Project / Task
  */
 
 async function cleanDatabase() {
-  console.log('🧹 Starting database cleanup...\n');
+  console.log('Starting database cleanup...');
 
   try {
-    // Counter for deleted records statistics
     const deletedCounts = {};
 
-    // 1. Delete Notifications (depends on many tables)
-    console.log('🗑️  Deleting notifications...');
-    const notifications = await prisma.notification.deleteMany({});
-    deletedCounts.notifications = notifications.count;
-    console.log(`   ✓ Deleted ${notifications.count} records\n`);
+    const deleteModel = async (label, delegate, where = {}) => {
+      const result = await delegate.deleteMany({ where });
+      deletedCounts[label] = result.count;
+      console.log(`Deleted ${result.count} from ${label}`);
+    };
 
-    // 2. Delete ChatThreadRead
-    console.log('🗑️  Deleting chat thread reads...');
-    const chatThreadReads = await prisma.chatThreadRead.deleteMany({});
-    deletedCounts.chatThreadReads = chatThreadReads.count;
-    console.log(`   ✓ Deleted ${chatThreadReads.count} records\n`);
-
-    // 3. Delete ChatMessage
-    console.log('🗑️  Deleting chat messages...');
-    const chatMessages = await prisma.chatMessage.deleteMany({});
-    deletedCounts.chatMessages = chatMessages.count;
-    console.log(`   ✓ Deleted ${chatMessages.count} records\n`);
-
-    // 4. Delete ChatThread
-    console.log('🗑️  Deleting chat threads...');
-    const chatThreads = await prisma.chatThread.deleteMany({});
-    deletedCounts.chatThreads = chatThreads.count;
-    console.log(`   ✓ Deleted ${chatThreads.count} records\n`);
-
-    // 5. Delete Reviews
-    console.log('🗑️  Deleting reviews...');
-    const reviews = await prisma.review.deleteMany({});
-    deletedCounts.reviews = reviews.count;
-    console.log(`   ✓ Deleted ${reviews.count} records\n`);
-
-    // 6. Delete Applications
-    console.log('🗑️  Deleting applications...');
-    const applications = await prisma.application.deleteMany({});
-    deletedCounts.applications = applications.count;
-    console.log(`   ✓ Deleted ${applications.count} records\n`);
-
-    // 7. Delete Tasks (need to nullify acceptedApplicationId first due to self-reference)
-    console.log('🗑️  Deleting tasks...');
-    // First nullify acceptedApplicationId to avoid foreign key issues
+    // Break Task -> Application link to prevent FK violations while deleting applications.
     await prisma.task.updateMany({
       where: { acceptedApplicationId: { not: null } },
       data: { acceptedApplicationId: null },
     });
-    const tasks = await prisma.task.deleteMany({});
-    deletedCounts.tasks = tasks.count;
-    console.log(`   ✓ Deleted ${tasks.count} records\n`);
 
-    // 8. Delete ProjectReports
-    console.log('🗑️  Deleting project reports...');
-    const projectReports = await prisma.projectReport.deleteMany({});
-    deletedCounts.projectReports = projectReports.count;
-    console.log(`   ✓ Deleted ${projectReports.count} records\n`);
+    await deleteModel('notifications', prisma.notification);
 
-    // 9. Delete Projects
-    console.log('🗑️  Deleting projects...');
-    const projects = await prisma.project.deleteMany({});
-    deletedCounts.projects = projects.count;
-    console.log(`   ✓ Deleted ${projects.count} records\n`);
+    await deleteModel('chatMessageAttachments', prisma.chatMessageAttachment);
+    await deleteModel('chatThreadReads', prisma.chatThreadRead);
+    await deleteModel('chatMessages', prisma.chatMessage);
+    await deleteModel('chatThreads', prisma.chatThread);
 
-    // 10. Delete DeveloperProfiles
-    console.log('🗑️  Deleting developer profiles...');
-    const developerProfiles = await prisma.developerProfile.deleteMany({});
-    deletedCounts.developerProfiles = developerProfiles.count;
-    console.log(`   ✓ Deleted ${developerProfiles.count} records\n`);
+    await deleteModel('taskFavorites', prisma.taskFavorite);
+    await deleteModel('taskInvites', prisma.taskInvite);
+    await deleteModel('taskReports', prisma.taskReport);
+    await deleteModel('taskDisputes', prisma.taskDispute);
+    await deleteModel('reviews', prisma.review);
+    await deleteModel('applications', prisma.application);
 
-    // 11. Delete CompanyProfiles
-    console.log('🗑️  Deleting company profiles...');
-    const companyProfiles = await prisma.companyProfile.deleteMany({});
-    deletedCounts.companyProfiles = companyProfiles.count;
-    console.log(`   ✓ Deleted ${companyProfiles.count} records\n`);
+    await deleteModel('taskTechnologies', prisma.taskTechnology);
+    await deleteModel('projectTechnologies', prisma.projectTechnology);
+    await deleteModel('developerTechnologies', prisma.developerTechnology);
 
-    // 12. Delete VerificationTokens
-    console.log('🗑️  Deleting verification tokens...');
-    const verificationTokens = await prisma.verificationToken.deleteMany({});
-    deletedCounts.verificationTokens = verificationTokens.count;
-    console.log(`   ✓ Deleted ${verificationTokens.count} records\n`);
+    await deleteModel('tasks', prisma.task);
+    await deleteModel('projectReports', prisma.projectReport);
+    await deleteModel('projects', prisma.project);
 
-    // 13. Delete RefreshTokens
-    console.log('🗑️  Deleting refresh tokens...');
-    const refreshTokens = await prisma.refreshToken.deleteMany({});
-    deletedCounts.refreshTokens = refreshTokens.count;
-    console.log(`   ✓ Deleted ${refreshTokens.count} records\n`);
+    await deleteModel('platformReviews', prisma.platformReview);
+    await deleteModel('userOnboardingStates', prisma.userOnboardingState);
+    await deleteModel('developerProfiles', prisma.developerProfile);
+    await deleteModel('companyProfiles', prisma.companyProfile);
+    await deleteModel('verificationTokens', prisma.verificationToken);
+    await deleteModel('refreshTokens', prisma.refreshToken);
 
-    // 14. Delete Users (parent table, delete last)
-    console.log('🗑️  Deleting users...');
-    const users = await prisma.user.deleteMany({});
-    deletedCounts.users = users.count;
-    console.log(`   ✓ Deleted ${users.count} records\n`);
+    await deleteModel('technologySuggestions', prisma.technologySuggestion);
+    await deleteModel('technologies', prisma.technology);
 
-    // Output summary statistics
-    console.log('═══════════════════════════════════════════════');
-    console.log('✨ Database successfully cleaned!\n');
-    console.log('📊 Deleted records statistics:');
-    console.log('═══════════════════════════════════════════════');
+    await deleteModel('emailOutbox', prisma.emailOutbox);
+    await deleteModel('users', prisma.user);
+
+    console.log('Database successfully cleaned');
+    console.log('Deleted records statistics:');
 
     const totalDeleted = Object.values(deletedCounts).reduce((sum, count) => sum + count, 0);
 
     Object.entries(deletedCounts).forEach(([table, count]) => {
-      console.log(`   ${table.padEnd(25)} → ${count} records`);
+      console.log(`${table.padEnd(25)} -> ${count}`);
     });
 
-    console.log('───────────────────────────────────────────────');
-    console.log(`   ${'TOTAL'.padEnd(25)} → ${totalDeleted} records`);
-    console.log('═══════════════════════════════════════════════\n');
-
-    console.log('ℹ️  Table structure and migrations remain intact');
-    console.log('ℹ️  Database is ready for new migrations\n');
+    console.log(`${'TOTAL'.padEnd(25)} -> ${totalDeleted}`);
+    console.log('Table structure and migrations remain intact');
   } catch (error) {
-    console.error('❌ Error during database cleanup:', error);
+    console.error('Error during database cleanup:', error);
     throw error;
   } finally {
     await prisma.$disconnect();
@@ -155,6 +94,6 @@ async function cleanDatabase() {
 
 // Run the script
 cleanDatabase().catch((error) => {
-  console.error('❌ Critical error:', error);
+  console.error('Critical error:', error);
   process.exit(1);
 });
