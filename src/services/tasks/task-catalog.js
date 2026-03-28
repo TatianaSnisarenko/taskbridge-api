@@ -2,6 +2,10 @@ import { prisma } from '../../db/prisma.js';
 import { ApiError } from '../../utils/ApiError.js';
 import { findTaskWithDetails } from '../../db/queries/tasks.queries.js';
 import { mapTaskDetailsOutput } from './helpers.js';
+import {
+  getCachedPublicTasksCatalog,
+  setCachedPublicTasksCatalog,
+} from '../../cache/tasks-catalog.js';
 
 export async function getTaskById({ userId, taskId, persona }) {
   const task = await findTaskWithDetails(taskId);
@@ -103,6 +107,24 @@ export async function getTasksCatalog(query) {
   } = query;
 
   const skip = (page - 1) * size;
+  const isPublicCatalog = !owner && !includeDeleted;
+
+  if (isPublicCatalog) {
+    const cached = await getCachedPublicTasksCatalog({
+      page,
+      size,
+      search,
+      category,
+      difficulty,
+      type,
+      technology_ids,
+      tech_match,
+      projectId,
+    });
+    if (cached) {
+      return cached;
+    }
+  }
 
   const where = {};
 
@@ -211,7 +233,7 @@ export async function getTasksCatalog(query) {
     prisma.task.count({ where }),
   ]);
 
-  return {
+  const result = {
     items: items.map((task) => ({
       task_id: task.id,
       title: task.title,
@@ -241,6 +263,25 @@ export async function getTasksCatalog(query) {
     size,
     total,
   };
+
+  if (isPublicCatalog) {
+    await setCachedPublicTasksCatalog(
+      {
+        page,
+        size,
+        search,
+        category,
+        difficulty,
+        type,
+        technology_ids,
+        tech_match,
+        projectId,
+      },
+      result
+    );
+  }
+
+  return result;
 }
 
 export async function getProjectTasks({

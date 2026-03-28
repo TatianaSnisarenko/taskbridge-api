@@ -1,6 +1,10 @@
 import { prisma } from '../../db/prisma.js';
 import { ApiError } from '../../utils/ApiError.js';
 import { mapChatMessageOutput } from './chat-message-output.js';
+import {
+  getCachedMyThreadsCatalog,
+  setCachedMyThreadsCatalog,
+} from '../../cache/threads-catalog.js';
 
 async function loadParticipantProfiles(otherUserIds) {
   if (otherUserIds.length === 0) {
@@ -40,6 +44,19 @@ export async function getMyThreads({
   search = '',
   importantOnly = false,
 }) {
+  const cached = await getCachedMyThreadsCatalog({
+    userId,
+    persona,
+    page,
+    size,
+    search,
+    importantOnly,
+  });
+
+  if (cached) {
+    return cached;
+  }
+
   const skip = (page - 1) * size;
 
   const taskTitleFilter = search.trim()
@@ -180,12 +197,26 @@ export async function getMyThreads({
     };
   });
 
-  return {
+  const result = {
     items: threadWithParticipants,
     page,
     size,
     total,
   };
+
+  await setCachedMyThreadsCatalog(
+    {
+      userId,
+      persona,
+      page,
+      size,
+      search,
+      importantOnly,
+    },
+    result
+  );
+
+  return result;
 }
 
 /**

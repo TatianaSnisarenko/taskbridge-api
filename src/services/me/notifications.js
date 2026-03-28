@@ -1,5 +1,10 @@
 import { prisma } from '../../db/prisma.js';
 import { isNotificationRelevantForPersona } from './notifications-helpers.js';
+import {
+  getCachedUnreadNotificationCount,
+  setCachedUnreadNotificationCount,
+  invalidateCachedUnreadNotificationCount,
+} from '../../cache/notifications.js';
 
 const CHAT_NOTIFICATION_TYPES = new Set(['CHAT_MESSAGE']);
 const REVIEW_NOTIFICATION_TYPES = new Set(['REVIEW_CREATED']);
@@ -237,7 +242,7 @@ export async function getMyNotifications({
     ...visibilityFilter,
   };
 
-  const [items, total, unreadTotal] = await Promise.all([
+  const [items, total, cachedUnreadTotal] = await Promise.all([
     prisma.notification.findMany({
       where: listWhere,
       select: {
@@ -288,13 +293,19 @@ export async function getMyNotifications({
     prisma.notification.count({
       where: listWhere,
     }),
-    prisma.notification.count({
+    getCachedUnreadNotificationCount(userId),
+  ]);
+
+  let unreadTotal = cachedUnreadTotal;
+  if (unreadTotal === null) {
+    unreadTotal = await prisma.notification.count({
       where: {
         userId,
         readAt: null,
       },
-    }),
-  ]);
+    });
+    await setCachedUnreadNotificationCount(userId, unreadTotal);
+  }
 
   return {
     items: items.map((notif) => {
@@ -387,6 +398,8 @@ export async function markAllNotificationsAsRead({ userId, persona }) {
         readAt: now,
       },
     });
+
+    await invalidateCachedUnreadNotificationCount(userId);
   }
 
   return {

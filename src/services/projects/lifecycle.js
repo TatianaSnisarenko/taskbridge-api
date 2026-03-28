@@ -4,6 +4,7 @@ import { findProjectForOwnership } from '../../db/queries/projects.queries.js';
 import { validateTechnologyIds, incrementTechnologyPopularity } from '../technologies/index.js';
 import { mapProjectInput } from './helpers.js';
 import { createNotification } from '../notifications/index.js';
+import { invalidateCachedPublicProjectsCatalog } from '../../cache/projects-catalog.js';
 
 export async function createProject({ userId, project }) {
   const existing = await prisma.project.findFirst({
@@ -43,6 +44,8 @@ export async function createProject({ userId, project }) {
   if (technologyIds.length > 0) {
     await incrementTechnologyPopularity(technologyIds);
   }
+
+  await invalidateCachedPublicProjectsCatalog();
 
   return { projectId: created.id, createdAt: created.createdAt };
 }
@@ -97,6 +100,8 @@ export async function updateProject({ userId, projectId, project }) {
     await incrementTechnologyPopularity(technologyIds);
   }
 
+  await invalidateCachedPublicProjectsCatalog();
+
   return { projectId: updated.id, updated: true, updatedAt: updated.updatedAt };
 }
 
@@ -148,6 +153,8 @@ export async function deleteProject({ userId, projectId }) {
 
     return updatedProject;
   });
+
+  await invalidateCachedPublicProjectsCatalog();
 
   return { projectId: updated.id, deletedAt: updated.deletedAt };
 }

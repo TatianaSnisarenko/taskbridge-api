@@ -1,6 +1,7 @@
 import { prisma } from '../../db/prisma.js';
 import { ApiError } from '../../utils/ApiError.js';
 import { findTaskForReport } from '../../db/queries/tasks.queries.js';
+import { invalidateCachedPublicTasksCatalog } from '../../cache/tasks-catalog.js';
 
 export async function reportTask({ userId, persona, taskId, report }) {
   await findTaskForReport(taskId);
@@ -130,6 +131,10 @@ export async function resolveTaskReport({ userId, reportId, action, note }) {
       },
     });
   });
+
+  if (action === 'DELETE') {
+    await invalidateCachedPublicTasksCatalog();
+  }
 
   return {
     reportId: updatedReport.id,

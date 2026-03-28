@@ -5,6 +5,7 @@ import {
   upsertThreadByTaskId,
 } from '../../db/queries/chat.queries.js';
 import { getThreadById } from './threads-read.js';
+import { invalidateCachedMyThreadsCatalog } from '../../cache/threads-catalog.js';
 
 /**
  * Resolves chat thread by task ID for the current participant.
@@ -47,6 +48,11 @@ export async function getThreadByTaskId({ userId, persona, taskId }) {
     companyUserId: task.ownerUserId,
     developerUserId: acceptedDeveloperUserId,
   });
+
+  await Promise.all([
+    invalidateCachedMyThreadsCatalog(task.ownerUserId),
+    invalidateCachedMyThreadsCatalog(acceptedDeveloperUserId),
+  ]);
 
   return getThreadById({ userId, persona, threadId: createdThread.id });
 }

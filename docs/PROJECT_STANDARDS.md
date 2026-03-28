@@ -121,6 +121,18 @@ src/services/
 - Add indexes for frequent filters/sorts and relation lookups.
 - Validate migration impact on seed scripts when schema relations change.
 
+## Redis Caching Standards
+
+- Use cache-aside patterns only; Redis is an optimization layer, never a source of truth.
+- Cache integrations must degrade gracefully:
+  - Cache reads fall back to DB/source query when Redis is unavailable or cache parsing fails.
+  - Cache writes/invalidation failures must not break endpoint behavior.
+- Keep invalidation explicit and close to write paths that mutate cached datasets.
+- Use bounded TTL via environment variables; do not hardcode production TTLs in services.
+- Startup dependency policy:
+  - PostgreSQL is critical and startup must fail if DB verification fails.
+  - Redis is optional by default with bounded startup retries unless `REDIS_REQUIRED=true`.
+
 ## Testing Standards
 
 - Add/update tests for every behavior change.
@@ -138,6 +150,9 @@ src/services/
 - Avoid external network dependencies in tests.
 - Keep assertions explicit and meaningful.
 - Do not lower coverage thresholds to pass a PR.
+- For each new Redis cache integration, add tests for both cache states:
+  - Redis available: cache hit path, cache set path, and invalidation path.
+  - Redis unavailable: helper soft-fallback values (`null`/`false`) and service-level DB fallback correctness.
 
 ## Code Style Standards
 

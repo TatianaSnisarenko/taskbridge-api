@@ -1,6 +1,7 @@
 import { prisma } from '../../db/prisma.js';
 import { ApiError } from '../../utils/ApiError.js';
 import { isNotificationRelevantForPersona } from './notifications-helpers.js';
+import { invalidateCachedUnreadNotificationCount } from '../../cache/notifications.js';
 
 const notificationOwnerSelect = {
   id: true,
@@ -46,6 +47,8 @@ export async function markNotificationAsRead({ userId, notificationId, persona }
     select: { id: true, readAt: true },
   });
 
+  await invalidateCachedUnreadNotificationCount(userId);
+
   return {
     id: updated.id,
     read_at: updated.readAt.toISOString(),
@@ -63,6 +66,8 @@ export async function markNotificationAsUnread({ userId, notificationId, persona
     data: { readAt: null },
     select: { id: true, readAt: true },
   });
+
+  await invalidateCachedUnreadNotificationCount(userId);
 
   return {
     id: updated.id,
@@ -82,6 +87,8 @@ export async function markNotificationAsImportant({ userId, notificationId, pers
     select: { id: true, importantAt: true },
   });
 
+  await invalidateCachedUnreadNotificationCount(userId);
+
   return {
     id: updated.id,
     important_at: updated.importantAt.toISOString(),
@@ -99,6 +106,8 @@ export async function markNotificationAsUnimportant({ userId, notificationId, pe
     data: { importantAt: null },
     select: { id: true, importantAt: true },
   });
+
+  await invalidateCachedUnreadNotificationCount(userId);
 
   return {
     id: updated.id,

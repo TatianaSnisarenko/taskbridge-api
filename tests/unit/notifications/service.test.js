@@ -6,13 +6,19 @@ const prismaMock = {
   },
 };
 
+const notificationsCacheMock = {
+  invalidateCachedUnreadNotificationCount: jest.fn(),
+};
+
 jest.unstable_mockModule('../../src/db/prisma.js', () => ({ prisma: prismaMock }));
+jest.unstable_mockModule('../../src/cache/notifications.js', () => notificationsCacheMock);
 
 const notificationsService = await import('../../../src/services/notifications/index.js');
 
 describe('notifications.service', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    notificationsCacheMock.invalidateCachedUnreadNotificationCount.mockResolvedValue(true);
   });
 
   test('buildTaskNotificationPayload builds consistent shape', () => {
@@ -65,6 +71,9 @@ describe('notifications.service', () => {
         payload: { task_id: 't2', thread_id: 'th-1' },
       },
     });
+    expect(notificationsCacheMock.invalidateCachedUnreadNotificationCount).toHaveBeenCalledWith(
+      'owner2'
+    );
     expect(result).toEqual({ id: 'n-default' });
   });
 

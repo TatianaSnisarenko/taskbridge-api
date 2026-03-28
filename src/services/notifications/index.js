@@ -1,4 +1,5 @@
 import { prisma } from '../../db/prisma.js';
+import { invalidateCachedUnreadNotificationCount } from '../../cache/notifications.js';
 
 export function buildTaskNotificationPayload({
   taskId,
@@ -24,7 +25,7 @@ export async function createNotification({
   type,
   payload,
 }) {
-  return client.notification.create({
+  const created = await client.notification.create({
     data: {
       userId,
       actorUserId,
@@ -35,6 +36,10 @@ export async function createNotification({
       payload,
     },
   });
+
+  await invalidateCachedUnreadNotificationCount(userId);
+
+  return created;
 }
 
 export async function createApplicationCreatedNotification({

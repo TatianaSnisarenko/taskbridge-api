@@ -8,13 +8,40 @@ const prismaMock = {
   },
 };
 
+const technologiesCacheMock = {
+  getCachedTechnologySearch: jest.fn(),
+  setCachedTechnologySearch: jest.fn(),
+  getCachedTechnologyById: jest.fn(),
+  setCachedTechnologyById: jest.fn(),
+  getCachedTechnologiesByIds: jest.fn(),
+  setCachedTechnologiesByIds: jest.fn(),
+};
+
 jest.unstable_mockModule('../../src/db/prisma.js', () => ({ prisma: prismaMock }));
+jest.unstable_mockModule('../../src/cache/technologies.js', () => technologiesCacheMock);
 
 const technologiesService = await import('../../../src/services/technologies/index.js');
 
 describe('technologies.service', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    technologiesCacheMock.getCachedTechnologySearch.mockResolvedValue(null);
+    technologiesCacheMock.setCachedTechnologySearch.mockResolvedValue(true);
+    technologiesCacheMock.getCachedTechnologyById.mockResolvedValue(null);
+    technologiesCacheMock.setCachedTechnologyById.mockResolvedValue(true);
+    technologiesCacheMock.getCachedTechnologiesByIds.mockResolvedValue(null);
+    technologiesCacheMock.setCachedTechnologiesByIds.mockResolvedValue(true);
+  });
+
+  test('searchTechnologies returns cached value and skips database', async () => {
+    technologiesCacheMock.getCachedTechnologySearch.mockResolvedValue({
+      items: [{ id: 'cached', slug: 'redis', name: 'Redis', type: 'BACKEND' }],
+    });
+
+    const result = await technologiesService.searchTechnologies({ q: 'redis', limit: 5 });
+
+    expect(prismaMock.technology.findMany).not.toHaveBeenCalled();
+    expect(result.items[0].id).toBe('cached');
   });
 
   test('searchTechnologies returns popular mode for empty query', async () => {

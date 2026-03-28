@@ -2,6 +2,7 @@ import { prisma } from '../../db/prisma.js';
 import { ApiError } from '../../utils/ApiError.js';
 import { findProjectForReport } from '../../db/queries/projects.queries.js';
 import { createNotification } from '../notifications/index.js';
+import { invalidateCachedPublicProjectsCatalog } from '../../cache/projects-catalog.js';
 
 export async function reportProject({ userId, persona, projectId, report }) {
   await findProjectForReport(projectId);
@@ -159,6 +160,10 @@ export async function resolveProjectReport({ userId, reportId, action, note }) {
       },
     });
   });
+
+  if (action === 'DELETE') {
+    await invalidateCachedPublicProjectsCatalog();
+  }
 
   return {
     reportId: updatedReport.id,

@@ -5,6 +5,7 @@ import { ApiError } from '../../utils/ApiError.js';
 import { deleteFile, uploadFile } from '../../utils/cloudinary.js';
 import { createNotification } from '../notifications/index.js';
 import { mapChatMessageOutput } from './chat-message-output.js';
+import { invalidateCachedMyThreadsCatalog } from '../../cache/threads-catalog.js';
 
 const CHAT_ATTACHMENT_UPLOAD_FOLDER = 'teamup/chat-attachments';
 
@@ -215,6 +216,11 @@ export async function createMessage({ userId, persona, threadId, text = '', file
         },
       });
 
+      await Promise.all([
+        invalidateCachedMyThreadsCatalog(userId),
+        invalidateCachedMyThreadsCatalog(recipientUserId),
+      ]);
+
       return message;
     });
 
@@ -251,6 +257,8 @@ export async function markThreadAsRead({ userId, persona, threadId }) {
     },
   });
 
+  await invalidateCachedMyThreadsCatalog(userId);
+
   return {
     thread_id: threadId,
     read_at: now.toISOString(),
@@ -286,6 +294,8 @@ export async function markThreadAsImportant({ userId, persona, threadId }) {
     },
   });
 
+  await invalidateCachedMyThreadsCatalog(userId);
+
   return {
     thread_id: updated.threadId,
     important_at: updated.importantAt.toISOString(),
@@ -307,6 +317,8 @@ export async function markThreadAsUnimportant({ userId, persona, threadId }) {
       importantAt: null,
     },
   });
+
+  await invalidateCachedMyThreadsCatalog(userId);
 
   return {
     thread_id: threadId,

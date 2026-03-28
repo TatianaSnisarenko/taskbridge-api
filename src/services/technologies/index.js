@@ -1,5 +1,13 @@
 import { prisma } from '../../db/prisma.js';
 import { ApiError } from '../../utils/ApiError.js';
+import {
+  getCachedTechnologySearch,
+  setCachedTechnologySearch,
+  getCachedTechnologyById,
+  setCachedTechnologyById,
+  getCachedTechnologiesByIds,
+  setCachedTechnologiesByIds,
+} from '../../cache/technologies.js';
 
 const TECHNOLOGY_TYPES = [
   'BACKEND',
@@ -33,6 +41,16 @@ export async function searchTechnologies({ q, type, limit = 5, activeOnly = true
   const normalizedLimit = Math.max(1, Math.min(20, limit || 5));
   const qTrim = q?.trim();
 
+  const cached = await getCachedTechnologySearch({
+    q: qTrim,
+    type,
+    limit: normalizedLimit,
+    activeOnly,
+  });
+  if (cached) {
+    return cached;
+  }
+
   const where = {};
 
   // Filter by active status
@@ -61,7 +79,18 @@ export async function searchTechnologies({ q, type, limit = 5, activeOnly = true
       },
     });
 
-    return { items: technologies };
+    const result = { items: technologies };
+    await setCachedTechnologySearch(
+      {
+        q: qTrim,
+        type,
+        limit: normalizedLimit,
+        activeOnly,
+      },
+      result
+    );
+
+    return result;
   }
 
   // SEARCH MODE: prefix matching with fallback to contains
@@ -119,13 +148,29 @@ export async function searchTechnologies({ q, type, limit = 5, activeOnly = true
       popularityScore: tech.popularityScore,
     }));
 
-  return { items: ranked };
+  const result = { items: ranked };
+  await setCachedTechnologySearch(
+    {
+      q: qTrim,
+      type,
+      limit: normalizedLimit,
+      activeOnly,
+    },
+    result
+  );
+
+  return result;
 }
 
 /**
  * Get technology by ID
  */
 export async function getTechnologyById(id) {
+  const cached = await getCachedTechnologyById(id);
+  if (cached) {
+    return cached;
+  }
+
   const technology = await prisma.technology.findUnique({
     where: { id },
     select: {
@@ -142,6 +187,8 @@ export async function getTechnologyById(id) {
     throw new ApiError(404, 'NOT_FOUND', 'Technology not found');
   }
 
+  await setCachedTechnologyById(id, technology);
+
   return technology;
 }
 
@@ -149,8 +196,18 @@ export async function getTechnologyById(id) {
  * Get multiple technologies by IDs
  */
 export async function getTechnologiesByIds(ids) {
+  const uniqueIds = [...new Set(ids ?? [])];
+  if (uniqueIds.length === 0) {
+    return [];
+  }
+
+  const cached = await getCachedTechnologiesByIds(uniqueIds);
+  if (cached) {
+    return cached;
+  }
+
   const technologies = await prisma.technology.findMany({
-    where: { id: { in: ids } },
+    where: { id: { in: uniqueIds } },
     select: {
       id: true,
       slug: true,
@@ -158,6 +215,8 @@ export async function getTechnologiesByIds(ids) {
       type: true,
     },
   });
+
+  await setCachedTechnologiesByIds(uniqueIds, technologies);
 
   return technologies;
 }

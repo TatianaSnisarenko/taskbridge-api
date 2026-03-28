@@ -1,4 +1,5 @@
 import { prisma } from '../../db/prisma.js';
+import { invalidateCachedMyThreadsCatalog } from '../../cache/threads-catalog.js';
 
 /**
  * Create a chat thread for a task if it doesn't already exist
@@ -22,6 +23,11 @@ export async function getOrCreateChatThread({ taskId, companyUserId, developerUs
         // lastMessageAt is nullable and will be set when first message is sent
       },
     });
+
+    await Promise.all([
+      invalidateCachedMyThreadsCatalog(companyUserId),
+      invalidateCachedMyThreadsCatalog(developerUserId),
+    ]);
 
     return thread;
   } catch (err) {

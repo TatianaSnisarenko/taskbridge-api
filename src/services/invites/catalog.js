@@ -1,5 +1,11 @@
 import { prisma } from '../../db/prisma.js';
 import { ApiError } from '../../utils/ApiError.js';
+import {
+  getCachedTaskInvites,
+  setCachedTaskInvites,
+  getCachedMyInvites,
+  setCachedMyInvites,
+} from '../../cache/invites-catalog.js';
 
 /**
  * Get invites for a task (company view)
@@ -28,6 +34,11 @@ export async function getTaskInvites({ userId, taskId, page = 1, size = 20, stat
     taskId,
     ...(status && { status }),
   };
+
+  const cached = await getCachedTaskInvites({ taskId, page, size, status });
+  if (cached) {
+    return cached;
+  }
 
   const [items, total] = await Promise.all([
     prisma.taskInvite.findMany({
@@ -58,7 +69,7 @@ export async function getTaskInvites({ userId, taskId, page = 1, size = 20, stat
     prisma.taskInvite.count({ where }),
   ]);
 
-  return {
+  const result = {
     items: items.map((invite) => ({
       invite_id: invite.id,
       status: invite.status,
@@ -76,6 +87,10 @@ export async function getTaskInvites({ userId, taskId, page = 1, size = 20, stat
     size,
     total,
   };
+
+  await setCachedTaskInvites({ taskId, page, size, status }, result);
+
+  return result;
 }
 
 /**
@@ -97,6 +112,11 @@ export async function getMyInvites({ userId, page = 1, size = 20, status }) {
     developerUserId: userId,
     ...(status && { status }),
   };
+
+  const cached = await getCachedMyInvites({ userId, page, size, status });
+  if (cached) {
+    return cached;
+  }
 
   const [items, total] = await Promise.all([
     prisma.taskInvite.findMany({
@@ -137,7 +157,7 @@ export async function getMyInvites({ userId, page = 1, size = 20, status }) {
     prisma.taskInvite.count({ where }),
   ]);
 
-  return {
+  const result = {
     items: items.map((invite) => {
       const companyProfile = invite.company.companyProfile;
       const avgRating = companyProfile?.avgRating;
@@ -168,4 +188,8 @@ export async function getMyInvites({ userId, page = 1, size = 20, status }) {
     size,
     total,
   };
+
+  await setCachedMyInvites({ userId, page, size, status }, result);
+
+  return result;
 }

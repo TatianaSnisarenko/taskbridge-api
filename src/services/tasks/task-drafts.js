@@ -4,6 +4,7 @@ import { validateTechnologyIds, incrementTechnologyPopularity } from '../technol
 import { findTaskForOwnership, findProjectForOwnership } from '../../db/queries/tasks.queries.js';
 import { mapTaskInput } from './helpers.js';
 import { createNotification } from '../notifications/index.js';
+import { invalidateCachedPublicTasksCatalog } from '../../cache/tasks-catalog.js';
 
 export async function createTaskDraft({ userId, task }) {
   const projectId = task.project_id ?? null;
@@ -106,6 +107,8 @@ export async function updateTaskDraft({ userId, taskId, task }) {
     await incrementTechnologyPopularity(technologyIds);
   }
 
+  await invalidateCachedPublicTasksCatalog();
+
   return { taskId: updated.id, updated: true, updatedAt: updated.updatedAt };
 }
 
@@ -162,6 +165,7 @@ export async function publishTask({ userId, taskId }) {
       return published;
     });
 
+    await invalidateCachedPublicTasksCatalog();
     return { taskId: result.id, status: result.status, publishedAt: result.publishedAt };
   }
 
@@ -170,6 +174,8 @@ export async function publishTask({ userId, taskId }) {
     data: updateData,
     select: { id: true, status: true, publishedAt: true },
   });
+
+  await invalidateCachedPublicTasksCatalog();
 
   return { taskId: published.id, status: published.status, publishedAt: published.publishedAt };
 }
@@ -223,6 +229,8 @@ export async function deleteTask({ userId, taskId }) {
 
     return updatedTask;
   });
+
+  await invalidateCachedPublicTasksCatalog();
 
   return { taskId: deleted.id, status: deleted.status, deletedAt: deleted.deletedAt };
 }

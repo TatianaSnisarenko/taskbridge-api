@@ -6,13 +6,19 @@ const prismaMock = {
   },
 };
 
+const threadsCacheMock = {
+  invalidateCachedMyThreadsCatalog: jest.fn(),
+};
+
 jest.unstable_mockModule('../../src/db/prisma.js', () => ({ prisma: prismaMock }));
+jest.unstable_mockModule('../../src/cache/threads-catalog.js', () => threadsCacheMock);
 
 const chatService = await import('../../../src/services/chat/index.js');
 
 describe('chat.service', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    threadsCacheMock.invalidateCachedMyThreadsCatalog.mockResolvedValue(true);
   });
 
   test('getOrCreateChatThread returns created thread when upsert succeeds', async () => {
@@ -34,6 +40,8 @@ describe('chat.service', () => {
       }),
     });
     expect(result).toEqual({ id: 'th-1' });
+    expect(threadsCacheMock.invalidateCachedMyThreadsCatalog).toHaveBeenCalledWith('c-1');
+    expect(threadsCacheMock.invalidateCachedMyThreadsCatalog).toHaveBeenCalledWith('d-1');
   });
 
   test('getOrCreateChatThread returns null when upsert fails', async () => {

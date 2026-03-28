@@ -4,6 +4,11 @@ import { createNotification, buildTaskNotificationPayload } from '../notificatio
 import { getOrCreateChatThread } from '../chat/index.js';
 import { sendImportantNotificationEmail } from '../notification-email/index.js';
 import { invalidateCachedCandidateCount } from '../../cache/candidates.js';
+import { invalidateCachedPublicTasksCatalog } from '../../cache/tasks-catalog.js';
+import {
+  invalidateCachedTaskInvites,
+  invalidateCachedMyInvites,
+} from '../../cache/invites-catalog.js';
 
 /**
  * Accept an invite (developer action)
@@ -96,6 +101,9 @@ export async function acceptInvite({ userId, inviteId }) {
   // Invalidate candidate count cache for this task
   // Invite accepted means developer is no longer available
   await invalidateCachedCandidateCount(result.task_id);
+  await invalidateCachedPublicTasksCatalog();
+  await invalidateCachedTaskInvites(result.task_id);
+  await invalidateCachedMyInvites(result.accepted_developer_user_id);
 
   // Create chat thread after transaction
   const thread = await getOrCreateChatThread({
@@ -214,6 +222,8 @@ export async function declineInvite({ userId, inviteId }) {
   // Declined invite doesn't change available candidates (developer still available)
   // However, invalidate to ensure consistency
   await invalidateCachedCandidateCount(result.task_id);
+  await invalidateCachedTaskInvites(result.task_id);
+  await invalidateCachedMyInvites(userId);
 
   // Send email notification to company after transaction
   const companyUser = await prisma.user.findUnique({
@@ -319,6 +329,9 @@ export async function cancelInvite({ userId, inviteId }) {
       task_id: invite.taskId,
     };
   });
+
+  await invalidateCachedTaskInvites(result.task_id);
+  await invalidateCachedMyInvites(result.developer_user_id);
 
   // Send email notification to developer after transaction
   const developerUser = await prisma.user.findUnique({

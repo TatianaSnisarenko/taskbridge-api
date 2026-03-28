@@ -63,6 +63,12 @@ const notificationEmailServiceMock = {
   sendImportantNotificationEmail: jest.fn(async () => {}),
 };
 
+const tasksCatalogCacheMock = {
+  getCachedPublicTasksCatalog: jest.fn(),
+  setCachedPublicTasksCatalog: jest.fn(),
+  invalidateCachedPublicTasksCatalog: jest.fn(),
+};
+
 jest.unstable_mockModule('../../src/db/prisma.js', () => ({ prisma: prismaMock }));
 jest.unstable_mockModule(
   '../../src/services/notifications/index.js',
@@ -73,12 +79,16 @@ jest.unstable_mockModule(
   '../../src/services/notification-email/index.js',
   () => notificationEmailServiceMock
 );
+jest.unstable_mockModule('../../src/cache/tasks-catalog.js', () => tasksCatalogCacheMock);
 
 const tasksService = await import('../../../src/services/tasks/index.js');
 
 describe('tasks.catalog-candidates.service', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    tasksCatalogCacheMock.getCachedPublicTasksCatalog.mockResolvedValue(null);
+    tasksCatalogCacheMock.setCachedPublicTasksCatalog.mockResolvedValue(true);
+    tasksCatalogCacheMock.invalidateCachedPublicTasksCatalog.mockResolvedValue(true);
     prismaMock.$transaction.mockImplementation(async (callback) => {
       return await callback(prismaMock);
     });
@@ -219,6 +229,25 @@ describe('tasks.catalog-candidates.service', () => {
       expect(result.items[0].project).toBeNull();
       expect(result.items[0].deadline).toBeNull();
       expect(result.items[0].company.company_name).toBeUndefined();
+      expect(tasksCatalogCacheMock.setCachedPublicTasksCatalog).toHaveBeenCalled();
+    });
+
+    test('returns cached public catalog without hitting database', async () => {
+      tasksCatalogCacheMock.getCachedPublicTasksCatalog.mockResolvedValue({
+        items: [{ task_id: 'cached-task' }],
+        page: 1,
+        size: 20,
+        total: 1,
+      });
+
+      const result = await tasksService.getTasksCatalog({
+        page: 1,
+        size: 20,
+      });
+
+      expect(prismaMock.task.findMany).not.toHaveBeenCalled();
+      expect(prismaMock.task.count).not.toHaveBeenCalled();
+      expect(result.items[0].task_id).toBe('cached-task');
     });
   });
 

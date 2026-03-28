@@ -42,4 +42,15 @@ export const env = {
   redisStartupRetries: Number(process.env.REDIS_STARTUP_RETRIES ?? 3),
   redisRetryDelayMs: Number(process.env.REDIS_RETRY_DELAY_MS ?? 500),
   candidateCacheTtlSeconds: Number(process.env.CANDIDATE_CACHE_TTL_SECONDS ?? 3600),
+  technologySearchCacheTtlSeconds: Number(process.env.TECHNOLOGY_SEARCH_CACHE_TTL_SECONDS ?? 300),
+  technologyByIdCacheTtlSeconds: Number(process.env.TECHNOLOGY_BY_ID_CACHE_TTL_SECONDS ?? 3600),
+  notificationUnreadCacheTtlSeconds: Number(
+    process.env.NOTIFICATION_UNREAD_CACHE_TTL_SECONDS ?? 30
+  ),
+  taskCatalogPublicCacheTtlSeconds: Number(process.env.TASK_CATALOG_PUBLIC_CACHE_TTL_SECONDS ?? 60),
+  projectsCatalogPublicCacheTtlSeconds: Number(
+    process.env.PROJECTS_CATALOG_PUBLIC_CACHE_TTL_SECONDS ?? 90
+  ),
+  invitesCatalogCacheTtlSeconds: Number(process.env.INVITES_CATALOG_CACHE_TTL_SECONDS ?? 45),
+  threadsCatalogCacheTtlSeconds: Number(process.env.THREADS_CATALOG_CACHE_TTL_SECONDS ?? 30),
 };

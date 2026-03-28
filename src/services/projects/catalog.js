@@ -2,6 +2,10 @@ import { prisma } from '../../db/prisma.js';
 import { ApiError } from '../../utils/ApiError.js';
 import { findProjectWithDetails, findProjectsCatalog } from '../../db/queries/projects.queries.js';
 import { mapProjectOutput, buildTaskSummary, mapProjectDetailsOutput } from './helpers.js';
+import {
+  getCachedPublicProjectsCatalog,
+  setCachedPublicProjectsCatalog,
+} from '../../cache/projects-catalog.js';
 
 export async function getProjects({ userId, query }) {
   // eslint-disable-next-line no-unused-vars
@@ -9,6 +13,7 @@ export async function getProjects({ userId, query }) {
 
   const isOwnerQuery = owner === true || owner === 'true';
   const includeDeleted = include_deleted === true || include_deleted === 'true';
+  const isPublicCatalog = !isOwnerQuery && !includeDeleted;
 
   // Only owner can see deleted and filter by owner
   if (includeDeleted && !isOwnerQuery) {
@@ -16,6 +21,19 @@ export async function getProjects({ userId, query }) {
   }
 
   const skip = (page - 1) * size;
+
+  if (isPublicCatalog) {
+    const cached = await getCachedPublicProjectsCatalog({
+      page,
+      size,
+      search,
+      visibility,
+    });
+
+    if (cached) {
+      return cached;
+    }
+  }
 
   const { projects: items, total } = await findProjectsCatalog(
     {
@@ -29,12 +47,26 @@ export async function getProjects({ userId, query }) {
     { skip, take: Number(size) }
   );
 
-  return {
+  const result = {
     items: items.map(mapProjectOutput),
     page,
     size: Number(size),
     total,
   };
+
+  if (isPublicCatalog) {
+    await setCachedPublicProjectsCatalog(
+      {
+        page,
+        size,
+        search,
+        visibility,
+      },
+      result
+    );
+  }
+
+  return result;
 }
 
 export async function getProjectById({ userId, projectId, includeDeleted, previewLimit }) {

@@ -9,6 +9,7 @@ import { getOrCreateChatThread } from '../../chat/index.js';
 import { sendImportantNotificationEmail } from '../../notification-email/index.js';
 import { findTaskForApplication, findTaskForOwnership } from '../../../db/queries/tasks.queries.js';
 import { invalidateCachedCandidateCount } from '../../../cache/candidates.js';
+import { invalidateCachedPublicTasksCatalog } from '../../../cache/tasks-catalog.js';
 
 export async function applyToTask({ userId, taskId, application }) {
   const task = await findTaskForApplication(taskId);
@@ -81,6 +82,8 @@ export async function closeTask({ userId, taskId }) {
     select: { id: true, status: true, closedAt: true },
   });
 
+  await invalidateCachedPublicTasksCatalog();
+
   return { taskId: closed.id, status: closed.status, closedAt: closed.closedAt };
 }
 
@@ -123,6 +126,7 @@ export async function acceptApplication({ userId, applicationId }) {
   // Invalidate candidate count cache for this task
   // Application accepted means developer is no longer available
   await invalidateCachedCandidateCount(result.task_id);
+  await invalidateCachedPublicTasksCatalog();
 
   const thread = await getOrCreateChatThread({
     taskId: result.task_id,
