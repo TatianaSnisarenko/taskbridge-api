@@ -1,6 +1,9 @@
 import { jest } from '@jest/globals';
 
 const prismaMock = {
+  user: {
+    findUnique: jest.fn(),
+  },
   developerProfile: {
     findUnique: jest.fn(),
   },
@@ -42,6 +45,7 @@ describe('me.controller - profile and catalog', () => {
   });
 
   test('getMe returns profile availability flags', async () => {
+    prismaMock.user.findUnique.mockResolvedValue({ roles: ['USER', 'ADMIN'] });
     prismaMock.developerProfile.findUnique.mockResolvedValue({ userId: 'u-1' });
     prismaMock.companyProfile.findUnique.mockResolvedValue(null);
     meServiceMock.getMyOnboardingState.mockResolvedValue({
@@ -65,6 +69,10 @@ describe('me.controller - profile and catalog', () => {
 
     await meController.getMe(req, res, next);
 
+    expect(prismaMock.user.findUnique).toHaveBeenCalledWith({
+      where: { id: 'u-1' },
+      select: { roles: true },
+    });
     expect(prismaMock.developerProfile.findUnique).toHaveBeenCalledWith({
       where: { userId: 'u-1' },
     });
@@ -73,6 +81,7 @@ describe('me.controller - profile and catalog', () => {
     expect(res.json).toHaveBeenCalledWith({
       user_id: 'u-1',
       email: 'user@example.com',
+      roles: ['USER', 'ADMIN'],
       hasDeveloperProfile: true,
       hasCompanyProfile: false,
       onboarding: {

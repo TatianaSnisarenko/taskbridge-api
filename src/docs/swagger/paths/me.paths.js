@@ -10,6 +10,27 @@
           content: {
             'application/json': {
               schema: { $ref: '#/components/schemas/GetMeResponse' },
+              example: {
+                user_id: '7f3f0c39-b6b7-4fc8-a8f6-9db7a7d0a8f0',
+                email: 'user@example.com',
+                roles: ['USER'],
+                hasDeveloperProfile: true,
+                hasCompanyProfile: false,
+                onboarding: {
+                  developer: {
+                    status: 'completed',
+                    version: 1,
+                    completed_at: '2026-03-14T10:00:00.000Z',
+                    skipped_at: null,
+                  },
+                  company: {
+                    status: 'not_started',
+                    version: 1,
+                    completed_at: null,
+                    skipped_at: null,
+                  },
+                },
+              },
             },
           },
         },

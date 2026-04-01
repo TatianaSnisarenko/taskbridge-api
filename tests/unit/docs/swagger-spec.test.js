@@ -36,4 +36,15 @@ describe('swagger spec - docs json endpoint', () => {
       additionalProperties: true,
     });
   });
+
+  test('includes roles in GetMeResponse schema', () => {
+    const spec = createSwaggerSpec('http://localhost:3000');
+    const getMeSchema = spec.components.schemas.GetMeResponse;
+
+    expect(getMeSchema.properties.roles).toEqual({
+      type: 'array',
+      items: { type: 'string', enum: ['USER', 'ADMIN', 'MODERATOR'] },
+      example: ['USER'],
+    });
+  });
 });

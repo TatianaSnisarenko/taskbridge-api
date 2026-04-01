@@ -24,6 +24,11 @@
     properties: {
       user_id: { type: 'string', format: 'uuid' },
       email: { type: 'string', format: 'email' },
+      roles: {
+        type: 'array',
+        items: { type: 'string', enum: ['USER', 'ADMIN', 'MODERATOR'] },
+        example: ['USER'],
+      },
       hasDeveloperProfile: { type: 'boolean' },
       hasCompanyProfile: { type: 'boolean' },
       onboarding: { $ref: '#/components/schemas/OnboardingState' },

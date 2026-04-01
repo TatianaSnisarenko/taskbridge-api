@@ -4,7 +4,8 @@ import * as meService from '../services/me/index.js';
 
 export const getMe = asyncHandler(async (req, res) => {
   const userId = req.user.id;
-  const [dev, company, onboarding] = await Promise.all([
+  const [user, dev, company, onboarding] = await Promise.all([
+    prisma.user.findUnique({ where: { id: userId }, select: { roles: true } }),
     prisma.developerProfile.findUnique({ where: { userId } }),
     prisma.companyProfile.findUnique({ where: { userId } }),
     meService.getMyOnboardingState({ userId }),
@@ -13,6 +14,7 @@ export const getMe = asyncHandler(async (req, res) => {
   return res.status(200).json({
     user_id: userId,
     email: req.user.email,
+    roles: Array.isArray(user?.roles) ? user.roles : [],
     hasDeveloperProfile: !!dev,
     hasCompanyProfile: !!company,
     onboarding,
