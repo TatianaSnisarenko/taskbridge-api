@@ -22,6 +22,7 @@ import { sharedSchemas } from './swagger/schemas/shared.schemas.js';
 import { tasksSchemas } from './swagger/schemas/tasks.schemas.js';
 import { technologiesSchemas } from './swagger/schemas/technologies.schemas.js';
 import { timezonesSchemas } from './swagger/schemas/timezones.schemas.js';
+import { usersSchemas } from './swagger/schemas/users.schemas.js';
 
 export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
   openapi: '3.0.0',
@@ -66,6 +67,7 @@ export const createSwaggerSpec = (appBaseUrl = 'http://localhost:3000') => ({
       ...reviewsSchemas,
       ...platformReviewsSchemas,
       ...sharedSchemas,
+      ...usersSchemas,
     },
   },
   paths: {

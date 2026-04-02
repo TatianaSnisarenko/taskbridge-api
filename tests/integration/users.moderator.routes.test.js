@@ -48,6 +48,21 @@ describe('users moderator routes', () => {
     expect(res.body.user_id).toBe(targetUser.id);
     expect(res.body.moderator_enabled).toBe(true);
     expect(res.body.roles).toContain('MODERATOR');
+
+    const notification = await prisma.notification.findFirst({
+      where: {
+        userId: targetUser.id,
+        actorUserId: admin.id,
+        type: 'MODERATOR_ROLE_GRANTED',
+      },
+    });
+
+    expect(notification).toBeTruthy();
+    expect(notification.payload).toEqual(
+      expect.objectContaining({
+        moderator_enabled: true,
+      })
+    );
   });
 
   test('PATCH /users/:userId/moderator allows admin to revoke moderator role', async () => {
@@ -74,6 +89,21 @@ describe('users moderator routes', () => {
     expect(res.body.moderator_enabled).toBe(false);
     expect(res.body.roles).not.toContain('MODERATOR');
     expect(res.body.roles).toContain('USER');
+
+    const notification = await prisma.notification.findFirst({
+      where: {
+        userId: targetUser.id,
+        actorUserId: admin.id,
+        type: 'MODERATOR_ROLE_REVOKED',
+      },
+    });
+
+    expect(notification).toBeTruthy();
+    expect(notification.payload).toEqual(
+      expect.objectContaining({
+        moderator_enabled: false,
+      })
+    );
   });
 
   test('PATCH /users/:userId/moderator rejects non-admin user', async () => {

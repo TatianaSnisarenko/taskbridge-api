@@ -140,6 +140,8 @@ enum NotificationType {
   PROJECT_DELETED
   PROJECT_ARCHIVED_LIMIT_REACHED
   PROJECT_ARCHIVED_MODERATION
+  MODERATOR_ROLE_GRANTED
+  MODERATOR_ROLE_REVOKED
 }
 
 enum VerificationType {
@@ -784,22 +786,22 @@ model PlatformReview {
 }
 
 model EmailOutbox {
-  id                String           @id @default(uuid()) @db.Uuid
+  id                String            @id @default(uuid()) @db.Uuid
   to                String
   subject           String
   text              String?
   html              String?
   status            EmailOutboxStatus @default(PENDING)
-  attempts          Int              @default(0)
-  maxAttempts       Int              @default(8) @map("max_attempts")
-  nextAttemptAt     DateTime         @default(now()) @map("next_attempt_at") @db.Timestamptz(6)
-  processingStarted DateTime?        @map("processing_started") @db.Timestamptz(6)
-  lastAttemptAt     DateTime?        @map("last_attempt_at") @db.Timestamptz(6)
-  sentAt            DateTime?        @map("sent_at") @db.Timestamptz(6)
-  expiresAt         DateTime         @map("expires_at") @db.Timestamptz(6)
-  lastError         String?          @map("last_error")
-  createdAt         DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt         DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+  attempts          Int               @default(0)
+  maxAttempts       Int               @default(8) @map("max_attempts")
+  nextAttemptAt     DateTime          @default(now()) @map("next_attempt_at") @db.Timestamptz(6)
+  processingStarted DateTime?         @map("processing_started") @db.Timestamptz(6)
+  lastAttemptAt     DateTime?         @map("last_attempt_at") @db.Timestamptz(6)
+  sentAt            DateTime?         @map("sent_at") @db.Timestamptz(6)
+  expiresAt         DateTime          @map("expires_at") @db.Timestamptz(6)
+  lastError         String?           @map("last_error")
+  createdAt         DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   @@index([status, nextAttemptAt(sort: Asc)])
   @@index([expiresAt])

@@ -5,13 +5,17 @@ const prismaMock = {
     create: jest.fn(),
     findFirst: jest.fn(),
     findUnique: jest.fn(),
+    findMany: jest.fn(),
+    count: jest.fn(),
     update: jest.fn(),
   },
+  $transaction: jest.fn(),
 };
 const hashPasswordMock = jest.fn();
 const verifyPasswordMock = jest.fn();
 const validateTechnologyIdsMock = jest.fn();
 const incrementTechnologyPopularityMock = jest.fn();
+const createNotificationMock = jest.fn();
 
 jest.unstable_mockModule('../../src/db/prisma.js', () => ({ prisma: prismaMock }));
 jest.unstable_mockModule('../../src/utils/password.js', () => ({
@@ -22,6 +26,9 @@ jest.unstable_mockModule('../../src/services/technologies/index.js', () => ({
   validateTechnologyIds: validateTechnologyIdsMock,
   incrementTechnologyPopularity: incrementTechnologyPopularityMock,
 }));
+jest.unstable_mockModule('../../src/services/notifications/index.js', () => ({
+  createNotification: createNotificationMock,
+}));
 
 const userService = await import('../../../src/services/user/index.js');
 
@@ -30,6 +37,7 @@ describe('user.service', () => {
     jest.clearAllMocks();
     validateTechnologyIdsMock.mockResolvedValue([]);
     incrementTechnologyPopularityMock.mockResolvedValue(undefined);
+    createNotificationMock.mockResolvedValue({ id: 'n1' });
   });
 
   test('createUser hashes password and creates profiles', async () => {
@@ -234,6 +242,7 @@ describe('user.service', () => {
     const result = await userService.setUserModeratorRole({
       userId: 'u1',
       enabled: true,
+      actorUserId: 'admin-1',
     });
 
     expect(prismaMock.user.findUnique).toHaveBeenCalledWith({
@@ -251,6 +260,16 @@ describe('user.service', () => {
       id: 'u1',
       roles: ['USER', 'MODERATOR'],
     });
+
+    expect(createNotificationMock).toHaveBeenCalledWith({
+      userId: 'u1',
+      actorUserId: 'admin-1',
+      type: 'MODERATOR_ROLE_GRANTED',
+      payload: {
+        message: 'Your moderator role was granted by an administrator.',
+        moderator_enabled: true,
+      },
+    });
   });
 
   test('setUserModeratorRole revokes MODERATOR role when enabled is false', async () => {
@@ -266,6 +285,7 @@ describe('user.service', () => {
     const result = await userService.setUserModeratorRole({
       userId: 'u1',
       enabled: false,
+      actorUserId: 'admin-1',
     });
 
     expect(prismaMock.user.findUnique).toHaveBeenCalledWith({
@@ -282,6 +302,16 @@ describe('user.service', () => {
     expect(result).toEqual({
       id: 'u1',
       roles: ['USER'],
+    });
+
+    expect(createNotificationMock).toHaveBeenCalledWith({
+      userId: 'u1',
+      actorUserId: 'admin-1',
+      type: 'MODERATOR_ROLE_REVOKED',
+      payload: {
+        message: 'Your moderator role was revoked by an administrator.',
+        moderator_enabled: false,
+      },
     });
   });
 
@@ -305,6 +335,7 @@ describe('user.service', () => {
     const callArgs = prismaMock.user.update.mock.calls[0][0];
     expect(callArgs.data.roles).toContain('USER');
     expect(callArgs.data.roles).not.toContain('MODERATOR');
+    expect(createNotificationMock).toHaveBeenCalledTimes(1);
   });
 
   test('setUserModeratorRole throws error when user not found', async () => {
@@ -316,6 +347,8 @@ describe('user.service', () => {
         enabled: true,
       })
     ).rejects.toThrow();
+
+    expect(createNotificationMock).not.toHaveBeenCalled();
   });
 
   test('setUserModeratorRole does not duplicate MODERATOR role', async () => {
@@ -337,5 +370,6 @@ describe('user.service', () => {
     const callArgs = prismaMock.user.update.mock.calls[0][0];
     const moderatorCount = callArgs.data.roles.filter((r) => r === 'MODERATOR').length;
     expect(moderatorCount).toBe(1);
+    expect(createNotificationMock).not.toHaveBeenCalled();
   });
 });

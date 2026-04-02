@@ -230,6 +230,48 @@
       },
     },
   },
+  '/api/v1/users': {
+    get: {
+      tags: ['Users'],
+      summary: 'Get users catalog',
+      description:
+        'Returns paginated users list for admin/moderator with the same user identity and onboarding shape as the /me endpoint.',
+      security: [{ bearerAuth: [] }],
+      parameters: [
+        {
+          name: 'page',
+          in: 'query',
+          schema: { type: 'integer', minimum: 1, default: 1 },
+          description: 'Page number (starting from 1)',
+        },
+        {
+          name: 'size',
+          in: 'query',
+          schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
+          description: 'Page size (max 100)',
+        },
+        {
+          name: 'q',
+          in: 'query',
+          schema: { type: 'string', maxLength: 255 },
+          description: 'Search by email (partial, case-insensitive)',
+        },
+      ],
+      responses: {
+        200: {
+          description: 'Users catalog retrieved',
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/GetUsersCatalogResponse' },
+            },
+          },
+        },
+        400: { description: 'Validation error' },
+        401: { description: 'Unauthorized' },
+        403: { description: 'Admin or moderator access required' },
+      },
+    },
+  },
   '/api/v1/users/{userId}/moderator': {
     patch: {
       tags: ['Users'],

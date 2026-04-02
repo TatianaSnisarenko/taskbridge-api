@@ -25,12 +25,16 @@ const KNOWN_NOTIFICATION_TYPES = [
   'PROJECT_DELETED',
   'PROJECT_ARCHIVED_LIMIT_REACHED',
   'PROJECT_ARCHIVED_MODERATION',
+  'MODERATOR_ROLE_GRANTED',
+  'MODERATOR_ROLE_REVOKED',
 ];
 
 const COMMON_VISIBLE_TYPES = [
   'CHAT_MESSAGE',
   'PROJECT_ARCHIVED_LIMIT_REACHED',
   'PROJECT_ARCHIVED_MODERATION',
+  'MODERATOR_ROLE_GRANTED',
+  'MODERATOR_ROLE_REVOKED',
 ];
 
 function mapNotificationCategory(type) {
@@ -108,6 +112,10 @@ function buildNotificationMessage({ type, payload, taskTitle, projectTitle }) {
       return `Project archived after reaching max talents${projectContext}`;
     case 'PROJECT_ARCHIVED_MODERATION':
       return `Project archived by moderation${projectContext}`;
+    case 'MODERATOR_ROLE_GRANTED':
+      return 'Your moderator role was granted';
+    case 'MODERATOR_ROLE_REVOKED':
+      return 'Your moderator role was revoked';
     default:
       return `Notification${projectContext || taskContext}`;
   }
