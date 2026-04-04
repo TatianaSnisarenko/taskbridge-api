@@ -26,6 +26,7 @@ describe('user.catalog.service', () => {
   });
 
   test('getUsersCatalog returns paginated users with me-like identity shape', async () => {
+    const createdAt = new Date('2026-03-15T08:00:00.000Z');
     const completedAt = new Date('2026-04-01T10:00:00.000Z');
     const skippedAt = new Date('2026-04-01T11:00:00.000Z');
 
@@ -35,6 +36,7 @@ describe('user.catalog.service', () => {
           id: 'u1',
           email: 'u1@example.com',
           roles: ['USER', 'MODERATOR'],
+          createdAt,
           developerProfile: { userId: 'u1' },
           companyProfile: null,
           onboardingStates: [
@@ -51,6 +53,7 @@ describe('user.catalog.service', () => {
           id: 'u2',
           email: 'u2@example.com',
           roles: ['USER'],
+          createdAt,
           developerProfile: null,
           companyProfile: { userId: 'u2' },
           onboardingStates: [
@@ -76,6 +79,7 @@ describe('user.catalog.service', () => {
           user_id: 'u1',
           email: 'u1@example.com',
           roles: ['USER', 'MODERATOR'],
+          created_at: createdAt,
           hasDeveloperProfile: true,
           hasCompanyProfile: false,
           onboarding: {
@@ -97,6 +101,7 @@ describe('user.catalog.service', () => {
           user_id: 'u2',
           email: 'u2@example.com',
           roles: ['USER'],
+          created_at: createdAt,
           hasDeveloperProfile: false,
           hasCompanyProfile: true,
           onboarding: {

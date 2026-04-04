@@ -54,7 +54,13 @@ describe('users.controller', () => {
 
   test('getUsersCatalog maps paginated response fields from service result', async () => {
     userServiceMock.getUsersCatalog.mockResolvedValue({
-      items: [{ user_id: 'u-1', email: 'u1@example.com' }],
+      items: [
+        {
+          user_id: 'u-1',
+          email: 'u1@example.com',
+          created_at: new Date('2026-03-20T10:00:00.000Z'),
+        },
+      ],
       page: 2,
       size: 5,
       total: 11,
@@ -74,7 +80,13 @@ describe('users.controller', () => {
     });
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith({
-      items: [{ user_id: 'u-1', email: 'u1@example.com' }],
+      items: [
+        {
+          user_id: 'u-1',
+          email: 'u1@example.com',
+          created_at: new Date('2026-03-20T10:00:00.000Z'),
+        },
+      ],
       page: 2,
       size: 5,
       total: 11,

@@ -9,6 +9,7 @@ export const usersSchemas = {
         items: { type: 'string', enum: ['USER', 'ADMIN', 'MODERATOR'] },
         example: ['USER'],
       },
+      created_at: { type: 'string', format: 'date-time' },
       hasDeveloperProfile: { type: 'boolean' },
       hasCompanyProfile: { type: 'boolean' },
       onboarding: { $ref: '#/components/schemas/OnboardingState' },

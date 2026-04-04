@@ -52,6 +52,7 @@ function mapUserCatalogItem(user) {
     user_id: user.id,
     email: user.email,
     roles: Array.isArray(user.roles) ? user.roles : [],
+    created_at: user.createdAt,
     hasDeveloperProfile: !!user.developerProfile,
     hasCompanyProfile: !!user.companyProfile,
     onboarding: {
@@ -205,6 +206,7 @@ export async function getUsersCatalog({ page = 1, size = 20, q = '' }) {
         id: true,
         email: true,
         roles: true,
+        createdAt: true,
         developerProfile: {
           select: { userId: true },
         },

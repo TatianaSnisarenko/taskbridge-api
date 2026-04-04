@@ -66,6 +66,7 @@ describe('users catalog routes', () => {
         user_id: expect.any(String),
         email: expect.any(String),
         roles: expect.any(Array),
+        created_at: expect.any(String),
         hasDeveloperProfile: expect.any(Boolean),
         hasCompanyProfile: expect.any(Boolean),
         onboarding: {
