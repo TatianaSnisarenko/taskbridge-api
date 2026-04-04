@@ -121,6 +121,7 @@ describe('tasks.service - Task Details & Applications', () => {
             reviewsCount: 8,
           },
         },
+        completionRejections: [],
       };
 
       prismaMock.task.findUnique.mockResolvedValue(task);
@@ -152,6 +153,8 @@ describe('tasks.service - Task Details & Applications', () => {
         created_at: new Date('2026-02-14T13:00:00Z').toISOString(),
         published_at: new Date('2026-02-14T13:20:00Z').toISOString(),
         accepted_application_id: null,
+        rejection_count: 0,
+        last_completion_rejection_feedback: null,
         deleted_at: null,
         applications_count: 0,
         can_apply: false,

@@ -35,6 +35,8 @@ export function mapTaskInput(input) {
 export function mapTaskDetailsOutput(task, computed) {
   const companyProfile = task.owner.companyProfile;
   const avgRating = companyProfile?.avgRating;
+  const lastRejection = task.completionRejections?.[0];
+  const lastRejectionFeedback = lastRejection?.feedback || null;
 
   return {
     task_id: task.id,
@@ -70,6 +72,8 @@ export function mapTaskDetailsOutput(task, computed) {
     created_at: task.createdAt.toISOString(),
     published_at: task.publishedAt ? task.publishedAt.toISOString() : null,
     accepted_application_id: task.acceptedApplicationId,
+    rejection_count: task.rejectionCount ?? 0,
+    last_completion_rejection_feedback: lastRejectionFeedback,
     deleted_at: task.deletedAt ? task.deletedAt.toISOString() : null,
     applications_count: computed.applicationsCount,
     can_apply: computed.canApply,

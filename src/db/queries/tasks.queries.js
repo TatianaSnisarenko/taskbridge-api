@@ -83,9 +83,19 @@ export async function findTaskWithDetails(taskId) {
       requirements: true,
       niceToHave: true,
       acceptedApplicationId: true,
+      rejectionCount: true,
       createdAt: true,
       publishedAt: true,
       deletedAt: true,
+      completionRejections: {
+        select: {
+          rejectionNumber: true,
+          feedback: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 1,
+      },
       acceptedApplication: {
         select: {
           developerUserId: true,

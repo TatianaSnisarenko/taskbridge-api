@@ -112,6 +112,14 @@ describe('tasks.helpers', () => {
         createdAt: new Date('2026-01-01T12:00:00Z'),
         publishedAt: new Date('2026-01-02T12:00:00Z'),
         acceptedApplicationId: 'app1',
+        rejectionCount: 1,
+        completionRejections: [
+          {
+            rejectionNumber: 1,
+            feedback: 'Please add integration tests.',
+            createdAt: new Date('2026-01-02T10:00:00Z'),
+          },
+        ],
         deletedAt: null,
         owner: {
           companyProfile: {
@@ -155,6 +163,8 @@ describe('tasks.helpers', () => {
         created_at: '2026-01-01T12:00:00.000Z',
         published_at: '2026-01-02T12:00:00.000Z',
         accepted_application_id: 'app1',
+        rejection_count: 1,
+        last_completion_rejection_feedback: 'Please add integration tests.',
         deleted_at: null,
         applications_count: 5,
         can_apply: true,

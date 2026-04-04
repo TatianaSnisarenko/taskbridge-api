@@ -708,6 +708,18 @@ export const tasksSchemas = {
         nullable: true,
         example: '8adf5d0f-7d45-4310-bc58-8a70aef6c9f9',
       },
+      rejection_count: {
+        type: 'integer',
+        minimum: 0,
+        example: 1,
+        description: 'Number of completion rejections for the task',
+      },
+      last_completion_rejection_feedback: {
+        type: 'string',
+        nullable: true,
+        example: 'Please fix validation errors and add missing tests before re-submission.',
+        description: 'Feedback from the most recent completion rejection (if any)',
+      },
       deleted_at: { type: 'string', format: 'date-time', nullable: true },
       applications_count: { type: 'integer', example: 3 },
       can_apply: { type: 'boolean', example: false },

@@ -17,6 +17,9 @@ const prismaMock = {
     findFirst: jest.fn(),
     update: jest.fn(),
   },
+  taskCompletionRejection: {
+    create: jest.fn(),
+  },
   taskTechnology: {
     createMany: jest.fn(),
     deleteMany: jest.fn(),

@@ -238,10 +238,11 @@ model User {
 
   platformReviews PlatformReview[] @relation("PlatformReviewAuthor")
 
-  taskFavorites         TaskFavorite[]        @relation("TaskFavoriteUser")
-  initiatedTaskDisputes TaskDispute[]         @relation("TaskDisputeInitiator")
-  resolvedTaskDisputes  TaskDispute[]         @relation("TaskDisputeResolver")
-  onboardingStates      UserOnboardingState[]
+  taskFavorites            TaskFavorite[]            @relation("TaskFavoriteUser")
+  initiatedTaskDisputes    TaskDispute[]             @relation("TaskDisputeInitiator")
+  resolvedTaskDisputes     TaskDispute[]             @relation("TaskDisputeResolver")
+  taskCompletionRejections TaskCompletionRejection[] @relation("TaskCompletionRejectionRejector")
+  onboardingStates         UserOnboardingState[]
 
   @@map("users")
 }
@@ -448,9 +449,10 @@ model Task {
   technologies        TaskTechnology[]
   invites             TaskInvite[]
 
-  notifications Notification[]
-  favorites     TaskFavorite[] @relation("TaskFavoriteTask")
-  reports       TaskReport[]
+  notifications        Notification[]
+  favorites            TaskFavorite[]            @relation("TaskFavoriteTask")
+  reports              TaskReport[]
+  completionRejections TaskCompletionRejection[]
 
   @@index([status, publishedAt(sort: Desc)])
   @@index([ownerUserId, createdAt(sort: Desc)])
@@ -458,6 +460,22 @@ model Task {
   @@index([deletedAt, createdAt(sort: Desc)])
   @@index([projectId, deletedAt, createdAt(sort: Desc)])
   @@map("tasks")
+}
+
+model TaskCompletionRejection {
+  id               String   @id @default(uuid()) @db.Uuid
+  taskId           String   @map("task_id") @db.Uuid
+  rejectionNumber  Int      @map("rejection_number")
+  feedback         String?  @db.VarChar(2000)
+  rejectedByUserId String   @map("rejected_by_user_id") @db.Uuid
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  task       Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  rejectedBy User @relation("TaskCompletionRejectionRejector", fields: [rejectedByUserId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, rejectionNumber])
+  @@index([taskId, createdAt(sort: Desc)])
+  @@map("task_completion_rejections")
 }
 
 model TaskReport {

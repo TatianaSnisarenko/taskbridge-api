@@ -188,6 +188,16 @@ export async function rejectTaskCompletion({ userId, taskId, feedback }) {
       },
     });
 
+    // Record rejection reason in TaskCompletionRejection
+    await tx.taskCompletionRejection.create({
+      data: {
+        taskId: taskId,
+        rejectionNumber: newRejectionCount,
+        feedback: feedback || null,
+        rejectedByUserId: userId,
+      },
+    });
+
     if (openDispute) {
       await tx.taskDispute.update({
         where: { id: openDispute.id },
