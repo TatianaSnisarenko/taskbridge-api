@@ -1,4 +1,4 @@
-# Contributing to TeamUp Backend
+# Contributing to TaskBridge API
 
 [Back to README](../README.md)
 

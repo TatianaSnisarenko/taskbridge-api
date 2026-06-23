@@ -2,7 +2,7 @@
 
 [← Back to README](../README.md)
 
-This document defines engineering standards for TeamUp Backend. It is intended for all contributors and keeps implementation and review expectations consistent.
+This document defines engineering standards for TaskBridge API. It is intended for all contributors and keeps implementation and review expectations consistent.
 
 ## Scope
 

@@ -1,4 +1,4 @@
-# TeamUp Backend
+# TaskBridge API
 
 REST API for a collaboration platform where companies publish project-based tasks and developers apply or receive invites to collaborate through a structured workflow.
 
